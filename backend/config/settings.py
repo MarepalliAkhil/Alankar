@@ -1,5 +1,6 @@
 """Django settings. Every value comes from the environment (see backend/.env.example)."""
 
+from datetime import timedelta
 from pathlib import Path
 
 from core import brand
@@ -25,6 +26,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "channels",
+    "rest_framework_simplejwt.token_blacklist",
     "core",
     "accounts",
     "people",
@@ -106,17 +108,55 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# API: deny by default. Each public endpoint opts in with AllowAny explicitly.
-# Cookie JWT authentication is added in Task 1.
+# API: deny by default. Every view declares a policy action from shared/policy.json and
+# PolicyPermission allows it only for the roles listed there (or for public actions).
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["accounts.authentication.CookieJWTAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["core.permissions.PolicyPermission"],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_THROTTLE_RATES": {"auth": env("SALON_AUTH_RATE", "20/min")},
+}
+
+# Role policy (single source of truth shared with the frontend).
+SALON_POLICY_PATH = Path(env("SALON_POLICY_PATH", str(BASE_DIR.parent / "shared" / "policy.json")))
+
+# Development-only tools (simulated mailbox, invite links). Off unless SALON_DEBUG=true.
+SALON_DEV_TOOLS = DEBUG
+SALON_FRONTEND_URL = env("SALON_FRONTEND_URL", "http://localhost:5173").rstrip("/")
+
+# Field-level encryption master key (base64, 32 bytes). Only in .env, never committed.
+SALON_FIELD_KEY = env("SALON_FIELD_KEY")
+
+# Auth cookies (JWT in httpOnly cookies; never in localStorage).
+SALON_AUTH = {
+    "ACCESS_COOKIE": "salon_access",
+    "REFRESH_COOKIE": "salon_refresh",
+    "ACCESS_COOKIE_PATH": "/api/",
+    "REFRESH_COOKIE_PATH": "/api/auth/",
+    "COOKIE_SECURE": not DEBUG,
+    "COOKIE_SAMESITE": "Lax",
+    "LOCKOUT_THRESHOLD": 5,
+    "LOCKOUT_MINUTES": 15,
+    "INVITE_HOURS": 72,
+    "PASSWORD_RESET_MINUTES": 60,
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "SIGNING_KEY": SECRET_KEY,
 }
 
 SALON_API_DOCS = env_bool("SALON_API_DOCS", DEBUG)
+
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 SPECTACULAR_SETTINGS = {
     "TITLE": f"{brand.PLATFORM_NAME} API",

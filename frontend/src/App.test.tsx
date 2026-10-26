@@ -1,13 +1,42 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-import { login, registerCustomer } from './api/auth';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureCsrf, getSession, login, logout, registerCustomer } from './api/auth';
 import { brand, poweredBy } from './config/brand';
 import { renderAt } from './test/render';
+import { unauthorized, userFor } from './test/session';
 
-vi.mock('./api/auth', () => ({ login: vi.fn(), registerCustomer: vi.fn() }));
+vi.mock('./api/auth', () => ({
+  ensureCsrf: vi.fn(),
+  getSession: vi.fn(),
+  refreshSession: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  registerCustomer: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  confirmPasswordReset: vi.fn(),
+  checkInvite: vi.fn(),
+  acceptInvite: vi.fn(),
+}));
+
+vi.mock('./api/staff', () => ({
+  listStaff: vi.fn().mockResolvedValue([]),
+  listInvites: vi.fn().mockResolvedValue([]),
+  listAudit: vi.fn().mockResolvedValue([]),
+  createInvite: vi.fn(),
+  deactivateStaff: vi.fn(),
+  reactivateStaff: vi.fn(),
+}));
+
+const meMock = vi.mocked(getSession);
 const loginMock = vi.mocked(login);
 const registerMock = vi.mocked(registerCustomer);
+
+beforeEach(() => {
+  vi.mocked(ensureCsrf).mockResolvedValue();
+  vi.mocked(logout).mockResolvedValue();
+  meMock.mockResolvedValue(null); // anonymous by default
+});
 
 describe('public site shell', () => {
   it('opens on the public home page (not login) with the shop brand', async () => {
@@ -18,10 +47,11 @@ describe('public site shell', () => {
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
 
-  it('shows the full navbar', async () => {
+  it('shows the full navbar to guests', async () => {
     renderAt('/');
     const nav = await screen.findByRole('navigation', { name: 'Main' });
-    for (const name of ['Salon', 'Spa', 'Beauty Parlor', 'Login', 'Register', 'For Zenotians']) {
+    await within(nav).findByRole('link', { name: 'Login' });
+    for (const name of ['Salon', 'Spa', 'Beauty Parlor', 'Register', 'For Zenotians']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(within(nav).getByRole('link', { name: brand.logoText })).toHaveAttribute('href', '/');
@@ -89,6 +119,7 @@ describe('login page', () => {
       'true',
     );
     expect(screen.getByRole('link', { name: 'Create an account' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Forgot your password?' })).toBeInTheDocument();
   });
 
   it('staff tabs are sign-in only (no registration link)', async () => {
@@ -100,7 +131,7 @@ describe('login page', () => {
     expect(screen.getByRole('button', { name: 'Sign in as Admin' })).toBeInTheDocument();
   });
 
-  it('preselects the role from the URL', async () => {
+  it('preselects the role from the URL and falls back to Customer', async () => {
     renderAt('/login?role=stylist');
     expect(await screen.findByRole('tab', { name: 'Stylist' })).toHaveAttribute(
       'aria-selected',
@@ -117,17 +148,16 @@ describe('login page', () => {
   });
 
   it('validates the form before calling the server', async () => {
-    const spy = loginMock;
     const user = userEvent.setup();
     renderAt('/login');
     await user.click(await screen.findByRole('button', { name: 'Sign in as Customer' }));
     expect(screen.getByText('Enter your email.')).toBeInTheDocument();
     expect(screen.getByText('Enter your password.')).toBeInTheDocument();
-    expect(spy).not.toHaveBeenCalled();
+    expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it('shows a generic error when the server rejects the credentials', async () => {
-    loginMock.mockRejectedValue({ isAxiosError: true, response: { status: 401 } });
+  it('shows the generic error when the server rejects the credentials or the tab', async () => {
+    loginMock.mockRejectedValue(unauthorized);
     const user = userEvent.setup();
     renderAt('/login?role=receptionist');
     await user.type(await screen.findByLabelText(/Email/), 'desk@example.com');
@@ -142,6 +172,126 @@ describe('login page', () => {
       password: 'wrong-password',
     });
   });
+
+  it('shows the lockout message from the server', async () => {
+    loginMock.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 429,
+        data: { detail: 'Too many attempts. Please wait 15 minutes and try again.' },
+      },
+    });
+    const user = userEvent.setup();
+    renderAt('/login');
+    await user.type(await screen.findByLabelText(/Email/), 'c@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'whatever-123');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('15 minutes');
+  });
+
+  it.each([
+    ['admin', 'Staff'],
+    ['receptionist', 'Cash Close'],
+    ['stylist', 'Earnings'],
+  ] as const)('signs a %s in and opens their own dashboard', async (role, menuItem) => {
+    loginMock.mockResolvedValue(userFor(role));
+    const user = userEvent.setup();
+    renderAt(`/login?role=${role}`);
+    await user.type(await screen.findByLabelText(/Email/), `${role}@example.com`);
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: new RegExp(`Sign in as`, 'i') }));
+    expect(await screen.findByRole('heading', { name: /Welcome, Test/ })).toBeInTheDocument();
+    const menu = screen.getByRole('navigation', { name: /menu/ });
+    expect(
+      within(menu).getByRole('link', { name: new RegExp(`^${menuItem}( Task \\d+)?$`) }),
+    ).toBeInTheDocument();
+  });
+
+  it('returns to the requested page after sign-in when the role may open it', async () => {
+    loginMock.mockResolvedValue(userFor('admin'));
+    const user = userEvent.setup();
+    renderAt('/login?role=admin&next=%2Fstaff');
+    await user.type(await screen.findByLabelText(/Email/), 'admin@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Staff' })).toBeInTheDocument();
+  });
+});
+
+describe('route guards and role menus', () => {
+  it('sends guests to sign in with the right tab and a return path', async () => {
+    renderAt('/my-day');
+    expect(await screen.findByRole('tab', { name: 'Stylist' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('blocks a customer from staff pages (403)', async () => {
+    meMock.mockResolvedValue(userFor('customer'));
+    renderAt('/staff');
+    expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+  });
+
+  it('blocks a receptionist from admin-only pages and a stylist from the dashboard', async () => {
+    meMock.mockResolvedValue(userFor('receptionist'));
+    const first = renderAt('/payroll');
+    expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+    first.unmount();
+    meMock.mockResolvedValue(userFor('stylist'));
+    renderAt('/dashboard');
+    expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+  });
+
+  it('shows the admin only the admin menu (no chat, no cash close)', async () => {
+    meMock.mockResolvedValue(userFor('admin'));
+    renderAt('/dashboard');
+    const menu = await screen.findByRole('navigation', { name: 'Admin menu' });
+    for (const label of ['Dashboard', 'Staff', 'Staff Summary', 'Payroll', 'Settings']) {
+      expect(
+        within(menu).getByRole('link', { name: new RegExp(`^${label}( Task \\d+)?$`) }),
+      ).toBeInTheDocument();
+    }
+    expect(within(menu).queryByRole('link', { name: /Cash Close/ })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('link', { name: /Chat/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the receptionist their menu without admin items or chat', async () => {
+    meMock.mockResolvedValue(userFor('receptionist'));
+    renderAt('/dashboard');
+    const menu = await screen.findByRole('navigation', { name: 'Receptionist menu' });
+    expect(within(menu).getByRole('link', { name: /Cash Close/ })).toBeInTheDocument();
+    expect(within(menu).getByRole('link', { name: /My Hours & Pay/ })).toBeInTheDocument();
+    for (const label of ['Staff', 'Payroll', 'Settings', 'Stylist Chat']) {
+      expect(
+        within(menu).queryByRole('link', { name: new RegExp(`^${label}( Task \\d+)?$`) }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('explains planned pages with their purpose and the task they arrive in', async () => {
+    meMock.mockResolvedValue(userFor('stylist'));
+    renderAt('/earnings');
+    expect(await screen.findByText('Earnings arrives in Task 6')).toBeInTheDocument();
+    expect(screen.getByText('Task pay, rating trend, tips and payslips.')).toBeInTheDocument();
+  });
+
+  it('gives a signed-in customer the account menu instead of Login/Register', async () => {
+    meMock.mockResolvedValue(userFor('customer'));
+    const user = userEvent.setup();
+    renderAt('/customer-dashboard');
+    expect(await screen.findByRole('heading', { name: 'Welcome, Test' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).queryByRole('link', { name: 'Login' })).not.toBeInTheDocument();
+    await user.click(within(nav).getByRole('button', { name: 'Account menu' }));
+    const menu = screen.getByRole('menu', { name: 'Account menu' });
+    for (const label of ['My Appointments', 'Stylist Chat', 'Invoices', 'Profile', 'Logout']) {
+      expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();
+    }
+    await user.click(within(menu).getByRole('menuitem', { name: 'Logout' }));
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+    expect(await within(nav).findByRole('link', { name: 'Login' })).toBeInTheDocument();
+  });
 });
 
 describe('register page', () => {
@@ -151,8 +301,8 @@ describe('register page', () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
-  it('shows validation errors and never sends a role', async () => {
-    const spy = registerMock.mockResolvedValue();
+  it('validates, never sends a role, and confirms', async () => {
+    registerMock.mockResolvedValue('Thanks! Please sign in.');
     const user = userEvent.setup();
     renderAt('/register');
     await user.click(await screen.findByRole('button', { name: 'Create account' }));
@@ -160,7 +310,7 @@ describe('register page', () => {
     expect(
       screen.getByText('Please accept the terms and cancellation policy.'),
     ).toBeInTheDocument();
-    expect(spy).not.toHaveBeenCalled();
+    expect(registerMock).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText(/Full name/), 'Ananya Rao');
     await user.type(screen.getByLabelText(/^Email/), 'ananya@example.com');
@@ -169,12 +319,34 @@ describe('register page', () => {
     await user.type(screen.getByLabelText(/Confirm password/), 'a-strong-pass');
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
-    expect(spy).toHaveBeenCalledWith({
-      name: 'Ananya Rao',
+    expect(registerMock).toHaveBeenCalledWith({
+      full_name: 'Ananya Rao',
       email: 'ananya@example.com',
       phone: '9876543210',
       password: 'a-strong-pass',
       consent: true,
     });
+    expect(await screen.findByText('Thanks! Please sign in.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?role=customer',
+    );
+  });
+
+  it('shows server-side field errors', async () => {
+    registerMock.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { password: ['This password is too common.'] } },
+    });
+    const user = userEvent.setup();
+    renderAt('/register');
+    await user.type(await screen.findByLabelText(/Full name/), 'Ananya Rao');
+    await user.type(screen.getByLabelText(/^Email/), 'ananya@example.com');
+    await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
+    await user.type(screen.getByLabelText(/^Password/), 'password123');
+    await user.type(screen.getByLabelText(/Confirm password/), 'password123');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('This password is too common.')).toBeInTheDocument();
   });
 });

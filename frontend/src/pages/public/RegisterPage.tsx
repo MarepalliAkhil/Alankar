@@ -1,10 +1,20 @@
+import { CircleCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { registerCustomer } from '../../api/auth';
 import { registerErrorMessage } from '../../api/auth-messages';
+import { serverFieldErrors } from '../../api/client';
 import { PageContainer } from '../../components/layout/PageContainer';
-import { Button, Card, Checkbox, Input, PasswordInput } from '../../components/ui';
+import {
+  Button,
+  ButtonLink,
+  Card,
+  Checkbox,
+  EmptyState,
+  Input,
+  PasswordInput,
+} from '../../components/ui';
 import { brand } from '../../config/brand';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { fieldErrors } from '../../lib/validation';
@@ -46,6 +56,10 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const next = params.get('next');
+  const loginPath = `/login?role=customer${next ? `&next=${encodeURIComponent(next)}` : ''}`;
 
   useDocumentTitle('Create account');
 
@@ -64,14 +78,36 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const { name, email, phone, password } = parsed.data;
-      await registerCustomer({ name, email, phone, password, consent: true });
-      // Task 1: simulated OTP step, then sign the customer in.
+      setDone(await registerCustomer({ full_name: name, email, phone, password, consent: true }));
     } catch (error) {
+      const fields = serverFieldErrors(error);
+      setErrors({
+        name: fields.full_name,
+        email: fields.email,
+        phone: fields.phone,
+        password: fields.password,
+        consent: fields.consent,
+      });
       setFormError(registerErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (done) {
+    return (
+      <PageContainer className="flex justify-center py-xl">
+        <Card variant="dense" padding="lg" className="w-full max-w-md">
+          <EmptyState
+            icon={<CircleCheck className="h-6 w-6" />}
+            title="Almost there"
+            description={done}
+            action={<ButtonLink to={loginPath}>Sign in</ButtonLink>}
+          />
+        </Card>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer className="flex justify-center py-xl">
@@ -155,7 +191,7 @@ export default function RegisterPage() {
         <p className="mt-lg text-center text-sm text-text-muted">
           Already have an account?{' '}
           <Link
-            to="/login?role=customer"
+            to={loginPath}
             className="font-medium text-primary-hover underline-offset-4 hover:underline"
           >
             Sign in

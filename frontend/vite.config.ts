@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       strictPort: true,
+      // The role policy lives in ../shared (one file for backend and frontend).
+      fs: { allow: ['.', '../shared'] },
       proxy: {
         '/api': { target: apiTarget, changeOrigin: false },
       },

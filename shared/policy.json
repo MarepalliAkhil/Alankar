@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "_comment": "Single source of truth for role access. Read by backend/core/policy.py and frontend/src/policy/policy.ts. Anything not listed is denied.",
+  "actions": {
+    "health": "Health check",
+    "auth.csrf": "Get a CSRF cookie",
+    "auth.register": "Create a customer account",
+    "auth.login": "Sign in with a role tab",
+    "auth.refresh": "Rotate the session cookies",
+    "auth.logout": "Sign out",
+    "auth.me": "Read the signed-in account",
+    "auth.session": "Read the current session (or none) and renew it from the refresh cookie",
+    "auth.password_reset": "Request a customer password reset email",
+    "auth.password_reset_confirm": "Set a new password from a reset link",
+    "auth.invite_check": "Read a staff invite from its link",
+    "auth.invite_accept": "Set a password from a staff invite link",
+    "dev.mailbox": "Read the simulated email outbox (development only)",
+    "staff.list": "List staff accounts",
+    "staff.invites.list": "List staff invites",
+    "staff.invites.create": "Invite a stylist or receptionist",
+    "staff.deactivate": "Deactivate a staff account",
+    "staff.reactivate": "Reactivate a staff account",
+    "audit.list": "Read the audit log"
+  },
+  "public": {
+    "api": [
+      "health",
+      "auth.csrf",
+      "auth.register",
+      "auth.login",
+      "auth.refresh",
+      "auth.logout",
+      "auth.session",
+      "auth.password_reset",
+      "auth.password_reset_confirm",
+      "auth.invite_check",
+      "auth.invite_accept",
+      "dev.mailbox"
+    ],
+    "routes": [
+      "/",
+      "/salon",
+      "/spa",
+      "/beauty-parlor",
+      "/login",
+      "/register",
+      "/zenotians",
+      "/forgot-password",
+      "/reset-password",
+      "/accept-invite",
+      "/403"
+    ]
+  },
+  "roles": {
+    "customer": {
+      "label": "Customer",
+      "home": "/customer-dashboard",
+      "api": [
+        "auth.me"
+      ],
+      "routes": [],
+      "menu": [
+        {
+          "id": "home",
+          "label": "Home",
+          "path": "/customer-dashboard",
+          "description": "Your account overview and shortcuts.",
+          "task": "Task 1",
+          "status": "available"
+        },
+        {
+          "id": "book",
+          "label": "Book Appointment",
+          "path": "/customer/book",
+          "description": "Pick a service, preferred time and stylist, then send a booking request.",
+          "task": "Task 2",
+          "status": "planned"
+        },
+        {
+          "id": "appointments",
+          "label": "My Appointments",
+          "path": "/customer/appointments",
+          "description": "Your booking requests and visits as cards: pay, reschedule, cancel, I'm here.",
+          "task": "Task 2",
+          "status": "planned"
+        },
+        {
+          "id": "chat",
+          "label": "Stylist Chat",
+          "path": "/customer/chat",
+          "description": "Chat with the stylist assigned to your paid appointment.",
+          "task": "Task 4",
+          "status": "planned"
+        },
+        {
+          "id": "invoices",
+          "label": "Invoices",
+          "path": "/customer/invoices",
+          "description": "Receipts and invoices for your visits.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "profile",
+          "label": "Profile",
+          "path": "/customer/profile",
+          "description": "Your contact details, allergies and preferences.",
+          "task": "Task 2",
+          "status": "planned"
+        }
+      ]
+    },
+    "receptionist": {
+      "label": "Receptionist",
+      "home": "/dashboard",
+      "api": [
+        "auth.me"
+      ],
+      "routes": [],
+      "menu": [
+        {
+          "id": "dashboard",
+          "label": "Dashboard",
+          "path": "/dashboard",
+          "description": "Your overview. Live request and check-in numbers arrive in Task 3.",
+          "task": "Task 3",
+          "status": "available"
+        },
+        {
+          "id": "appointments",
+          "label": "Appointments",
+          "path": "/appointments",
+          "description": "Booking request cards: confirm with stylist, time and room, or reject.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "schedule",
+          "label": "Schedule",
+          "path": "/schedule",
+          "description": "Drag-and-drop day schedule by stylist and room.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "customers",
+          "label": "Customers",
+          "path": "/customers",
+          "description": "Search, register and edit customer records.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "pos",
+          "label": "POS / Billing",
+          "path": "/pos",
+          "description": "Checkout: invoice, payment, tip and receipt.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "cash-close",
+          "label": "Cash Close",
+          "path": "/cash-close",
+          "description": "End-of-day cash count against expected totals.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "inventory",
+          "label": "Inventory",
+          "path": "/inventory",
+          "description": "View stock levels and raise reorder requests.",
+          "task": "Task 5",
+          "status": "planned"
+        },
+        {
+          "id": "my-hours",
+          "label": "My Hours & Pay",
+          "path": "/my-hours",
+          "description": "Your work sessions, hours and payslips.",
+          "task": "Task 6",
+          "status": "planned"
+        }
+      ]
+    },
+    "stylist": {
+      "label": "Stylist",
+      "home": "/my-day",
+      "api": [
+        "auth.me"
+      ],
+      "routes": [],
+      "menu": [
+        {
+          "id": "my-day",
+          "label": "My Day",
+          "path": "/my-day",
+          "description": "Your overview. Today's appointments arrive in Task 4.",
+          "task": "Task 4",
+          "status": "available"
+        },
+        {
+          "id": "my-appointments",
+          "label": "My Appointments",
+          "path": "/my-appointments",
+          "description": "Your assigned appointments: start and complete services.",
+          "task": "Task 4",
+          "status": "planned"
+        },
+        {
+          "id": "my-schedule",
+          "label": "My Schedule",
+          "path": "/my-schedule",
+          "description": "Your working hours, breaks and leave.",
+          "task": "Task 4",
+          "status": "planned"
+        },
+        {
+          "id": "chat",
+          "label": "Stylist Chat",
+          "path": "/chat",
+          "description": "Chat with customers of your paid appointments.",
+          "task": "Task 4",
+          "status": "planned"
+        },
+        {
+          "id": "earnings",
+          "label": "Earnings",
+          "path": "/earnings",
+          "description": "Task pay, rating trend, tips and payslips.",
+          "task": "Task 6",
+          "status": "planned"
+        }
+      ]
+    },
+    "admin": {
+      "label": "Admin",
+      "home": "/dashboard",
+      "api": [
+        "auth.me",
+        "staff.list",
+        "staff.invites.list",
+        "staff.invites.create",
+        "staff.deactivate",
+        "staff.reactivate",
+        "audit.list"
+      ],
+      "routes": [],
+      "menu": [
+        {
+          "id": "dashboard",
+          "label": "Dashboard",
+          "path": "/dashboard",
+          "description": "Your overview. Business numbers arrive in Task 5.",
+          "task": "Task 5",
+          "status": "available"
+        },
+        {
+          "id": "appointments",
+          "label": "Appointments",
+          "path": "/appointments",
+          "description": "All booking requests and appointments as cards.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "schedule",
+          "label": "Schedule",
+          "path": "/schedule",
+          "description": "Drag-and-drop day schedule by stylist and room.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "customers",
+          "label": "Customers",
+          "path": "/customers",
+          "description": "All customer records, merge and anonymise.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "staff",
+          "label": "Staff",
+          "path": "/staff",
+          "description": "Invite stylists and receptionists, deactivate or reactivate accounts.",
+          "task": "Task 1",
+          "status": "available"
+        },
+        {
+          "id": "staff-summary",
+          "label": "Staff Summary",
+          "path": "/staff-summary",
+          "description": "Graphs for stylist ratings and tasks and receptionist hours.",
+          "task": "Task 6",
+          "status": "planned"
+        },
+        {
+          "id": "payroll",
+          "label": "Payroll",
+          "path": "/payroll",
+          "description": "Generate, adjust, approve and pay payroll.",
+          "task": "Task 6",
+          "status": "planned"
+        },
+        {
+          "id": "services",
+          "label": "Services",
+          "path": "/services",
+          "description": "Service catalogue, variants, prices and photos.",
+          "task": "Task 5",
+          "status": "planned"
+        },
+        {
+          "id": "pos",
+          "label": "POS / Billing",
+          "path": "/pos",
+          "description": "Checkout, refunds approval and all invoices.",
+          "task": "Task 3",
+          "status": "planned"
+        },
+        {
+          "id": "inventory",
+          "label": "Inventory",
+          "path": "/inventory",
+          "description": "Products, suppliers, purchase orders and the stock ledger.",
+          "task": "Task 5",
+          "status": "planned"
+        },
+        {
+          "id": "marketing",
+          "label": "Marketing",
+          "path": "/marketing",
+          "description": "Campaigns, coupons and offers.",
+          "task": "Task 5",
+          "status": "planned"
+        },
+        {
+          "id": "reports",
+          "label": "Reports",
+          "path": "/reports",
+          "description": "Revenue, service and staff reports with exports.",
+          "task": "Task 5",
+          "status": "planned"
+        },
+        {
+          "id": "concierge",
+          "label": "Concierge",
+          "path": "/concierge",
+          "description": "Chatbot knowledge entries and unanswered questions.",
+          "task": "Task 8",
+          "status": "planned"
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "path": "/settings",
+          "description": "Business details, users and roles, audit log and security.",
+          "task": "Task 5",
+          "status": "planned"
+        }
+      ]
+    }
+  }
+}

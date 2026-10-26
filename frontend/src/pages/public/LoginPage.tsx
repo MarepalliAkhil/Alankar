@@ -1,15 +1,25 @@
 import { Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { login } from '../../api/auth';
 import { loginErrorMessage } from '../../api/auth-messages';
 import { PageContainer } from '../../components/layout/PageContainer';
-import { Button, Card, Input, PasswordInput, TabPanel, Tabs } from '../../components/ui';
+import {
+  Button,
+  ButtonLink,
+  Card,
+  Input,
+  PasswordInput,
+  TabPanel,
+  Tabs,
+} from '../../components/ui';
 import { brand } from '../../config/brand';
 import { isLoginRole, loginRoles, type LoginRole } from '../../config/roles';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { fieldErrors } from '../../lib/validation';
+import { roleLabel } from '../../policy/policy';
+import { destinationAfterLogin } from '../../routes/destination';
+import { useSession } from '../../session/session-context';
 
 const schema = z.object({
   email: z.string().trim().min(1, 'Enter your email.').email('Enter a valid email address.'),
@@ -20,10 +30,12 @@ type FormErrors = Partial<Record<'email' | 'password', string>>;
 
 export default function LoginPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { status, user, signIn, signOut } = useSession();
   const roleParam = params.get('role');
   const role: LoginRole = isLoginRole(roleParam) ? roleParam : 'customer';
   const bookingIntent = params.get('intent') === 'book';
-  const roleLabel = loginRoles.find((item) => item.id === role)?.label ?? 'Customer';
+  const roleText = loginRoles.find((item) => item.id === role)?.label ?? 'Customer';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,14 +69,37 @@ export default function LoginPage() {
     setErrors({});
     setSubmitting(true);
     try {
-      await login({ role, ...parsed.data });
-      // Task 1: redirect to the role's home (customer: back to booking when intent=book).
+      const signedIn = await signIn({ role, ...parsed.data });
+      navigate(destinationAfterLogin(signedIn, params.get('next'), bookingIntent), {
+        replace: true,
+      });
     } catch (error) {
       setFormError(loginErrorMessage(error));
-    } finally {
+      setPassword('');
       setSubmitting(false);
     }
   };
+
+  if (status === 'authenticated' && user && !submitting) {
+    return (
+      <PageContainer className="flex justify-center py-xl">
+        <Card variant="dense" padding="lg" className="w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold text-text">You&apos;re signed in</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Signed in as {user.full_name || user.email} ({roleLabel(user.role)}).
+          </p>
+          <div className="mt-lg flex flex-wrap justify-center gap-sm">
+            <ButtonLink to={user.home}>
+              Go to my {user.role === 'customer' ? 'account' : 'dashboard'}
+            </ButtonLink>
+            <Button variant="secondary" onClick={() => void signOut()}>
+              Sign out
+            </Button>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer className="flex justify-center py-xl">
@@ -115,25 +150,37 @@ export default function LoginPage() {
               </p>
             )}
             <Button type="submit" fullWidth loading={submitting}>
-              Sign in as {roleLabel}
+              Sign in as {roleText}
             </Button>
           </form>
 
           {role === 'customer' ? (
-            <p className="mt-lg text-center text-sm text-text-muted">
-              New here?{' '}
+            <div className="mt-lg flex flex-col items-center gap-sm text-sm text-text-muted">
               <Link
-                to="/register"
+                to="/forgot-password"
                 className="font-medium text-primary-hover underline-offset-4 hover:underline"
               >
-                Create an account
+                Forgot your password?
               </Link>
-            </p>
+              <p>
+                New here?{' '}
+                <Link
+                  to={
+                    params.get('next')
+                      ? `/register?next=${encodeURIComponent(params.get('next') ?? '')}`
+                      : '/register'
+                  }
+                  className="font-medium text-primary-hover underline-offset-4 hover:underline"
+                >
+                  Create an account
+                </Link>
+              </p>
+            </div>
           ) : (
             <p className="mt-lg flex items-start gap-sm rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
               <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover" />
-              Staff accounts are created by the salon admin. If you can&apos;t sign in, ask your
-              admin for an invite.
+              Staff accounts are created by the salon admin. If you can&apos;t sign in or forgot
+              your password, ask your admin.
             </p>
           )}
         </TabPanel>

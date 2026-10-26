@@ -3,8 +3,14 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from accounts.staff_views import AuditLogListView
+from accounts.urls import auth_patterns, staff_patterns
+
 urlpatterns = [
     path("api/", include("core.urls")),
+    path("api/auth/", include(auth_patterns)),
+    path("api/staff/", include(staff_patterns)),
+    path("api/audit/", AuditLogListView.as_view(), name="audit-list"),
 ]
 
 if settings.SALON_API_DOCS:

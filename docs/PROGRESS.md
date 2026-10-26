@@ -1,8 +1,9 @@
 # Progress
 
 ## Status
-- Task 0 (scaffold and foundation): DONE. Verified on the owner's Windows PC (2026-10-26):
-  pytest 12 passed, ruff clean, vitest 30 passed, eslint clean, tsc clean, vite build OK.
+- Task 0 (scaffold and foundation): DONE (verified on the owner's PC, 2026-10-26).
+- Task 1 (auth and policy): DONE. Verified on the owner's PC (2026-10-26): pytest 99 passed,
+  ruff clean, vitest 65 passed, eslint, typecheck and build OK; browser run of every flow.
 
 ## Decisions
 - Defaults in CLAUDE.md section 9 and MASTER_NOTES section 28 are assumed accepted until changed.
@@ -29,10 +30,40 @@
 - Login/Register forms validate with zod and call `/api/auth/login/` and `/api/auth/register/`.
   Those endpoints arrive in Task 1; until then the forms show an honest "not available" error.
 - Django's own admin is mounted at /django-admin/ only when SALON_DEBUG=true (developer tool).
+- Task 1 decisions:
+  - ONE policy file `shared/policy.json` lists every API action, public routes, and per role:
+    home, menu (label, path, description, task, status) and allowed API actions. Backend
+    `core.permissions.PolicyPermission` enforces it (views without a known action are denied;
+    a test fails if any endpoint is undeclared); the frontend imports the same JSON for menus
+    and route guards (`src/policy/policy.ts`).
+  - Login is by email; `username` = lower-cased email. Login body carries the role tab; a
+    wrong tab, wrong password, unknown email or inactive account all return the same 401.
+  - Lockout: 5 failures for one email within 15 min lock that email for 15 min (also for
+    unknown emails, so lockout reveals nothing). Auth endpoints are rate limited (20/min per IP).
+  - JWT in httpOnly cookies: access 15 min (path /api/), refresh 7 days rotating + blacklisted
+    (path /api/auth/). CSRF double-submit enforced on every unsafe API request. The SPA renews
+    the session every 12 min; `GET /api/auth/session/` returns `{user|null}` with 200 so guests
+    see no 401 noise.
+  - The user is re-read on every request: deactivation (or a role change) takes effect on the
+    next request; deactivation also revokes all refresh tokens.
+  - Registration returns the same 201 message whether or not the email exists (an existing
+    owner gets a simulated "someone tried to register" email). Phone is AES-256-GCM encrypted
+    with an HMAC blind index (`SALON_FIELD_KEY`, HKDF-derived keys, `.env` only).
+  - Staff invite: creates an inactive account with no usable password, 72 h link, only the
+    SHA-256 hash of the token is stored. Password reset: customers only, 1 h, single use,
+    hashed token, generic response, revokes sessions.
+  - Simulated email goes to `MailOutbox`; `/api/dev/mailbox/` and the invite link endpoints
+    answer 404 unless SALON_DEBUG=true (owner request). Password-reset confirm is not
+    dev-gated (its link is only visible in the dev mailbox anyway until real email exists).
+  - Audit log: register, login success/failure (with reason), lockout, logout, invite
+    sent/accepted, role change (model signal, any code path), staff deactivate/reactivate,
+    password reset requested/done. Admin sees the latest entries on the Staff page.
+  - First admin: `python manage.py create_admin --email ... --name "..."`.
+  - Customer OTP at registration: deferred (owner) to a small task after the booking flow.
 
 ## Local setup notes
 - Docker PostgreSQL runs on host port 55432 (5432/5433 are taken by other PostgreSQL installs on the owner's PC).
-- Owner uses Command Prompt (cmd): activate venv with `.venv\\Scripts\\activate.bat`.
+- Owner uses Command Prompt (cmd): activate venv with `.venv\Scripts\activate.bat`.
 
 ## Done
 - Starter kit committed (git initialised).
@@ -53,9 +84,25 @@
 ## In progress
 - (nothing)
 
+## Done (Task 1 details)
+- Task 1: auth and policy.
+  - Backend: register, login (role tabs), session/me, refresh, logout, CSRF, lockout, rate
+    limits, password reset, staff invites + accept, staff list/deactivate/reactivate, audit
+    list, dev mailbox, create_admin; models AuditLog, LoginAttempt, LoginLock, StaffInvite,
+    PasswordResetToken, MailOutbox, CustomerProfile (encrypted phone); 99 tests.
+  - Frontend: SessionProvider (+ silent refresh), RequireRole guard, StaffLayout and
+    CustomerShell with menus from the policy, role home pages, admin Staff page (invite,
+    deactivate/reactivate, audit), login/register wired, forgot/reset password, accept invite,
+    dev mailbox, customer avatar menu; 65 tests.
+
 ## Next
-- Task 1: auth and policy (login tabs by role, cookie JWT, lockout, invites, audit,
-  `src/policy/policy.ts` + backend permission classes, allowed/denied tests).
+- Task 2: public website content + catalogue + booking sheet + customer slice (payment link).
+- Small task after the booking flow works: simulated customer OTP shown in the dev mailbox.
+
+## Temporary exceptions (owner-approved)
+- Planned menu items show an informative empty state (name, what it will do, the task it
+  arrives in) via `PlannedPage`. Remove each one as its task is built. Status lives in
+  `shared/policy.json` (`status: planned|available`).
 
 ## Known issues
 - "For Zenotians" page content is pending from the owner (the one allowed placeholder; the

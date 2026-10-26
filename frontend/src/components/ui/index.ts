@@ -5,6 +5,7 @@ export { ButtonLink } from './ButtonLink';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
 export { Drawer } from './Drawer';
+export { DropdownMenu, type DropdownItem } from './DropdownMenu';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { IconButton } from './IconButton';

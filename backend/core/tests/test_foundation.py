@@ -19,7 +19,7 @@ def test_passwords_use_argon2_first():
 
 def test_api_denies_by_default():
     permissions = settings.REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]
-    assert permissions == ["rest_framework.permissions.IsAuthenticated"]
+    assert permissions == ["core.permissions.PolicyPermission"]
 
 
 def test_brand_values():
