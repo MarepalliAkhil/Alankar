@@ -49,7 +49,17 @@ class HealthView(APIView):
 class MailOutboxSerializer(serializers.ModelSerializer):
     class Meta:
         model = MailOutbox
-        fields = ["id", "kind", "to_email", "subject", "body", "link", "created_at"]
+        fields = [
+            "id",
+            "kind",
+            "to_email",
+            "subject",
+            "body",
+            "link",
+            "status",
+            "error",
+            "created_at",
+        ]
 
 
 class DevMailboxView(APIView):

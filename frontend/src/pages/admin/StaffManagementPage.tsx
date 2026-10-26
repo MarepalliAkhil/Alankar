@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, UserPlus, Users } from 'lucide-react';
+import { Copy, Mail, TriangleAlert, UserPlus, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -12,6 +12,8 @@ import {
   listInvites,
   listStaff,
   reactivateStaff,
+  resendInvite,
+  type StaffInvite,
   type StaffMember,
   type StaffRole,
 } from '../../api/staff';
@@ -51,7 +53,12 @@ const statusTone: Record<StaffMember['status'], BadgeTone> = {
   deactivated: 'danger',
 };
 
-const inviteTone = { pending: 'info', accepted: 'success', expired: 'neutral' } as const;
+const inviteTone = {
+  sent: 'info',
+  failed: 'danger',
+  accepted: 'success',
+  expired: 'neutral',
+} as const;
 
 const dateTime = (value: string) =>
   new Date(value).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -64,6 +71,45 @@ export default function StaffManagementPage() {
   const [form, setForm] = useState({ full_name: '', email: '', role: '' });
   const [errors, setErrors] = useState<Partial<Record<InviteField, string>>>({});
   const [confirming, setConfirming] = useState<StaffMember | null>(null);
+  const [failedLink, setFailedLink] = useState<{ email: string; link: string } | null>(null);
+
+  const copyLink = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.show({
+        tone: 'success',
+        title: 'Link copied',
+        description: 'Send it to them yourself.',
+      });
+    } catch {
+      toast.show({
+        tone: 'warning',
+        title: 'Could not copy automatically',
+        description: 'Select the link in the box and copy it.',
+      });
+    }
+  };
+
+  const afterSend = (sent: StaffInvite, again: boolean) => {
+    if (sent.link) {
+      setFailedLink({ email: sent.email, link: sent.link });
+      toast.show({
+        tone: 'warning',
+        title: 'Email could not be sent',
+        description: 'Copy the link instead (shown above the team list).',
+      });
+      return;
+    }
+    setFailedLink(null);
+    toast.show({
+      tone: 'success',
+      title: `${again ? 'Invite sent again' : 'Invite sent'} to ${sent.email}`,
+      description:
+        sent.delivery === 'dev_mailbox'
+          ? 'Email is simulated (no SMTP set up): open the dev mailbox to see the link.'
+          : 'They will get an email with a link to set their password.',
+    });
+  };
 
   const staff = useQuery({ queryKey: ['staff'], queryFn: listStaff });
   const invites = useQuery({ queryKey: ['staff-invites'], queryFn: listInvites });
@@ -78,13 +124,7 @@ export default function StaffManagementPage() {
   const invite = useMutation({
     mutationFn: createInvite,
     onSuccess: (created) => {
-      toast.show({
-        tone: 'success',
-        title: `Invite sent to ${created.email}`,
-        description: import.meta.env.DEV
-          ? 'Email is simulated: open the dev mailbox to see the link.'
-          : 'They will get a link to set their password.',
-      });
+      afterSend(created, false);
       setForm({ full_name: '', email: '', role: '' });
       refreshAll();
     },
@@ -98,6 +138,21 @@ export default function StaffManagementPage() {
           description: genericErrorMessage(error, 'Please try again.'),
         });
       }
+    },
+  });
+
+  const resend = useMutation({
+    mutationFn: resendInvite,
+    onSuccess: (sent) => {
+      afterSend(sent, true);
+      refreshAll();
+    },
+    onError: (error) => {
+      toast.show({
+        tone: 'danger',
+        title: 'Invite not resent',
+        description: genericErrorMessage(error, 'Please try again.'),
+      });
     },
   });
 
@@ -244,6 +299,39 @@ export default function StaffManagementPage() {
         </form>
       </Card>
 
+      {failedLink && (
+        <Card
+          variant="dense"
+          as="section"
+          aria-labelledby="copy-title"
+          className="flex flex-col gap-sm border-l-4 border-l-warning"
+        >
+          <h2 id="copy-title" className="flex items-center gap-sm font-semibold text-text">
+            <TriangleAlert aria-hidden="true" className="h-5 w-5 text-warning-text" />
+            Email could not be sent. Copy the link instead.
+          </h2>
+          <p className="text-sm text-text-muted">
+            The invite for {failedLink.email} is still valid. Send this one-time link to them
+            yourself (for example on WhatsApp). It expires in 72 hours.
+          </p>
+          <div className="flex flex-col gap-sm sm:flex-row sm:items-end">
+            <Input
+              label="Invite link"
+              readOnly
+              value={failedLink.link}
+              onFocus={(event) => event.currentTarget.select()}
+              className="font-mono text-xs"
+            />
+            <Button
+              leftIcon={<Copy className="h-4 w-4" />}
+              onClick={() => void copyLink(failedLink.link)}
+            >
+              Copy link
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <section aria-labelledby="team-title" className="flex flex-col gap-md">
         <h2 id="team-title" className="flex items-center gap-sm text-lg font-semibold text-text">
           <Users aria-hidden="true" className="h-5 w-5 text-primary-hover" /> Team
@@ -304,9 +392,34 @@ export default function StaffManagementPage() {
               {
                 key: 'status',
                 header: 'Status',
-                render: (row) => <Badge tone={inviteTone[row.status]}>{row.status}</Badge>,
+                render: (row) => (
+                  <div className="flex flex-col gap-1">
+                    <Badge tone={inviteTone[row.status]}>{row.status}</Badge>
+                    {row.status === 'sent' && row.delivery === 'dev_mailbox' && (
+                      <span className="text-xs text-text-muted">dev mailbox</span>
+                    )}
+                  </div>
+                ),
               },
               { key: 'expires', header: 'Link expires', render: (row) => dateTime(row.expires_at) },
+              {
+                key: 'actions',
+                header: 'Actions',
+                className: 'text-right',
+                render: (row) =>
+                  row.status === 'accepted' ? (
+                    <span className="text-xs text-text-muted">Joined</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={resend.isPending && resend.variables === row.id}
+                      onClick={() => resend.mutate(row.id)}
+                    >
+                      Resend invite
+                    </Button>
+                  ),
+              },
             ]}
           />
         )}

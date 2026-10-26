@@ -43,6 +43,8 @@ class AuditLog(models.Model):
         STAFF_REACTIVATED = "staff_reactivated", "Staff account reactivated"
         PASSWORD_RESET_REQUESTED = "password_reset_requested", "Password reset requested"
         PASSWORD_RESET_DONE = "password_reset_done", "Password reset completed"
+        INVITE_RESENT = "invite_resent", "Staff invite resent"
+        EMAIL_FAILED = "email_failed", "Email could not be sent"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)
@@ -94,6 +96,12 @@ class LoginLock(models.Model):
 
 
 class StaffInvite(models.Model):
+    class EmailStatus(models.TextChoices):
+        PENDING = "pending", "Waiting for the database commit"
+        SIMULATED = "simulated", "Simulated (dev mailbox)"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="invites"
@@ -110,6 +118,11 @@ class StaffInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     accepted_at = models.DateTimeField(null=True, blank=True)
+    email_status = models.CharField(
+        max_length=20, choices=EmailStatus.choices, default=EmailStatus.PENDING
+    )
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    send_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]

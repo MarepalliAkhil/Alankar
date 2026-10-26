@@ -105,8 +105,11 @@ class InviteCreateSerializer(serializers.Serializer):
 
 
 class InviteSerializer(serializers.ModelSerializer):
+    """status: sent | failed | accepted | expired. delivery: email | dev_mailbox."""
+
     full_name = serializers.CharField(source="user.full_name", read_only=True)
     status = serializers.SerializerMethodField()
+    delivery = serializers.SerializerMethodField()
 
     class Meta:
         model = StaffInvite
@@ -116,9 +119,12 @@ class InviteSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "status",
+            "delivery",
             "created_at",
             "expires_at",
             "accepted_at",
+            "last_sent_at",
+            "send_count",
         ]
 
     def get_status(self, obj: StaffInvite) -> str:
@@ -128,7 +134,14 @@ class InviteSerializer(serializers.ModelSerializer):
             return "accepted"
         if obj.expires_at <= timezone.now():
             return "expired"
-        return "pending"
+        if obj.email_status == StaffInvite.EmailStatus.FAILED:
+            return "failed"
+        return "sent"
+
+    def get_delivery(self, obj: StaffInvite) -> str:
+        if obj.email_status == StaffInvite.EmailStatus.SIMULATED:
+            return "dev_mailbox"
+        return "email"
 
 
 class AuditLogSerializer(serializers.ModelSerializer):

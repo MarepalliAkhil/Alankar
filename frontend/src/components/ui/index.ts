@@ -1,13 +1,16 @@
+export { Accordion, type AccordionItem } from './Accordion';
 export { Avatar } from './Avatar';
 export { Badge, type BadgeTone } from './Badge';
 export { Button } from './Button';
 export { ButtonLink } from './ButtonLink';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
+export { CountUp } from './CountUp';
 export { Drawer } from './Drawer';
 export { DropdownMenu, type DropdownItem } from './DropdownMenu';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { FilterChips, type ChipOption } from './FilterChips';
 export { IconButton } from './IconButton';
 export { Input } from './Input';
 export { Modal } from './Modal';

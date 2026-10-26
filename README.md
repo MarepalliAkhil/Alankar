@@ -39,6 +39,7 @@ python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py create_admin --email you@example.com --name "Your Name"   # first admin (asks for a password)
+python manage.py seed_demo   # demo services, prices, team, contact, hours, policies, FAQ (safe to re-run)
 cd ..
 
 # 4. Frontend
@@ -87,6 +88,47 @@ cd frontend; npm run dev
 - Who can open which page and call which API is defined once in `shared/policy.json`
   (read by both the backend and the frontend). Anything not listed there is denied.
 - Dev-only tools (mailbox, invite links) answer 404 unless `SALON_DEBUG=true`.
+
+## Set up real email (Gmail, about 5 minutes)
+
+Without this, emails are simulated: they are saved and shown on the dev mailbox. With it,
+invites and password resets are really sent (a copy is still saved). Payment-link emails
+use the same setup when they arrive in Task 2b.
+
+1. On your Google account, turn on **2-Step Verification**.
+2. In your Google Account security settings, search for **App passwords** and create one
+   named "Alankar". You get a 16-character password. Never use your normal Google password.
+3. Put these in `backend\.env` (the file is git-ignored; never commit it):
+
+   ```
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=true
+   EMAIL_HOST_USER=your-gmail@gmail.com
+   EMAIL_HOST_PASSWORD=the-16-character-app-password
+   DEFAULT_FROM_EMAIL=Alankar <your-gmail@gmail.com>
+   ```
+
+4. Restart the API, then test it:
+
+   ```
+   cd backend
+   .venv\Scripts\activate.bat
+   python manage.py send_test_email --to some-other-email@gmail.com
+   ```
+
+   Check that inbox and the spam folder.
+
+Notes:
+- Gmail allows roughly 500 emails a day, enough for a demo. For a real launch switch to a
+  dedicated email service later; only these settings change, not the code.
+- Emails are sent after the database change is saved. If sending fails, the invite stays
+  valid: the admin sees "Email could not be sent. Copy the link instead" with a Copy link
+  button, and can use "Resend invite". Failures are recorded in the audit log (without links).
+- With real email set up, invite links also work when SALON_DEBUG is false; the dev mailbox
+  itself always stays debug-only.
+- This is a normal email service; it has nothing to do with AI (the no-LLM rule is unaffected).
+- Never share the app password. If you paste a log anywhere, remove that line first.
 
 ## Checks
 

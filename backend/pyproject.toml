@@ -9,5 +9,5 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 [tool.ruff.lint.isort]
 known-first-party = [
   "config", "core", "accounts", "people", "scheduling",
-  "billing", "inventory", "chat", "marketing",
+  "billing", "inventory", "chat", "marketing", "website",
 ]

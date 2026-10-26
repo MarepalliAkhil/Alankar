@@ -11,6 +11,9 @@ import {
 } from '../api/auth';
 import { listMailbox } from '../api/dev';
 import { createInvite, deactivateStaff, listInvites, listStaff } from '../api/staff';
+import * as publicApi from '../api/public';
+import { resendInvite } from '../api/staff';
+import { site } from '../test/fixtures';
 import { renderAt } from '../test/render';
 import { userFor } from '../test/session';
 
@@ -33,6 +36,15 @@ vi.mock('../api/staff', () => ({
   createInvite: vi.fn(),
   deactivateStaff: vi.fn(),
   reactivateStaff: vi.fn(),
+  resendInvite: vi.fn(),
+}));
+
+vi.mock('../api/public', () => ({
+  getSite: vi.fn(),
+  getCategories: vi.fn(),
+  getServices: vi.fn(),
+  getTeam: vi.fn(),
+  getPolicyPage: vi.fn(),
 }));
 vi.mock('../api/dev', () => ({ listMailbox: vi.fn() }));
 
@@ -44,7 +56,24 @@ beforeEach(async () => {
   const staff = await import('../api/staff');
   vi.mocked(staff.listAudit).mockResolvedValue([]);
   vi.mocked(listInvites).mockResolvedValue([]);
+  vi.mocked(listStaff).mockResolvedValue([]);
+  vi.mocked(publicApi.getSite).mockResolvedValue(site);
+  vi.mocked(publicApi.getTeam).mockResolvedValue([]);
 });
+
+const pendingInvite = {
+  id: 'i1',
+  email: 'arun@example.com',
+  full_name: 'Arun K',
+  role: 'receptionist' as const,
+  status: 'sent' as const,
+  delivery: 'email' as const,
+  created_at: '2026-10-26T10:00:00Z',
+  expires_at: '2026-10-29T10:00:00Z',
+  accepted_at: null,
+  last_sent_at: '2026-10-26T10:00:00Z',
+  send_count: 1,
+};
 
 describe('password reset', () => {
   it('requests a link and always shows the generic message', async () => {
@@ -129,16 +158,7 @@ describe('admin staff page', () => {
 
   it('invites a team member', async () => {
     vi.mocked(listStaff).mockResolvedValue([]);
-    vi.mocked(createInvite).mockResolvedValue({
-      id: 'i1',
-      email: 'arun@example.com',
-      full_name: 'Arun K',
-      role: 'receptionist',
-      status: 'pending',
-      created_at: '2026-10-26T10:00:00Z',
-      expires_at: '2026-10-29T10:00:00Z',
-      accepted_at: null,
-    });
+    vi.mocked(createInvite).mockResolvedValue(pendingInvite);
     const user = userEvent.setup();
     renderAt('/staff');
     expect(await screen.findByText('No staff yet')).toBeInTheDocument();
@@ -156,6 +176,54 @@ describe('admin staff page', () => {
       }),
     );
     expect(await screen.findByText('Invite sent to arun@example.com')).toBeInTheDocument();
+  });
+
+  it('offers Copy link when the email could not be sent', async () => {
+    vi.mocked(listStaff).mockResolvedValue([]);
+    vi.mocked(createInvite).mockResolvedValue({
+      ...pendingInvite,
+      status: 'failed',
+      link: 'http://localhost:5173/accept-invite?token=abc',
+      detail: 'Email could not be sent. Copy the link instead.',
+    });
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderAt('/staff');
+    await screen.findByText('No staff yet');
+    await user.type(screen.getByLabelText(/Full name/), 'Arun K');
+    await user.type(screen.getByLabelText(/^Email/), 'arun@example.com');
+    await user.selectOptions(screen.getByLabelText(/^Role/), 'receptionist');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Email could not be sent. Copy the link instead.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Invite link')).toHaveValue(
+      'http://localhost:5173/accept-invite?token=abc',
+    );
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    expect(writeText).toHaveBeenCalledWith('http://localhost:5173/accept-invite?token=abc');
+  });
+
+  it('shows invite statuses and resends an invite', async () => {
+    vi.mocked(listInvites).mockResolvedValue([
+      { ...pendingInvite, status: 'failed' },
+      { ...pendingInvite, id: 'i2', email: 'kiran@example.com', status: 'accepted' },
+      { ...pendingInvite, id: 'i3', email: 'old@example.com', status: 'expired' },
+    ]);
+    vi.mocked(resendInvite).mockResolvedValue({ ...pendingInvite, send_count: 2 });
+    const user = userEvent.setup();
+    renderAt('/staff');
+    const table = await screen.findByRole('table', { name: 'Staff invites' });
+    expect(within(table).getByText('failed')).toBeInTheDocument();
+    expect(within(table).getByText('accepted')).toBeInTheDocument();
+    expect(within(table).getByText('expired')).toBeInTheDocument();
+    expect(within(table).getAllByRole('button', { name: 'Resend invite' })).toHaveLength(2);
+    await user.click(within(table).getAllByRole('button', { name: 'Resend invite' })[0]);
+    await waitFor(() => expect(vi.mocked(resendInvite).mock.calls[0][0]).toBe('i1'));
+    expect(await screen.findByText('Invite sent again to arun@example.com')).toBeInTheDocument();
   });
 
   it('deactivates a staff member after confirmation', async () => {

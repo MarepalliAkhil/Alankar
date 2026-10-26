@@ -10,6 +10,13 @@ PASSWORD = "Strong-Pass-2026!"
 
 
 @pytest.fixture(autouse=True)
+def _no_real_smtp(settings):
+    """Tests never depend on the developer's .env email settings; email tests opt in."""
+    settings.SALON_SMTP_CONFIGURED = False
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+
+@pytest.fixture(autouse=True)
 def _clear_cache():
     """Rate-limit counters live in the cache; start every test clean."""
     cache.clear()

@@ -144,3 +144,11 @@ def test_role_can_matrix_matches_policy_file():
         assert policy.role_can(role, "staff.invites.create") is (role == "admin")
     assert not policy.role_can("superuser", "auth.me")
     assert not policy.role_can(None, "auth.me")
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("role", ["customer", "receptionist", "stylist"])
+def test_invite_resend_denied_for_other_roles(logged_in, role):
+    client, _ = logged_in(role)
+    response = client.post(f"/api/staff/invites/{uuid.uuid4()}/resend/")
+    assert response.status_code == 403

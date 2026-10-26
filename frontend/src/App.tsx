@@ -19,6 +19,7 @@ const RegisterPage = lazy(() => import('./pages/public/RegisterPage'));
 const ZenotiansPage = lazy(() => import('./pages/public/ZenotiansPage'));
 const ForbiddenPage = lazy(() => import('./pages/public/ForbiddenPage'));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
+const PolicyPage = lazy(() => import('./pages/public/PolicyPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'));
@@ -46,6 +47,9 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/zenotians" element={<ZenotiansPage />} />
+        <Route path="/privacy" element={<PolicyPage policy="privacy" />} />
+        <Route path="/terms" element={<PolicyPage policy="terms" />} />
+        <Route path="/cancellation-policy" element={<PolicyPage policy="cancellation" />} />
         <Route path="/403" element={<ForbiddenPage />} />
         {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystemPage />} />}
         {import.meta.env.DEV && <Route path="/dev/mailbox" element={<MailboxPage />} />}

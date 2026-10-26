@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.audit import audit
+from accounts.invites import invite_link, send_invite_email
 from accounts.models import AuditLog, StaffInvite, User
 from accounts.serializers import (
     AuditLogSerializer,
@@ -21,9 +22,18 @@ from accounts.serializers import (
     StaffSerializer,
 )
 from accounts.tokens import new_link_token, revoke_all_refresh_tokens
-from core import brand
-from core.mail import frontend_link, send_simulated_mail
-from core.models import MailOutbox
+
+FAILED_HINT = "Email could not be sent. Copy the link instead."
+
+
+def invite_response(invite: StaffInvite, token: str, status_code: int) -> Response:
+    """Invite data; the one-time link is included only when the email failed (to copy)."""
+    invite.refresh_from_db()
+    data = dict(InviteSerializer(invite).data)
+    if invite.email_status == StaffInvite.EmailStatus.FAILED:
+        data["link"] = invite_link(token)
+        data["detail"] = FAILED_HINT
+    return Response(data, status=status_code)
 
 
 class StaffListView(APIView):
@@ -72,17 +82,7 @@ class InviteListCreateView(APIView):
                 created_by=request.user,
                 expires_at=timezone.now() + timedelta(hours=hours),
             )
-        role_label = User.Role(user.role).label.lower()
-        send_simulated_mail(
-            kind=MailOutbox.Kind.INVITE,
-            to=user.email,
-            subject=f"You're invited to join {brand.SHOP_NAME} as a {role_label}",
-            body=(
-                f"Hi {user.full_name}, {request.user.full_name or 'the admin'} invited you to "
-                f"{brand.SHOP_NAME}. Open the link within {hours} hours to set your password."
-            ),
-            link=frontend_link(f"/accept-invite?token={token}"),
-        )
+            send_invite_email(invite, token, inviter=request.user, request=request)
         audit(
             AuditLog.Action.INVITE_SENT,
             request=request,
@@ -90,7 +90,36 @@ class InviteListCreateView(APIView):
             target=user,
             role=user.role,
         )
-        return Response(InviteSerializer(invite).data, status=status.HTTP_201_CREATED)
+        return invite_response(invite, token, status.HTTP_201_CREATED)
+
+
+class InviteResendView(APIView):
+    """New link (the old one stops working), new expiry, email sent again."""
+
+    policy_action = "staff.invites.resend"
+
+    @extend_schema(summary="Resend a staff invite", request=None, responses=InviteSerializer)
+    def post(self, request: Request, pk) -> Response:
+        invite = get_object_or_404(StaffInvite.objects.select_related("user"), pk=pk)
+        if invite.accepted_at or invite.user.has_usable_password():
+            return Response(
+                {"detail": "This invite was already accepted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        token, token_hash = new_link_token()
+        hours = settings.SALON_AUTH["INVITE_HOURS"]
+        with transaction.atomic():
+            invite.token_hash = token_hash
+            invite.expires_at = timezone.now() + timedelta(hours=hours)
+            invite.save(update_fields=["token_hash", "expires_at"])
+            send_invite_email(invite, token, inviter=request.user, request=request)
+        audit(
+            AuditLog.Action.INVITE_RESENT,
+            request=request,
+            actor=request.user,
+            target=invite.user,
+        )
+        return invite_response(invite, token, status.HTTP_200_OK)
 
 
 def _staff_member(pk) -> User:

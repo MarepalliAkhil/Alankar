@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/auth/", include(auth_patterns)),
     path("api/staff/", include(staff_patterns)),
     path("api/audit/", AuditLogListView.as_view(), name="audit-list"),
+    path("api/public/", include("website.urls")),
 ]
 
 if settings.SALON_API_DOCS:

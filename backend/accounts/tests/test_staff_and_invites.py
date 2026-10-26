@@ -31,7 +31,9 @@ def test_admin_invites_staff_and_invite_flow_works(logged_in):
     admin_client, admin = logged_in("admin")
     response = invite(admin_client)
     assert response.status_code == 201
-    assert response.json()["status"] == "pending"
+    assert response.json()["status"] == "sent"
+    assert response.json()["delivery"] == "dev_mailbox"
+    assert "link" not in response.json()
 
     user = User.objects.get(email="priya@example.com")
     assert user.role == "stylist" and not user.is_active and not user.has_usable_password()

@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -31,3 +33,37 @@ class CustomerProfile(models.Model):
 
 def phone_index(raw: str) -> str:
     return crypto.blind_index(crypto.normalize_phone(raw), PHONE_CONTEXT)
+
+
+class StylistProfile(models.Model):
+    """Public team profile (customer-safe: no phone, no pay, no schedule).
+
+    `user` links the profile to a stylist account once that person has accepted an invite;
+    only linked, active stylists can be chosen when booking (Task 2b).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="stylist_profile",
+    )
+    display_name = models.CharField(max_length=80)
+    title = models.CharField(max_length=80)
+    specialization = models.CharField(max_length=160, blank=True)
+    bio = models.TextField(blank=True)
+    photo_url = models.URLField(blank=True)
+    divisions = models.JSONField(default=list, blank=True)
+    services = models.ManyToManyField(
+        "scheduling.Service", blank=True, related_name="stylist_profiles"
+    )
+    is_public = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "display_name"]
+
+    def __str__(self) -> str:
+        return self.display_name

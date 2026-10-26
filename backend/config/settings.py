@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "inventory",
     "chat",
     "marketing",
+    "website",
 ]
 
 MIDDLEWARE = [
@@ -122,9 +123,28 @@ REST_FRAMEWORK = {
 # Role policy (single source of truth shared with the frontend).
 SALON_POLICY_PATH = Path(env("SALON_POLICY_PATH", str(BASE_DIR.parent / "shared" / "policy.json")))
 
-# Development-only tools (simulated mailbox, invite links). Off unless SALON_DEBUG=true.
+# Development-only tools (simulated mailbox). Off unless SALON_DEBUG=true.
 SALON_DEV_TOOLS = DEBUG
 SALON_FRONTEND_URL = env("SALON_FRONTEND_URL", "http://localhost:5173").rstrip("/")
+
+# Email. Real SMTP is used only when EMAIL_HOST (and the password, if a user is set) is in
+# backend/.env; otherwise emails are
+# simulated (saved in MailOutbox and shown on the dev mailbox). A copy is always saved.
+EMAIL_HOST = env("EMAIL_HOST", "")
+EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+# Gmail shows app passwords as "abcd efgh ijkl mnop"; spaces are not part of it.
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "").replace(" ", "").strip()
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@localhost")
+EMAIL_TIMEOUT = 15
+# A user without a password (e.g. the Gmail app password not pasted yet) means "not configured".
+SALON_SMTP_CONFIGURED = bool(EMAIL_HOST) and (bool(EMAIL_HOST_PASSWORD) or not EMAIL_HOST_USER)
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if SALON_SMTP_CONFIGURED
+    else "django.core.mail.backends.dummy.EmailBackend"
+)
 
 # Field-level encryption master key (base64, 32 bytes). Only in .env, never committed.
 SALON_FIELD_KEY = env("SALON_FIELD_KEY")

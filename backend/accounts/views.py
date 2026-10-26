@@ -34,8 +34,8 @@ from accounts.tokens import (
     set_session_cookies,
 )
 from core import brand
-from core.devtools import require_dev_tools
-from core.mail import frontend_link, send_simulated_mail
+from core.devtools import require_links_enabled
+from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
 from people.models import CustomerProfile
 
@@ -78,7 +78,7 @@ class RegisterView(AuthThrottleMixin, APIView):
         if User.objects.filter(email__iexact=email).exists():
             # Same response as success: never reveal that the email is registered.
             make_password(data["password"])  # keep timing similar
-            send_simulated_mail(
+            queue_mail(
                 kind=MailOutbox.Kind.NOTICE,
                 to=email,
                 subject=f"{brand.SHOP_NAME}: someone tried to register with your email",
@@ -265,18 +265,30 @@ class PasswordResetRequestView(AuthThrottleMixin, APIView):
         if user is not None:
             token, token_hash = new_link_token()
             minutes = settings.SALON_AUTH["PASSWORD_RESET_MINUTES"]
-            PasswordResetToken.objects.create(
-                user=user,
-                token_hash=token_hash,
-                expires_at=timezone.now() + timedelta(minutes=minutes),
-            )
-            send_simulated_mail(
-                kind=MailOutbox.Kind.PASSWORD_RESET,
-                to=user.email,
-                subject=f"{brand.SHOP_NAME}: reset your password",
-                body=f"Use this link within {minutes} minutes to choose a new password.",
-                link=frontend_link(f"/reset-password?token={token}"),
-            )
+
+            def on_failure(message: MailOutbox) -> None:
+                audit(
+                    AuditLog.Action.EMAIL_FAILED,
+                    request=request,
+                    target=user,
+                    kind="password_reset",
+                    error=message.error,
+                )
+
+            with transaction.atomic():
+                PasswordResetToken.objects.create(
+                    user=user,
+                    token_hash=token_hash,
+                    expires_at=timezone.now() + timedelta(minutes=minutes),
+                )
+                queue_mail(
+                    kind=MailOutbox.Kind.PASSWORD_RESET,
+                    to=user.email,
+                    subject=f"{brand.SHOP_NAME}: reset your password",
+                    body=f"Use this link within {minutes} minutes to choose a new password.",
+                    link=frontend_link(f"/reset-password?token={token}"),
+                    on_failure=on_failure,
+                )
             audit(AuditLog.Action.PASSWORD_RESET_REQUESTED, request=request, target=user)
         return Response({"detail": RESET_REQUEST_MESSAGE})
 
@@ -332,14 +344,14 @@ def _valid_invite(token: str) -> StaffInvite | None:
 
 
 class InviteCheckView(APIView):
-    """Reads an invite from its link. Development only (simulated email)."""
+    """Reads an invite from its link. Works in debug mode or when real email is configured."""
 
     policy_action = "auth.invite_check"
     authentication_classes: list = []
 
     @extend_schema(summary="Read a staff invite", responses={200: None})
     def get(self, request: Request) -> Response:
-        require_dev_tools()
+        require_links_enabled()
         invite = _valid_invite(request.query_params.get("token", ""))
         if invite is None:
             return Response({"detail": INVITE_INVALID}, status=status.HTTP_404_NOT_FOUND)
@@ -349,7 +361,7 @@ class InviteCheckView(APIView):
 
 
 class InviteAcceptView(AuthThrottleMixin, APIView):
-    """Sets the password and activates the account. Development only (simulated email)."""
+    """Sets the password and activates the account (debug mode or real email configured)."""
 
     policy_action = "auth.invite_accept"
     authentication_classes: list = []
@@ -360,7 +372,7 @@ class InviteAcceptView(AuthThrottleMixin, APIView):
         responses={200: None},
     )
     def post(self, request: Request) -> Response:
-        require_dev_tools()
+        require_links_enabled()
         serializer = SetPasswordWithTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         invite = _valid_invite(serializer.validated_data["token"])

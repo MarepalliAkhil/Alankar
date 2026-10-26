@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureCsrf, getSession, login, logout, registerCustomer } from './api/auth';
 import { brand, poweredBy } from './config/brand';
+import * as publicApi from './api/public';
+import * as staffApi from './api/staff';
+import { beard, haircut, rahul, site } from './test/fixtures';
 import { renderAt } from './test/render';
 import { unauthorized, userFor } from './test/session';
 
@@ -20,12 +23,21 @@ vi.mock('./api/auth', () => ({
 }));
 
 vi.mock('./api/staff', () => ({
-  listStaff: vi.fn().mockResolvedValue([]),
-  listInvites: vi.fn().mockResolvedValue([]),
-  listAudit: vi.fn().mockResolvedValue([]),
+  listStaff: vi.fn(),
+  listInvites: vi.fn(),
+  listAudit: vi.fn(),
   createInvite: vi.fn(),
   deactivateStaff: vi.fn(),
   reactivateStaff: vi.fn(),
+  resendInvite: vi.fn(),
+}));
+
+vi.mock('./api/public', () => ({
+  getSite: vi.fn(),
+  getCategories: vi.fn(),
+  getServices: vi.fn(),
+  getTeam: vi.fn(),
+  getPolicyPage: vi.fn(),
 }));
 
 const meMock = vi.mocked(getSession);
@@ -36,6 +48,13 @@ beforeEach(() => {
   vi.mocked(ensureCsrf).mockResolvedValue();
   vi.mocked(logout).mockResolvedValue();
   meMock.mockResolvedValue(null); // anonymous by default
+  vi.mocked(publicApi.getSite).mockResolvedValue(site);
+  vi.mocked(publicApi.getCategories).mockResolvedValue([]);
+  vi.mocked(publicApi.getServices).mockResolvedValue([]);
+  vi.mocked(publicApi.getTeam).mockResolvedValue([rahul]);
+  vi.mocked(staffApi.listStaff).mockResolvedValue([]);
+  vi.mocked(staffApi.listInvites).mockResolvedValue([]);
+  vi.mocked(staffApi.listAudit).mockResolvedValue([]);
 });
 
 describe('public site shell', () => {
@@ -75,7 +94,7 @@ describe('public site shell', () => {
   ])('renders the %s division shell with an empty state', async (path, label) => {
     renderAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: label })).toBeInTheDocument();
-    expect(screen.getByText('No services listed yet')).toBeInTheDocument();
+    expect(await screen.findByText('No services listed yet')).toBeInTheDocument();
   });
 
   it('shows the For Zenotians page with the platform name', async () => {
@@ -100,6 +119,99 @@ describe('public site shell', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Design system' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('website content from the database', () => {
+  it('shows hero, numbers, team, FAQ and a Call button from the API', async () => {
+    renderAt('/');
+    expect(await screen.findByText('Look good. Feel calm.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Call salon/ })).toHaveAttribute(
+      'href',
+      'tel:+919000000000',
+    );
+    expect(await screen.findByRole('heading', { name: 'Meet the team' })).toBeInTheDocument();
+    expect(screen.getByText('No ratings yet')).toBeInTheDocument();
+    expect(screen.getByText('When do I pay?')).toBeInTheDocument();
+    expect(screen.getByText('Services')).toBeInTheDocument();
+    const footer = screen.getByRole('contentinfo');
+    expect(within(footer).getByText('Demo address, Vijayawada')).toBeInTheDocument();
+    expect(within(footer).getByRole('link', { name: 'Cancellation policy' })).toHaveAttribute(
+      'href',
+      '/cancellation-policy',
+    );
+  });
+
+  it('opens a division card as a popup sheet', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await screen.findByText('Look good. Feel calm.');
+    await user.click(screen.getByRole('button', { name: /^Salon/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Salon' });
+    expect(within(dialog).getByRole('link', { name: 'View services' })).toHaveAttribute(
+      'href',
+      '/salon',
+    );
+  });
+
+  it('lists services, filters by audience and opens the price sheet', async () => {
+    vi.mocked(publicApi.getServices).mockResolvedValue([haircut, beard]);
+    const user = userEvent.setup();
+    renderAt('/salon');
+    expect(await screen.findByText("Women's Haircut")).toBeInTheDocument();
+    expect(screen.getByText('₹500')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Men' }));
+    await waitFor(() =>
+      expect(publicApi.getServices).toHaveBeenLastCalledWith({
+        division: 'salon',
+        audience: 'men',
+        category: undefined,
+        q: undefined,
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /Women's Haircut: see details/ }));
+    const sheet = screen.getByRole('dialog', { name: "Women's Haircut" });
+    expect(within(sheet).getByText('Long hair')).toBeInTheDocument();
+    expect(within(sheet).getByText('₹900')).toBeInTheDocument();
+    expect(within(sheet).getByText('Bond-repair treatment')).toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: 'Sign in to book' })).toHaveAttribute(
+      'href',
+      `/login?role=customer&next=${encodeURIComponent('/customer/book?service=womens-haircut')}`,
+    );
+  });
+
+  it('sends a signed-in customer straight to the booking sheet', async () => {
+    meMock.mockResolvedValue(userFor('customer'));
+    vi.mocked(publicApi.getServices).mockResolvedValue([haircut]);
+    const user = userEvent.setup();
+    renderAt('/salon');
+    await user.click(await screen.findByRole('button', { name: /Women's Haircut: see details/ }));
+    expect(screen.getByRole('link', { name: 'Book this service' })).toHaveAttribute(
+      'href',
+      '/customer/book?service=womens-haircut',
+    );
+  });
+
+  it('explains when filters match nothing', async () => {
+    const user = userEvent.setup();
+    renderAt('/spa');
+    await user.click(await screen.findByRole('button', { name: 'Kids' }));
+    expect(await screen.findByText('No services match your filters')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(await screen.findByText('No services listed yet')).toBeInTheDocument();
+  });
+
+  it('shows a policy page from the database', async () => {
+    vi.mocked(publicApi.getPolicyPage).mockResolvedValue({
+      key: 'cancellation',
+      title: 'Cancellation policy',
+      body: 'Cancel free up to 24 hours before.\n\nNo fee for missed visits.',
+    });
+    renderAt('/cancellation-policy');
+    expect(await screen.findByText('Cancel free up to 24 hours before.')).toBeInTheDocument();
+    expect(screen.getByText('No fee for missed visits.')).toBeInTheDocument();
   });
 });
 

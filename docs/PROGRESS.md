@@ -2,6 +2,11 @@
 
 ## Status
 - Task 0 (scaffold and foundation): DONE (verified on the owner's PC, 2026-10-26).
+- Task 2a (real email + catalogue/site content in the database + public website): DONE.
+  Verified on the owner's PC (2026-10-26): migrate, seed_demo, pytest 122 passed, ruff, eslint,
+  typecheck; real Gmail sending confirmed (send_test_email + staff invites); admin sign-in OK.
+  vitest timeouts raised (asyncUtilTimeout 5 s, testTimeout 20 s) for the slower Windows run;
+  vitest 75 passed in the build sandbox. EMAIL_HOST_PASSWORD spaces are stripped.
 - Task 1 (auth and policy): DONE. Verified on the owner's PC (2026-10-26): pytest 99 passed,
   ruff clean, vitest 65 passed, eslint, typecheck and build OK; browser run of every flow.
 
@@ -82,7 +87,7 @@
   - README.md with Windows run instructions.
 
 ## In progress
-- (nothing)
+- Task 2b: plan sent to the owner, waiting for approval.
 
 ## Done (Task 1 details)
 - Task 1: auth and policy.
@@ -95,28 +100,40 @@
     deactivate/reactivate, audit), login/register wired, forgot/reset password, accept invite,
     dev mailbox, customer avatar menu; 65 tests.
 
-## Next
-- Task 2: public website content + catalogue + booking sheet + customer slice (payment link).
-  Owner addition to Task 2: real email sending (SMTP), spec:
-  - Settings read EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
-    DEFAULT_FROM_EMAIL from backend/.env; `.env.example` entries with placeholders only.
-  - If SMTP is configured: invite, password-reset and (later) payment-link emails are sent for
-    real with the same templates; a copy is always saved in MailOutbox. If not configured:
-    behaviour stays exactly as now (simulated, dev mailbox).
-  - Send only after the DB transaction commits (transaction.on_commit), never inside it.
-  - On send failure: the invite stays valid, the failure is written to the audit log, the
-    admin sees "Email could not be sent. Copy the link instead" with a Copy link button, and
-    there is a "Resend invite" action.
-  - Admin sees each invite's status: sent, failed, accepted or expired.
-  - Management command `send_test_email --to <address>`.
-  - Tests: SMTP configured (Django locmem backend), SMTP failure, no SMTP configured. The invite
-    token must never appear in the audit log or in error messages.
-  - README section "Set up real email" for Gmail (2-Step Verification + 16-character App
-    password, smtp.gmail.com:587 TLS, ~500 emails/day limit, never commit .env or share the
-    app password). Normal email service: no AI involved, no-LLM rule unaffected.
-  - Open question for Task 2: copying an invite link in production mode conflicts with the
-    Task 1 rule "invite links work only when SALON_DEBUG=true"; decide when real email lands.
+## Task 2 split (owner-approved)
+- 2a (this step): real email (SMTP) + catalogue and site content in the database (demo seed)
+  + public website from the database.
+- 2b (next): booking sheet, booking requests, confirm (receptionist/admin API), payment link,
+  mock gateway, expiry, My Appointments cards, Profile. Payment-link emails use the 2a mailer.
+- 2c (after Task 3 checkout exists): customer invoices and the mandatory rating gate.
 - Small task after the booking flow works: simulated customer OTP shown in the dev mailbox.
+
+## Task 2a decisions
+- Real email when EMAIL_HOST is set in backend/.env (and EMAIL_HOST_PASSWORD if a user is set);
+  otherwise simulated exactly as in Task 1. Every email is saved in MailOutbox with a status
+  (simulated / queued / sent / failed) and a secret-free error (exception type + SMTP code).
+- Delivery runs in transaction.on_commit, never inside the transaction.
+- Invite email failure: invite stays valid, audit `email_failed` (no token/link), the API
+  returns the one-time link only in that response so the admin can "Copy link"; "Resend
+  invite" issues a new link (old one stops working) and a new 72 h expiry. Invite statuses:
+  sent / failed / accepted / expired (+ delivery email | dev_mailbox).
+- Owner decision: invite links work when SALON_DEBUG=true OR real email is configured; the dev
+  mailbox stays debug-only.
+- `python manage.py send_test_email --to <address>` checks the SMTP setup.
+- Catalogue in `scheduling` (ServiceCategory, Service, ServiceVariant, ServiceAddon; prices INR
+  incl. GST; from-price = cheapest active variant). Public team profiles in
+  `people.StylistProfile` (customer-safe; `user` links a profile to a stylist account later).
+  Website content in new app `website` (SiteContent keyed JSON, Achievement, Offer,
+  KnowledgeEntry = FAQ now, chatbot knowledge in Task 8).
+- `python manage.py seed_demo` loads DEMO content (Indian-salon services and prices, 4 team
+  profiles, contact/hours/policies/FAQ). Demo address/phone are clearly placeholders.
+  Achievements, offers, ratings and reviews are NOT seeded: they come only from the owner or
+  from real activity. Home "numbers" show real counts (services, team members, divisions).
+- Until the admin content screens (Task 5) exist, content is edited in the developer-only
+  Django admin (/django-admin/, SALON_DEBUG=true).
+- Public read-only API `/api/public/...` (site, categories, services, service, team, pages),
+  all declared as public actions in shared/policy.json. New public routes: /privacy, /terms,
+  /cancellation-policy.
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

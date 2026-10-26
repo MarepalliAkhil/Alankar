@@ -18,10 +18,18 @@ export interface StaffInvite {
   email: string;
   full_name: string;
   role: StaffRole;
-  status: 'pending' | 'accepted' | 'expired';
+  /** sent | failed (email could not be sent) | accepted | expired */
+  status: 'sent' | 'failed' | 'accepted' | 'expired';
+  /** email = real SMTP; dev_mailbox = simulated (no SMTP configured) */
+  delivery: 'email' | 'dev_mailbox';
   created_at: string;
   expires_at: string;
   accepted_at: string | null;
+  last_sent_at: string | null;
+  send_count: number;
+  /** Only present right after a create/resend whose email failed: the link to copy. */
+  link?: string;
+  detail?: string;
 }
 
 export interface AuditEntry {
@@ -52,6 +60,12 @@ export async function listInvites(): Promise<StaffInvite[]> {
 
 export async function createInvite(payload: InvitePayload): Promise<StaffInvite> {
   const { data } = await api.post<StaffInvite>('/staff/invites/', payload);
+  return data;
+}
+
+/** New link (the old one stops working) and a new 72-hour expiry; the email is sent again. */
+export async function resendInvite(id: string): Promise<StaffInvite> {
+  const { data } = await api.post<StaffInvite>(`/staff/invites/${id}/resend/`);
   return data;
 }
 

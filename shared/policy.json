@@ -18,9 +18,16 @@
     "staff.list": "List staff accounts",
     "staff.invites.list": "List staff invites",
     "staff.invites.create": "Invite a stylist or receptionist",
+    "staff.invites.resend": "Resend a staff invite with a new link",
     "staff.deactivate": "Deactivate a staff account",
     "staff.reactivate": "Reactivate a staff account",
-    "audit.list": "Read the audit log"
+    "audit.list": "Read the audit log",
+    "public.site": "Read website content (home page and footer)",
+    "public.categories": "List service categories",
+    "public.services": "List and search active services",
+    "public.service": "Read one active service",
+    "public.team": "List public team profiles",
+    "public.page": "Read a policy page (privacy, terms, cancellation)"
   },
   "public": {
     "api": [
@@ -35,7 +42,13 @@
       "auth.password_reset_confirm",
       "auth.invite_check",
       "auth.invite_accept",
-      "dev.mailbox"
+      "dev.mailbox",
+      "public.site",
+      "public.categories",
+      "public.services",
+      "public.service",
+      "public.team",
+      "public.page"
     ],
     "routes": [
       "/",
@@ -48,7 +61,10 @@
       "/forgot-password",
       "/reset-password",
       "/accept-invite",
-      "/403"
+      "/403",
+      "/privacy",
+      "/terms",
+      "/cancellation-policy"
     ]
   },
   "roles": {
@@ -73,7 +89,7 @@
           "label": "Book Appointment",
           "path": "/customer/book",
           "description": "Pick a service, preferred time and stylist, then send a booking request.",
-          "task": "Task 2",
+          "task": "Task 2b",
           "status": "planned"
         },
         {
@@ -81,7 +97,7 @@
           "label": "My Appointments",
           "path": "/customer/appointments",
           "description": "Your booking requests and visits as cards: pay, reschedule, cancel, I'm here.",
-          "task": "Task 2",
+          "task": "Task 2b",
           "status": "planned"
         },
         {
@@ -97,7 +113,7 @@
           "label": "Invoices",
           "path": "/customer/invoices",
           "description": "Receipts and invoices for your visits.",
-          "task": "Task 3",
+          "task": "Task 2c",
           "status": "planned"
         },
         {
@@ -105,7 +121,7 @@
           "label": "Profile",
           "path": "/customer/profile",
           "description": "Your contact details, allergies and preferences.",
-          "task": "Task 2",
+          "task": "Task 2b",
           "status": "planned"
         }
       ]
@@ -242,6 +258,7 @@
         "staff.list",
         "staff.invites.list",
         "staff.invites.create",
+        "staff.invites.resend",
         "staff.deactivate",
         "staff.reactivate",
         "audit.list"
