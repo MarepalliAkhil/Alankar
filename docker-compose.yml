@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${SALON_DB_USER:-salon}
       POSTGRES_PASSWORD: ${SALON_DB_PASSWORD:?Set SALON_DB_PASSWORD in the root .env file}
     ports:
-      - "${SALON_DB_PORT:-5432}:5432"
+      - "${SALON_DB_PORT:-55432}:5432"
     volumes:
       - salon-db-data:/var/lib/postgresql/data
     healthcheck:
