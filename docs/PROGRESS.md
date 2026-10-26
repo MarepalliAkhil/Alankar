@@ -97,6 +97,25 @@
 
 ## Next
 - Task 2: public website content + catalogue + booking sheet + customer slice (payment link).
+  Owner addition to Task 2: real email sending (SMTP), spec:
+  - Settings read EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
+    DEFAULT_FROM_EMAIL from backend/.env; `.env.example` entries with placeholders only.
+  - If SMTP is configured: invite, password-reset and (later) payment-link emails are sent for
+    real with the same templates; a copy is always saved in MailOutbox. If not configured:
+    behaviour stays exactly as now (simulated, dev mailbox).
+  - Send only after the DB transaction commits (transaction.on_commit), never inside it.
+  - On send failure: the invite stays valid, the failure is written to the audit log, the
+    admin sees "Email could not be sent. Copy the link instead" with a Copy link button, and
+    there is a "Resend invite" action.
+  - Admin sees each invite's status: sent, failed, accepted or expired.
+  - Management command `send_test_email --to <address>`.
+  - Tests: SMTP configured (Django locmem backend), SMTP failure, no SMTP configured. The invite
+    token must never appear in the audit log or in error messages.
+  - README section "Set up real email" for Gmail (2-Step Verification + 16-character App
+    password, smtp.gmail.com:587 TLS, ~500 emails/day limit, never commit .env or share the
+    app password). Normal email service: no AI involved, no-LLM rule unaffected.
+  - Open question for Task 2: copying an invite link in production mode conflicts with the
+    Task 1 rule "invite links work only when SALON_DEBUG=true"; decide when real email lands.
 - Small task after the booking flow works: simulated customer OTP shown in the dev mailbox.
 
 ## Temporary exceptions (owner-approved)
