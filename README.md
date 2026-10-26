@@ -43,6 +43,8 @@ npm install
 cd ..
 ```
 
+Using Command Prompt (cmd) instead of PowerShell? Use `copy` instead of `Copy-Item`, activate the venv with `.venv\Scripts\activate.bat`, and run one command per line (cmd has no `#` comments and no `;` separator).
+
 If PowerShell blocks `Activate.ps1`, run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ### Without Docker

@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { ToastProvider } from './components/ui';
 import { divisions } from './config/divisions';
+import { routerFuture } from './config/router';
 
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const DivisionPage = lazy(() => import('./pages/public/DivisionPage'));
@@ -14,8 +15,6 @@ const ZenotiansPage = lazy(() => import('./pages/public/ZenotiansPage'));
 const ForbiddenPage = lazy(() => import('./pages/public/ForbiddenPage'));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
 const DesignSystemPage = lazy(() => import('./pages/dev/DesignSystemPage'));
-
-export const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 
 export function AppRoutes() {
   return (
