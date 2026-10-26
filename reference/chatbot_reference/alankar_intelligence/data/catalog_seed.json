@@ -1,0 +1,37 @@
+{
+  "_comment": "SAMPLE DATA ONLY. In the real app this comes from the database (Services, Stylists, Site content) and is edited by admin.",
+  "shop": {
+    "name": "Alankar",
+    "address": "Address will be added by the admin in Settings",
+    "phone": "+91 00000 00000",
+    "email": "hello@example.com",
+    "hours": "every day, 9:00 AM to 8:00 PM",
+    "cancel_window_hours": 24,
+    "link_valid_hours": 6
+  },
+  "services": [
+    {"id": "svc-haircut-men", "name": "Men's Haircut", "aliases": ["haircut", "hair cut", "trim"], "division": "salon", "gender": "men", "price_from": 250, "duration": 30, "info": "Classic or modern cut with wash and style."},
+    {"id": "svc-haircut-women", "name": "Women's Haircut", "aliases": ["haircut", "hair cut", "trim"], "division": "salon", "gender": "women", "price_from": 450, "duration": 45, "info": "Cut and blow-dry. Price depends on hair length."},
+    {"id": "svc-haircut-kids", "name": "Kids Haircut", "aliases": ["haircut", "hair cut"], "division": "salon", "gender": "kids", "price_from": 200, "duration": 30, "info": "Gentle cut for children."},
+    {"id": "svc-beard", "name": "Beard Trim", "aliases": ["beard", "beard trim", "shave"], "division": "salon", "gender": "men", "price_from": 150, "duration": 20, "info": "Shape and trim."},
+    {"id": "svc-color", "name": "Hair Color", "aliases": ["hair color", "color"], "division": "salon", "gender": "unisex", "price_from": 1200, "duration": 90, "info": "Full color or highlights. Price depends on length."},
+    {"id": "svc-hairspa", "name": "Hair Spa", "aliases": ["hair spa"], "division": "salon", "gender": "unisex", "price_from": 900, "duration": 60, "info": "Deep conditioning treatment."},
+    {"id": "svc-keratin", "name": "Keratin Smoothing", "aliases": ["keratin", "smoothing", "straightening"], "division": "salon", "gender": "unisex", "price_from": 3000, "duration": 150, "info": "Smooth, frizz-free hair."},
+    {"id": "svc-bodymassage", "name": "Body Massage", "aliases": ["body massage", "massage"], "division": "spa", "gender": "unisex", "price_from": 1500, "duration": 60, "info": "Full-body relaxation massage."},
+    {"id": "svc-headmassage", "name": "Head Massage", "aliases": ["head massage", "massage"], "division": "spa", "gender": "unisex", "price_from": 400, "duration": 30, "info": "Relaxing head, neck and shoulder massage."},
+    {"id": "svc-aroma", "name": "Aromatherapy", "aliases": ["aromatherapy", "aroma"], "division": "spa", "gender": "unisex", "price_from": 2000, "duration": 75, "info": "Essential-oil therapy."},
+    {"id": "svc-foot", "name": "Foot Reflexology", "aliases": ["foot reflexology", "foot massage", "reflexology"], "division": "spa", "gender": "unisex", "price_from": 800, "duration": 45, "info": "Pressure-point foot therapy."},
+    {"id": "svc-facial", "name": "Facial", "aliases": ["facial"], "division": "parlor", "gender": "unisex", "price_from": 800, "duration": 60, "info": "Cleansing and glow facial."},
+    {"id": "svc-bridal", "name": "Bridal Makeup", "aliases": ["bridal makeup", "bridal", "makeup"], "division": "parlor", "gender": "women", "price_from": 8000, "duration": 180, "info": "Full bridal look. A trial session is recommended."},
+    {"id": "svc-party", "name": "Party Makeup", "aliases": ["party makeup", "makeup"], "division": "parlor", "gender": "women", "price_from": 2500, "duration": 90, "info": "Event-ready makeup."},
+    {"id": "svc-nails", "name": "Manicure and Pedicure", "aliases": ["nails", "manicure and pedicure"], "division": "parlor", "gender": "unisex", "price_from": 700, "duration": 60, "info": "Nail care for hands and feet."},
+    {"id": "svc-wax", "name": "Waxing", "aliases": ["wax"], "division": "parlor", "gender": "unisex", "price_from": 500, "duration": 30, "info": "Price depends on the area."},
+    {"id": "svc-thread", "name": "Threading", "aliases": ["threading", "eyebrow"], "division": "parlor", "gender": "unisex", "price_from": 60, "duration": 10, "info": "Eyebrows and facial threading."}
+  ],
+  "stylists": [
+    {"id": "sty-rahul", "name": "Rahul", "specialization": "Men's cuts and styling", "division": "salon", "rating": 4.7},
+    {"id": "sty-arun", "name": "Arun", "specialization": "Beard and grooming", "division": "salon", "rating": 4.6},
+    {"id": "sty-kiran", "name": "Kiran", "specialization": "Massage and body therapies", "division": "spa", "rating": 4.8},
+    {"id": "sty-priya", "name": "Priya", "specialization": "Bridal makeup and skin care", "division": "parlor", "rating": 4.9}
+  ]
+}
