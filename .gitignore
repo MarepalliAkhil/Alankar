@@ -12,3 +12,6 @@ venv/
 *.sqlite3
 .DS_Store
 coverage/
+staticfiles/
+*.tsbuildinfo
+.env.local

@@ -1,0 +1,9 @@
+from django.apps import AppConfig
+
+
+class PeopleConfig(AppConfig):
+    """Customer and staff profiles (built in later tasks)."""
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "people"
+    verbose_name = "People"

@@ -1,0 +1,170 @@
+import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { z } from 'zod';
+import { registerCustomer } from '../../api/auth';
+import { registerErrorMessage } from '../../api/auth-messages';
+import { PageContainer } from '../../components/layout/PageContainer';
+import { Button, Card, Checkbox, Input, PasswordInput } from '../../components/ui';
+import { brand } from '../../config/brand';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { fieldErrors } from '../../lib/validation';
+
+/** Indian mobile number: optional +91 / 0 prefix, then 10 digits starting 6-9. */
+const normalisePhone = (value: string) => value.replace(/[\s-]/g, '').replace(/^(\+91|0)/, '');
+
+const schema = z
+  .object({
+    name: z.string().trim().min(2, 'Enter your full name.').max(80, 'Name is too long.'),
+    email: z.string().trim().min(1, 'Enter your email.').email('Enter a valid email address.'),
+    phone: z
+      .string()
+      .transform(normalisePhone)
+      .refine((value) => /^[6-9]\d{9}$/.test(value), 'Enter a valid 10-digit mobile number.'),
+    password: z.string().min(8, 'Use at least 8 characters.'),
+    confirmPassword: z.string().min(1, 'Repeat your password.'),
+    consent: z.literal(true, {
+      errorMap: () => ({ message: 'Please accept the terms and cancellation policy.' }),
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords do not match.',
+  });
+
+type FieldName = 'name' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'consent';
+
+/** Customers only. Staff accounts are created by admin invite (no sign-up for staff). */
+export default function RegisterPage() {
+  const [values, setValues] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [consent, setConsent] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useDocumentTitle('Create account');
+
+  const update = (field: keyof typeof values) => (event: { target: { value: string } }) =>
+    setValues((current) => ({ ...current, [field]: event.target.value }));
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+    const parsed = schema.safeParse({ ...values, consent });
+    if (!parsed.success) {
+      setErrors(fieldErrors<FieldName>(parsed.error));
+      return;
+    }
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const { name, email, phone, password } = parsed.data;
+      await registerCustomer({ name, email, phone, password, consent: true });
+      // Task 1: simulated OTP step, then sign the customer in.
+    } catch (error) {
+      setFormError(registerErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <PageContainer className="flex justify-center py-xl">
+      <Card variant="dense" padding="lg" className="w-full max-w-md">
+        <h1 className="text-2xl font-bold text-text">Create your account</h1>
+        <p className="mt-1 text-sm text-text-muted">
+          Register as a customer to book appointments at {brand.shopName}.
+        </p>
+
+        <form noValidate onSubmit={onSubmit} className="mt-lg flex flex-col gap-md">
+          <Input
+            label="Full name"
+            name="name"
+            autoComplete="name"
+            required
+            value={values.name}
+            onChange={update('name')}
+            error={errors.name}
+          />
+          <Input
+            label="Email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={values.email}
+            onChange={update('email')}
+            error={errors.email}
+          />
+          <Input
+            label="Mobile number"
+            type="tel"
+            name="phone"
+            autoComplete="tel"
+            inputMode="tel"
+            hint="We'll use this to confirm your bookings."
+            required
+            value={values.phone}
+            onChange={update('phone')}
+            error={errors.phone}
+          />
+          <PasswordInput
+            label="Password"
+            name="password"
+            autoComplete="new-password"
+            hint="At least 8 characters."
+            required
+            value={values.password}
+            onChange={update('password')}
+            error={errors.password}
+          />
+          <PasswordInput
+            label="Confirm password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            required
+            value={values.confirmPassword}
+            onChange={update('confirmPassword')}
+            error={errors.confirmPassword}
+          />
+          <Checkbox
+            name="consent"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            label="I agree to the terms, privacy notice and cancellation policy."
+            error={errors.consent}
+          />
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
+            >
+              {formError}
+            </p>
+          )}
+          <Button type="submit" fullWidth loading={submitting}>
+            Create account
+          </Button>
+        </form>
+
+        <p className="mt-lg text-center text-sm text-text-muted">
+          Already have an account?{' '}
+          <Link
+            to="/login?role=customer"
+            className="font-medium text-primary-hover underline-offset-4 hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
+        <p className="mt-sm text-center text-xs text-text-muted">
+          Staff accounts are created by the salon admin. Staff sign in from the Login page.
+        </p>
+      </Card>
+    </PageContainer>
+  );
+}
