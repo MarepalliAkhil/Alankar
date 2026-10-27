@@ -9,6 +9,7 @@ from core.fields import EncryptedTextField
 PHONE_CONTEXT = "people.customerprofile.phone"
 ALLERGIES_CONTEXT = "people.customerprofile.allergies"
 PREFERENCES_CONTEXT = "people.customerprofile.preferences"
+NOTE_CONTEXT = "people.customernote.body"
 
 
 class CustomerProfile(models.Model):
@@ -126,3 +127,33 @@ class Rating(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("Ratings cannot be deleted.")
+
+
+class CustomerNote(models.Model):
+    """A private note about a customer, encrypted at rest.
+
+    `audience` says who may read it. Front-desk notes are shared by the receptionist and the
+    admin. Notes meant for the stylist only (written in the stylist slice) are never returned by
+    the desk API, and the customer never sees any note.
+    """
+
+    class Audience(models.TextChoices):
+        DESK = "desk", "Front desk"
+        STYLIST = "stylist", "Stylist only"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="staff_notes"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.DESK)
+    body = EncryptedTextField(context=NOTE_CONTEXT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Note for {self.customer_id}"

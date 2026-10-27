@@ -1,6 +1,7 @@
 from django.urls import path
 
 from billing.views import MyInvoiceDetailView, MyInvoiceListView
+from people.desk_views import CustomerDetailView, CustomerListView, CustomerNoteView
 from people.views import PendingRatingsView, ProfileView, RatingSubmitView
 from scheduling import views
 
@@ -72,6 +73,16 @@ desk_patterns = [
         views.DeskNoShowView.as_view(),
         name="desk-appointment-no-show",
     ),
+    path("slots/", views.DeskSlotsView.as_view(), name="desk-slots"),
+    path("bookings/", views.DeskBookingCreateView.as_view(), name="desk-bookings"),
+    path(
+        "appointments/<uuid:pk>/check-in/",
+        views.DeskCheckInView.as_view(),
+        name="desk-appointment-check-in",
+    ),
+    path("customers/", CustomerListView.as_view(), name="desk-customers"),
+    path("customers/<uuid:pk>/", CustomerDetailView.as_view(), name="desk-customer"),
+    path("customers/<uuid:pk>/notes/", CustomerNoteView.as_view(), name="desk-customer-notes"),
     path(
         "appointments/<uuid:pk>/dismiss/",
         views.DeskDismissView.as_view(),

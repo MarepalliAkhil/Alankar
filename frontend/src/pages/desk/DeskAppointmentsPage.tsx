@@ -3,6 +3,7 @@ import { Inbox } from 'lucide-react';
 import { useState } from 'react';
 import { genericErrorMessage } from '../../api/auth-messages';
 import {
+  checkInAppointment,
   declineRequest,
   listDeskAppointments,
   markNoShow,
@@ -74,6 +75,20 @@ export default function DeskAppointmentsPage() {
       toast.show({
         tone: 'danger',
         title: 'Link not sent',
+        description: genericErrorMessage(error, 'Please try again.'),
+      }),
+  });
+
+  const checkIn = useMutation({
+    mutationFn: (id: string) => checkInAppointment(id),
+    onSuccess: (appt) => {
+      refresh();
+      toast.show({ tone: 'success', title: `${appt.customer_name} checked in` });
+    },
+    onError: (error) =>
+      toast.show({
+        tone: 'danger',
+        title: 'Not checked in',
         description: genericErrorMessage(error, 'Please try again.'),
       }),
   });
@@ -150,7 +165,9 @@ export default function DeskAppointmentsPage() {
               <li key={appt.id}>
                 <RequestCard
                   appt={appt}
-                  busy={resend.isPending || noShow.isPending || decline.isPending}
+                  busy={
+                    resend.isPending || noShow.isPending || decline.isPending || checkIn.isPending
+                  }
                   onAct={(action) => {
                     if (action === 'confirm') setPlacing({ appt, mode: 'confirm' });
                     else if (action === 'move') setPlacing({ appt, mode: 'move' });
@@ -158,6 +175,7 @@ export default function DeskAppointmentsPage() {
                     else if (action === 'cancel') setCancelling(appt);
                     else if (action === 'resend_link') resend.mutate(appt.id);
                     else if (action === 'no_show') noShow.mutate(appt.id);
+                    else if (action === 'check_in') checkIn.mutate(appt.id);
                     else if (action === 'decline_reschedule')
                       decline.mutate({ id: appt.id, flag: 'reschedule' });
                     else if (action === 'decline_cancel')
@@ -276,7 +294,9 @@ function RequestCard({
       {appt.reject_reason && (
         <p className="text-xs text-text-muted">Rejected: {appt.reject_reason}</p>
       )}
-      {(appt.reschedule_requested || appt.cancel_requested || appt.arrived_at) && (
+      {(appt.reschedule_requested ||
+        appt.cancel_requested ||
+        (appt.arrived_at && appt.status === 'scheduled')) && (
         <ul className="flex flex-col gap-1 text-xs text-text-muted">
           {appt.reschedule_requested && (
             <li>
@@ -286,10 +306,17 @@ function RequestCard({
             </li>
           )}
           {appt.cancel_requested && <li>Customer asked to cancel.</li>}
-          {appt.arrived_at && <li>Customer says they have arrived.</li>}
+          {appt.arrived_at && appt.status === 'scheduled' && (
+            <li>Customer says they have arrived.</li>
+          )}
         </ul>
       )}
       <div className="mt-auto flex flex-wrap gap-sm">
+        {can('check_in') && (
+          <Button size="sm" disabled={busy} onClick={() => onAct('check_in')}>
+            Check in
+          </Button>
+        )}
         {can('confirm') && (
           <Button size="sm" onClick={() => onAct('confirm')}>
             {appt.status === 'payment_expired' ? 'Confirm again' : 'Confirm'}

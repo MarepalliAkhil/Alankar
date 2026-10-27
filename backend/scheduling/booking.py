@@ -631,6 +631,8 @@ def desk_actions(appt: Appointment, now: datetime | None = None) -> list[str]:
         actions.append("move")
     if status in CANCELLABLE:
         actions.append("cancel")
+    if status == S.SCHEDULED and appt.start and local(appt.start).date() == local(now).date():
+        actions.append("check_in")
     if status == S.SCHEDULED and appt.start and appt.start <= now:
         actions.append("no_show")
     if appt.reschedule_requested and status in MOVABLE:
@@ -638,6 +640,87 @@ def desk_actions(appt: Appointment, now: datetime | None = None) -> list[str]:
     if appt.cancel_requested and status in CANCELLABLE:
         actions.append("decline_cancel")
     return actions
+
+
+def check_in(appt_id, *, actor) -> Appointment:
+    """The guest has arrived: scheduled -> checked in, on the day of the visit only."""
+    with transaction.atomic():
+        appt = Appointment.objects.select_for_update().get(pk=appt_id)
+        if appt.status != S.SCHEDULED:
+            raise BookingError("Only scheduled bookings can be checked in.")
+        if appt.start is None or local(appt.start).date() != local(timezone.now()).date():
+            raise BookingError("A guest can be checked in only on the day of the visit.")
+        appt.status = S.CHECKED_IN
+        appt.arrived_at = appt.arrived_at or timezone.now()
+        appt.save()
+        record(appt, "checked_in", actor=actor, from_status=S.SCHEDULED)
+    return appt
+
+
+def create_desk_booking(
+    *,
+    actor,
+    customer,
+    service: Service,
+    variant_id,
+    addon_ids,
+    start: datetime,
+    stylist: StylistProfile,
+    room: Room | None,
+    source: str,
+    contact: dict,
+    notes: str = "",
+    allergies: str = "",
+    check_in_now: bool = False,
+) -> Appointment:
+    """A walk-in or phone booking made by staff. It goes straight to scheduled (or checked in).
+
+    There is no online prepayment: the whole amount is settled at checkout. The same overlap
+    checks as a confirmed request apply, so a clash returns the three nearest free times.
+    """
+    if source not in (Appointment.Source.WALK_IN, Appointment.Source.PHONE):
+        raise BookingError("Choose walk-in or phone.")
+    q = quote(service, variant_id, addon_ids)
+    with transaction.atomic():
+        appt = Appointment.objects.create(
+            customer=customer,
+            service=service,
+            variant=q.variant,
+            service_name=service.name,
+            variant_label=q.variant.label if q.variant else "",
+            addon_labels=[a.label for a in q.addons],
+            duration_minutes=q.duration_minutes,
+            price_total=q.price_total,
+            gst_amount=q.gst_amount,
+            amount_payable=q.amount_payable,
+            preferred_start=start,
+            preferred_stylist=stylist,
+            source=source,
+            contact_name=contact["name"],
+            contact_email=contact["email"],
+            contact_phone=contact.get("phone", ""),
+            notes=notes,
+            allergies=allergies,
+            policy_accepted_at=timezone.now(),
+            status=S.REQUESTED,
+        )
+        appt.addons.set(q.addons)
+        end = _place(appt, stylist=stylist, start=start, room=room)
+        appt.stylist, appt.room, appt.start, appt.end = stylist, room, start, end
+        appt.confirmed_by = actor
+        appt.status = S.CHECKED_IN if check_in_now else S.SCHEDULED
+        if check_in_now:
+            appt.arrived_at = timezone.now()
+        appt.save()
+        record(appt, "created_by_staff", actor=actor, note=f"{source}")
+        if check_in_now:
+            record(appt, "checked_in", actor=actor, from_status=S.SCHEDULED)
+        email_customer(
+            appt,
+            "your visit is booked",
+            "Your visit has been booked at the front desk. Payment is taken at checkout.",
+        )
+    return appt
 
 
 DISMISSABLE = {"reschedule": "reschedule_requested", "cancel": "cancel_requested"}

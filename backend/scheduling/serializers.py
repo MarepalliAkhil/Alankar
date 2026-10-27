@@ -55,6 +55,26 @@ class ConfirmSerializer(serializers.Serializer):
     room = serializers.UUIDField(required=False, allow_null=True)
 
 
+class DeskBookingSerializer(serializers.Serializer):
+    """A walk-in or phone booking made by staff for an existing customer."""
+
+    customer = serializers.UUIDField()
+    service = serializers.SlugField()
+    variant = serializers.UUIDField(required=False, allow_null=True)
+    addons = serializers.ListField(
+        child=serializers.UUIDField(), required=False, default=list, max_length=10
+    )
+    start = serializers.DateTimeField()
+    stylist = serializers.UUIDField()
+    room = serializers.UUIDField(required=False, allow_null=True)
+    source = serializers.ChoiceField(choices=["walk_in", "phone"])
+    notes = serializers.CharField(max_length=MAX_TEXT, required=False, allow_blank=True, default="")
+    allergies = serializers.CharField(
+        max_length=MAX_TEXT, required=False, allow_blank=True, default=""
+    )
+    check_in_now = serializers.BooleanField(required=False, default=False)
+
+
 class RejectSerializer(serializers.Serializer):
     reason = serializers.CharField(min_length=3, max_length=300, trim_whitespace=True)
 

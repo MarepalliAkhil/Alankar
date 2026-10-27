@@ -59,6 +59,14 @@ class AuditLog(models.Model):
         PAYMENT_LINK_RESENT = "payment_link_resent", "Payment link resent by staff"
         STAFF_RATE_CHANGED = "staff_rate_changed", "Receptionist hourly rate changed"
         POS_SETTINGS_CHANGED = "pos_settings_changed", "Billing settings changed"
+        APPOINTMENT_CHECKED_IN = "appointment_checked_in", "Customer checked in"
+        APPOINTMENT_CREATED_BY_STAFF = (
+            "appointment_created_by_staff",
+            "Walk-in or phone booking created by staff",
+        )
+        CUSTOMER_CREATED = "customer_created", "Customer registered at the desk"
+        CUSTOMER_UPDATED = "customer_updated", "Customer details changed by staff"
+        CUSTOMER_NOTE_ADDED = "customer_note_added", "Customer note added"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

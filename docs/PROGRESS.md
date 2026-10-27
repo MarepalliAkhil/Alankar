@@ -1,6 +1,10 @@
 # Progress
 
 ## Status
+- Task 3b (check-in, walk-in and phone bookings, customers): IMPLEMENTED in the build sandbox,
+  waiting for the owner's PC run (migrate, pytest, npm test, walkthrough below).
+- Task 3a (requests inbox, schedule, desk actions, pay settings): DONE. Verified on the owner's PC
+  (2026-10-27): tests, lint, typecheck, build and the browser walkthrough passed.
 - Task 2c (invoices + mandatory rating) and customer email-OTP: IMPLEMENTED in the build sandbox,
   waiting for the owner's PC run (migrate, pytest, npm test, npm run build, walkthrough below).
   Sandbox: pytest 216 passed, ruff clean, vitest 112 passed, eslint, typecheck, prettier clean.
@@ -242,6 +246,34 @@
 4. Cancel with a reason (empty reason refused); mark no-show on a past visit; dismiss a customer flag.
 5. Admin Staff page: set a receptionist hourly rate and the discount cap; check the Audit entries.
 6. Dashboard shows "Today at the desk".
+
+## Task 3b decisions
+- Check-in: a scheduled visit can be checked in on the day of the visit only (shop time zone).
+  Audited. The "customer is here" flag stays a flag; the receptionist's check-in is the status change.
+- Walk-in and phone bookings (receptionist or admin, for an existing customer): go straight to
+  scheduled (or checked in when the guest is here now), no online prepayment, settled at checkout in
+  3c. Same overlap check as a confirmed request: a clash returns 409 plus the 3 nearest free times.
+  Staff are not blocked by the customer's unrated visits (that rule is for online booking requests).
+- Customers: search by name or email (partial) or a full 10-digit mobile number (exact, through the
+  blind index; partial phone search is not possible by design). The list never includes staff.
+- Registering a customer at the desk needs a name, email and mobile number (email is needed for
+  receipts). The account has no password; the customer claims it with "Forgot password". Duplicate
+  email returns 409. Edits (name, phone, allergies, preferences) and notes are audited; the audit
+  log stores only which fields changed, never the values.
+- Notes are encrypted at rest. Each note has an audience: front-desk notes are returned to the
+  receptionist and admin; "stylist only" notes (written in the stylist slice) are never returned by
+  the desk API. Customers never see any note.
+- Menu: Customers added for the receptionist (and now live for the admin).
+
+## Task 3b: owner browser walkthrough (to verify on the PC)
+1. Receptionist: Customers shows everyone; search by name, by email, by full mobile number.
+2. Register customer (name, email, mobile). You land on the profile. Try the same email again: refused.
+3. On a profile: Edit details (phone change makes the new number searchable), add a note, see visit history.
+4. Book a visit (walk-in): pick service, time, stylist; tick "check them in" for today. Book the same
+   stylist and time again: a clash shows nearest free times.
+5. Appointments > Scheduled: a visit booked for today has Check in. Tomorrow's visit does not.
+6. As a customer, book online, pay (as in 2b), then as receptionist check that visit in on its day.
+7. Stylist and customer accounts cannot open /customers (403 page).
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

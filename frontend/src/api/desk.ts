@@ -12,6 +12,7 @@ export type DeskAction =
   | 'move'
   | 'cancel'
   | 'no_show'
+  | 'check_in'
   | 'decline_reschedule'
   | 'decline_cancel';
 
@@ -120,6 +121,11 @@ export async function moveAppointment(id: string, payload: Placement): Promise<D
 
 export async function cancelAppointment(id: string, reason: string): Promise<DeskAppointment> {
   const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/cancel/`, { reason });
+  return data;
+}
+
+export async function checkInAppointment(id: string): Promise<DeskAppointment> {
+  const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/check-in/`);
   return data;
 }
 

@@ -10,6 +10,7 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 # These tests reuse the fixtures of the booking tests by importing them.
 "billing/tests/*" = ["F401", "F811"]
 "scheduling/tests/test_desk.py" = ["F401", "F811"]
+"scheduling/tests/test_desk_customers.py" = ["F401", "F811"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

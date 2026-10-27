@@ -11,12 +11,16 @@ const BookPage = lazy(() => import('../customer/BookPage'));
 const AppointmentsPage = lazy(() => import('../customer/AppointmentsPage'));
 const InvoicesPage = lazy(() => import('../customer/InvoicesPage'));
 const SchedulePage = lazy(() => import('../desk/SchedulePage'));
+const CustomersPage = lazy(() => import('../desk/CustomersPage'));
+const CustomerProfilePage = lazy(() => import('../desk/CustomerProfilePage'));
 const ProfilePage = lazy(() => import('../customer/ProfilePage'));
 
 /** Picks the page for a policy path. Built pages are listed here; the rest are planned. */
 export default function RolePage({ path }: { path: string }) {
   const { user } = useSession();
   if (!user) return null;
+  const isDesk = user.role === 'receptionist' || user.role === 'admin';
+  if (path === '/customers/:id' && isDesk) return <CustomerProfilePage />;
   const item = menuItemFor(user.role, path);
   if (!item) return <Navigate to="/403" replace />;
   if (path === homeFor(user.role)) return <RoleHomePage />;
@@ -28,6 +32,7 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/schedule' && (user.role === 'receptionist' || user.role === 'admin')) {
     return <SchedulePage />;
   }
+  if (path === '/customers' && isDesk) return <CustomersPage />;
   if (path === '/appointments' && (user.role === 'receptionist' || user.role === 'admin')) {
     return <DeskAppointmentsPage />;
   }

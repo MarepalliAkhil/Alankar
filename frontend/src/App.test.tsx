@@ -456,12 +456,12 @@ describe('route guards and role menus', () => {
     renderAt('/dashboard');
     const menu = await screen.findByRole('navigation', { name: 'Receptionist menu' });
     // Only built pages are listed; the rest join the menu as their sub-task is finished.
-    for (const label of ['Dashboard', 'Appointments', 'Schedule']) {
+    for (const label of ['Dashboard', 'Appointments', 'Schedule', 'Customers']) {
       expect(
         within(menu).getByRole('link', { name: new RegExp(`^${label}( Task \\d+[a-z]?)?$`) }),
       ).toBeInTheDocument();
     }
-    for (const label of ['Cash Close', 'My Hours & Pay', 'POS / Billing', 'Customers']) {
+    for (const label of ['Cash Close', 'My Hours & Pay', 'POS / Billing']) {
       expect(within(menu).queryByRole('link', { name: new RegExp(label) })).not.toBeInTheDocument();
     }
     for (const label of ['Staff', 'Payroll', 'Settings', 'Stylist Chat']) {

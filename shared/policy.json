@@ -57,7 +57,14 @@
     "desk.schedule.read": "Read one day of the schedule by stylist and room",
     "staff.pay.update": "Set a receptionist's hourly rate",
     "settings.pos.read": "Read billing settings (discount cap)",
-    "settings.pos.update": "Change billing settings (discount cap)"
+    "settings.pos.update": "Change billing settings (discount cap)",
+    "desk.appointments.check_in": "Check a scheduled guest in on the day of the visit",
+    "desk.bookings.create": "Book a walk-in or phone customer and list free times for it",
+    "desk.customers.list": "Search customers by name, email or full mobile number",
+    "desk.customers.create": "Register a customer at the desk",
+    "desk.customers.read": "Read a customer with visit history and front-desk notes",
+    "desk.customers.update": "Edit a customer's name, phone, allergies or preferences",
+    "desk.customers.notes": "Add a front-desk note to a customer"
   },
   "public": {
     "api": [
@@ -191,9 +198,18 @@
         "desk.appointments.no_show",
         "desk.appointments.dismiss",
         "desk.schedule.read",
-        "settings.pos.read"
+        "settings.pos.read",
+        "desk.appointments.check_in",
+        "desk.bookings.create",
+        "desk.customers.list",
+        "desk.customers.create",
+        "desk.customers.read",
+        "desk.customers.update",
+        "desk.customers.notes"
       ],
-      "routes": [],
+      "routes": [
+        "/customers/:id"
+      ],
       "menu": [
         {
           "id": "dashboard",
@@ -217,6 +233,14 @@
           "path": "/schedule",
           "description": "Day schedule by stylist and room. Drag a visit to move it, or use Move to.",
           "task": "Task 3a",
+          "status": "available"
+        },
+        {
+          "id": "customers",
+          "label": "Customers",
+          "path": "/customers",
+          "description": "Search customers, open a profile with visit history and notes, register walk-ins and book them.",
+          "task": "Task 3b",
           "status": "available"
         }
       ]
@@ -297,9 +321,18 @@
         "desk.schedule.read",
         "staff.pay.update",
         "settings.pos.read",
-        "settings.pos.update"
+        "settings.pos.update",
+        "desk.appointments.check_in",
+        "desk.bookings.create",
+        "desk.customers.list",
+        "desk.customers.create",
+        "desk.customers.read",
+        "desk.customers.update",
+        "desk.customers.notes"
       ],
-      "routes": [],
+      "routes": [
+        "/customers/:id"
+      ],
       "menu": [
         {
           "id": "dashboard",
@@ -313,8 +346,8 @@
           "id": "appointments",
           "label": "Appointments",
           "path": "/appointments",
-          "description": "Booking requests: confirm with stylist, time and room, or reject. Full cards and schedule arrive in Task 3.",
-          "task": "Task 2b",
+          "description": "Booking requests as cards: confirm, reject, move, cancel, check in, or mark a no-show.",
+          "task": "Task 3a",
           "status": "available"
         },
         {
@@ -329,9 +362,9 @@
           "id": "customers",
           "label": "Customers",
           "path": "/customers",
-          "description": "All customer records, merge and anonymise.",
-          "task": "Task 3",
-          "status": "planned"
+          "description": "Search customers, open a profile with visit history and notes, register walk-ins and book them.",
+          "task": "Task 3b",
+          "status": "available"
         },
         {
           "id": "staff",

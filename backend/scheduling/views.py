@@ -19,8 +19,9 @@ from rest_framework.views import APIView
 from accounts.audit import audit
 from accounts.models import AuditLog
 from billing.models import Payment
+from people import desk as customer_desk
 from people import ratings
-from people.models import StylistProfile
+from people.models import CustomerProfile, StylistProfile
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentEvent, Room, Service
 from scheduling.serializers import (
@@ -29,6 +30,7 @@ from scheduling.serializers import (
     ConfirmSerializer,
     CustomerAppointmentSerializer,
     DeskAppointmentSerializer,
+    DeskBookingSerializer,
     DeskCancelSerializer,
     DismissSerializer,
     PaySerializer,
@@ -602,6 +604,120 @@ class DeskNoShowView(APIView):
         except booking.BookingError as exc:
             return booking_error(exc)
         return desk_done(request, pk, AuditLog.Action.APPOINTMENT_NO_SHOW)
+
+
+class DeskCheckInView(APIView):
+    policy_action = "desk.appointments.check_in"
+
+    @extend_schema(summary="Check a guest in on the day of the visit")
+    def post(self, request: Request, pk) -> Response:
+        desk_appointment(pk)
+        try:
+            booking.check_in(pk, actor=request.user)
+        except booking.BookingError as exc:
+            return booking_error(exc)
+        return desk_done(request, pk, AuditLog.Action.APPOINTMENT_CHECKED_IN)
+
+
+class DeskSlotsView(APIView):
+    """Free times (and which stylists are free) for a walk-in or phone booking."""
+
+    policy_action = "desk.bookings.create"
+
+    @extend_schema(summary="Free times for a desk booking")
+    def get(self, request: Request) -> Response:
+        params = SlotQuerySerializer(
+            data={**request.query_params.dict(), "addons": request.query_params.getlist("addons")}
+        )
+        params.is_valid(raise_exception=True)
+        data = params.validated_data
+        service = get_service(data["service"])
+        try:
+            quote = booking.quote(service, data.get("variant"), data.get("addons"))
+        except booking.BookingError as exc:
+            return booking_error(exc)
+        booking.expire_due()
+        stylists = list(booking.qualified_stylists(service))
+        wanted = [s.id for s in stylists if data.get("stylist") in (None, s.id)]
+        starts = booking.free_starts(data["date"], quote.duration_minutes, wanted, staff=True)
+        division = service.category.division
+        rooms = sorted(
+            Room.objects.filter(is_active=True), key=lambda r: (r.division != division, r.name)
+        )
+        return Response(
+            {
+                "date": data["date"].isoformat(),
+                "duration_minutes": quote.duration_minutes,
+                "price_total": str(quote.price_total),
+                "amount_payable": str(quote.amount_payable),
+                "stylists": [stylist_card(s) for s in stylists],
+                "rooms": RoomSerializer(rooms, many=True).data,
+                "slots": [
+                    {"start": start.isoformat(), "stylists": [str(i) for i in free]}
+                    for start, free in starts
+                ],
+            }
+        )
+
+
+class DeskBookingCreateView(APIView):
+    policy_action = "desk.bookings.create"
+
+    @extend_schema(
+        summary="Book a walk-in or phone customer",
+        request=DeskBookingSerializer,
+        responses={201: None},
+    )
+    def post(self, request: Request) -> Response:
+        body = DeskBookingSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+        customer = customer_desk.get(data["customer"])
+        if customer is None:
+            raise Http404
+        service = get_service(data["service"])
+        stylist, room, valid = placement(data)
+        if not valid:
+            return Response(
+                {"detail": "Choose a stylist and room from the list."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        profile = CustomerProfile.objects.filter(user=customer).first()
+        try:
+            appt = booking.create_desk_booking(
+                actor=request.user,
+                customer=customer,
+                service=service,
+                variant_id=data.get("variant"),
+                addon_ids=data.get("addons"),
+                start=data["start"],
+                stylist=stylist,
+                room=room,
+                source=data["source"],
+                contact={
+                    "name": customer.full_name,
+                    "email": customer.email,
+                    "phone": profile.phone if profile else "",
+                },
+                notes=data["notes"],
+                allergies=data["allergies"] or (profile.allergies if profile else ""),
+                check_in_now=data["check_in_now"],
+            )
+        except booking.BookingError as exc:
+            return booking_error(exc)
+        audit(
+            AuditLog.Action.APPOINTMENT_CREATED_BY_STAFF,
+            request=request,
+            actor=request.user,
+            target=customer,
+            appointment=str(appt.id),
+            source=data["source"],
+            checked_in=data["check_in_now"],
+        )
+        return Response(
+            DeskAppointmentSerializer(desk_appointment(appt.pk)).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class DeskDismissView(APIView):
