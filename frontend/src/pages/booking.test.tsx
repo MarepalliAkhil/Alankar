@@ -74,6 +74,12 @@ vi.mock('../api/booking', async (importOriginal) => {
     changePassword: vi.fn(),
   };
 });
+vi.mock('../api/privacy', () => ({
+  listMyRequests: vi.fn().mockResolvedValue([]),
+  createMyRequest: vi.fn(),
+  cancelMyRequest: vi.fn(),
+  downloadMyData: vi.fn(),
+}));
 vi.mock('../api/desk', () => ({
   listDeskAppointments: vi.fn(),
   getConfirmOptions: vi.fn(),

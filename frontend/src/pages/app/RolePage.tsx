@@ -11,6 +11,8 @@ const AdminInventoryPage = lazy(() => import('../admin/AdminInventoryPage'));
 const ContentPage = lazy(() => import('../admin/ContentPage'));
 const MarketingPage = lazy(() => import('../admin/MarketingPage'));
 const ReportsPage = lazy(() => import('../admin/ReportsPage'));
+const AuditLogPage = lazy(() => import('../admin/AuditLogPage'));
+const SecurityPage = lazy(() => import('../admin/SecurityPage'));
 const SettingsPage = lazy(() => import('../admin/SettingsPage'));
 const DeskAppointmentsPage = lazy(() => import('../desk/DeskAppointmentsPage'));
 const BookPage = lazy(() => import('../customer/BookPage'));
@@ -60,6 +62,8 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/content' && user.role === 'admin') return <ContentPage />;
   if (path === '/marketing' && user.role === 'admin') return <MarketingPage />;
   if (path === '/reports' && user.role === 'admin') return <ReportsPage />;
+  if (path === '/audit-log' && user.role === 'admin') return <AuditLogPage />;
+  if (path === '/security' && user.role === 'admin') return <SecurityPage />;
   if (path === '/customer/book' && user.role === 'customer') return <BookPage />;
   if (path === '/customer/appointments' && user.role === 'customer') return <AppointmentsPage />;
   if (path === '/customer/invoices' && user.role === 'customer') return <InvoicesPage />;

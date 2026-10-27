@@ -4,6 +4,11 @@ from accounts import work_views
 from billing import desk_views as pos
 from billing.views import MyInvoiceDetailView, MyInvoiceListView
 from people.desk_views import CustomerDetailView, CustomerListView, CustomerNoteView
+from people.privacy_views import (
+    MyDataDownloadView,
+    MyDataRequestCancelView,
+    MyDataRequestView,
+)
 from people.views import PendingRatingsView, ProfileView, RatingSubmitView
 from scheduling import views
 
@@ -15,6 +20,17 @@ booking_patterns = [
 
 my_patterns = [
     path("profile/", ProfileView.as_view(), name="my-profile"),
+    path("data-requests/", MyDataRequestView.as_view(), name="my-data-requests"),
+    path(
+        "data-requests/<uuid:pk>/cancel/",
+        MyDataRequestCancelView.as_view(),
+        name="my-data-request-cancel",
+    ),
+    path(
+        "data-requests/<uuid:pk>/download/",
+        MyDataDownloadView.as_view(),
+        name="my-data-request-download",
+    ),
     path("invoices/", MyInvoiceListView.as_view(), name="my-invoices"),
     path("invoices/<uuid:pk>/", MyInvoiceDetailView.as_view(), name="my-invoice"),
     path("ratings/pending/", PendingRatingsView.as_view(), name="my-ratings-pending"),

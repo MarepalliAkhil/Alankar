@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { changePassword, getProfile, updateProfile, type ProfilePayload } from '../../api/booking';
 import { serverFieldErrors } from '../../api/client';
+import { YourDataCard } from '../../components/customer/YourDataCard';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -62,6 +63,7 @@ export default function ProfilePage() {
         <div className="grid gap-lg lg:grid-cols-2">
           <DetailsForm initial={profile.data} />
           <PasswordForm />
+          <YourDataCard />
         </div>
       )}
     </section>

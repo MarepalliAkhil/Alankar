@@ -9,9 +9,9 @@
   passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
 - Task 5a (admin: team and catalogue): DONE. Verified on the owner's PC (2026-10-27).
   Task 5b (operations): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5c (content editor, marketing, reports): IMPLEMENTED in the build sandbox, waiting for the
-  owner's PC run (npm install for Recharts, migrate, pytest, npm test, walkthrough below).
-  Next: 5d (security and audit). One sub-task at a time; wait for "passed".
+  Task 5c (content editor, marketing, reports): DONE. Verified on the owner's PC (2026-10-27).
+  Task 5d (audit log, security, data requests): BUILT, waiting for the owner's "passed".
+  Next after 5d: Task 6. One sub-task at a time; wait for "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -598,3 +598,60 @@
    the sum of the invoices in POS / Billing for those days.
 9. Receptionist, stylist and customer: none of Website, Marketing or Reports is in their menu, and the
    URLs /content, /marketing and /reports show the "not allowed" page.
+
+## Task 5d: decisions
+- Audit Log (admin, /audit-log): filters for action, "by" email, free text, date range; 50 per page;
+  details shown with secrets masked (any key containing password, token, secret, code, hash, otp,
+  authorization, cookie or key, at any depth). The old `/api/audit/` list is masked the same way.
+  CSV download is a separate endpoint (policy `audit.export`), cells are protected against spreadsheet
+  formulas, capped at 20,000 rows, and each download is itself audited (`audit_exported`).
+- Security (admin, /security), three tabs:
+  1. Sign-ins & locks: failed sign-ins and lock-outs in the last 7 days, most-failed emails, the recent
+     failures with IP, and the accounts locked now with an Unlock button (audited `lock_cleared`).
+  2. Staff sessions: every live (not expired, not revoked) refresh session of admin, stylist and
+     receptionist accounts. "Sign out this session" blacklists that refresh token, ends a
+     receptionist's work session, and is audited (`session_revoked`). You cannot sign out your own
+     session from here (use Sign out). The session id shown is the token's jti, never the token.
+  3. Data requests: see below.
+- Known limit, documented on the page: a receptionist is cut off at once (their work session is
+  closed). Other staff keep the access cookie for up to 15 minutes (its lifetime) but cannot renew it.
+- Data requests: the customer asks on Profile > Your data (download my data, or delete my account).
+  One waiting request per kind; the customer can cancel while it waits. The admin completes or
+  declines (a reason is required to decline). Every step is audited (`data_requested`,
+  `data_request_decided`, `data_exported`, `customer_anonymized`).
+  - Export: after approval the customer can download a JSON file for 7 days. It is built fresh from the
+    database each time and is not stored. It contains the account, profile, bookings, invoices,
+    loyalty and ratings. It leaves out staff-only notes and chat messages.
+  - Delete = anonymize: name, email, phone, allergies, preferences, staff notes, chat messages, rating
+    comments, marketing consent, mail-outbox copies and sign-in history are removed or replaced; the
+    account is deactivated with no usable password and its refresh tokens are revoked. Invoices and
+    amounts stay, with the name "Deleted customer". Not allowed while the customer has an open booking
+    or a refund waiting for a decision; the admin sees the reason and the request stays pending.
+  - After anonymizing, the request keeps only the label "Deleted customer", never the email.
+- Policy: new actions audit.export, security.view, security.unlock, security.sessions.revoke,
+  datarequests.list, datarequests.decide (admin) and my.datarequests.list/create/cancel/download
+  (customer). A crawl test now walks every `/api/admin/` URL and checks that customers, stylists,
+  receptionists and guests are refused on every method.
+- Users & Roles is still not on any list (unplaced).
+
+## Task 5d: owner browser walkthrough (to verify on the PC)
+1. Admin > Audit Log: entries appear newest first. Filter by action "Login failed", by a date range,
+   by text (an email). Page through with Next/Previous. No password, code or token text is visible.
+2. Download CSV: a file opens in Excel; a new "Audit log downloaded" entry appears at the top.
+3. Sign out, then fail the password 5 times for one customer email. Sign in as admin > Security:
+   the count goes up, that email shows under Locked accounts. Press Unlock: they can sign in again,
+   and the Audit Log shows "Locked account unlocked".
+4. Sign in as a receptionist in a second browser window. Admin > Security > Staff sessions lists them.
+   Press Sign out this session: the receptionist's window returns to the sign-in page at its next
+   click, and their My Hours shows the session closed. Your own row says "This is you" with no button.
+5. As a customer (Profile > Your data): Request my data. The button disables and shows "Waiting for the
+   salon". Cancel request, then ask again.
+6. Admin > Security > Data requests: Approve download. The customer now sees Download my data and gets
+   a JSON file. The Audit Log shows the request, the decision and the download.
+7. Customer with an open booking asks for deletion: admin sees the warning, and Delete the account
+   shows the reason and changes nothing.
+8. Customer with only finished visits: Delete the account > Confirm. The customer cannot sign in. In
+   POS / Billing their old invoices remain, named "Deleted customer". If they still appear in the Customers
+   list, it is as "Deleted customer" with no phone or notes.
+9. Receptionist, stylist and customer: no Audit Log or Security in their menus; /audit-log and /security
+   show the "not allowed" page.

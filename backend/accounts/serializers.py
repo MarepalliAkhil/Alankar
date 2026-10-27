@@ -184,6 +184,13 @@ class AuditLogSerializer(serializers.ModelSerializer):
         model = AuditLog
         fields = ["id", "action", "actor_email", "email", "ip_address", "metadata", "created_at"]
 
+    def to_representation(self, instance):
+        from accounts.security_views import mask
+
+        data = super().to_representation(instance)
+        data["metadata"] = mask(data["metadata"])
+        return data
+
 
 class PasswordChangeSerializer(serializers.Serializer):
     current_password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)

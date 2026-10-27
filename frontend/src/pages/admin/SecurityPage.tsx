@@ -1,0 +1,33 @@
+import { useState } from 'react';
+import { DataRequestsPanel } from '../../components/admin/security/DataRequestsPanel';
+import { SessionsPanel } from '../../components/admin/security/SessionsPanel';
+import { SignInsPanel } from '../../components/admin/security/SignInsPanel';
+import { PageHeader } from '../../components/layout/PageContainer';
+import { Tabs } from '../../components/ui';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+
+const TABS = [
+  { id: 'signins', label: 'Sign-ins & locks' },
+  { id: 'sessions', label: 'Staff sessions' },
+  { id: 'requests', label: 'Data requests' },
+] as const;
+type Tab = (typeof TABS)[number]['id'];
+
+/** Admin: failed sign-ins and locks, signed-in staff, and customer data requests. */
+export default function SecurityPage() {
+  useDocumentTitle('Security');
+  const [tab, setTab] = useState<Tab>('signins');
+  return (
+    <div className="flex flex-col gap-lg pb-xl">
+      <PageHeader
+        eyebrow="Admin"
+        title="Security"
+        description="Watch sign-in problems, end a staff session, and handle customers' data requests."
+      />
+      <Tabs items={TABS} value={tab} onChange={setTab} label="Security sections" idPrefix="sec" />
+      {tab === 'signins' && <SignInsPanel />}
+      {tab === 'sessions' && <SessionsPanel />}
+      {tab === 'requests' && <DataRequestsPanel />}
+    </div>
+  );
+}

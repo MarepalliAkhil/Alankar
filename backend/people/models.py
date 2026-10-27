@@ -240,3 +240,50 @@ class DayOffRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.stylist_id} {self.start_date}..{self.end_date} ({self.status})"
+
+
+class DataRequest(models.Model):
+    """A customer's request to download their data or to have their account deleted.
+
+    The admin decides. An approved export can be downloaded by the customer for a limited time
+    (the data is built fresh from the database, never stored). An approved deletion anonymizes the
+    account: invoices stay (they are immutable) but carry no personal details.
+    """
+
+    class Kind(models.TextChoices):
+        EXPORT = "export", "Download my data"
+        DELETE = "delete", "Delete my account"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for the admin"
+        COMPLETED = "completed", "Done"
+        DECLINED = "declined", "Declined"
+        CANCELLED = "cancelled", "Cancelled by the customer"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="data_requests"
+    )
+    # Kept after anonymizing, so the admin can still see who asked (never the email address).
+    customer_label = models.CharField(max_length=120, blank=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "kind"],
+                condition=models.Q(status="pending"),
+                name="one_pending_request_per_kind",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.kind} request ({self.status})"

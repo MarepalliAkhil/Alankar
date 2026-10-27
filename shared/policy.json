@@ -111,7 +111,17 @@
     "marketing.manage": "Manage offers, coupons, loyalty rules and campaign drafts",
     "marketing.send": "Send a campaign to opted-in customers",
     "reports.view": "View and download reports",
-    "public.unsubscribe": "Unsubscribe from marketing messages with the emailed link"
+    "public.unsubscribe": "Unsubscribe from marketing messages with the emailed link",
+    "audit.export": "Download the audit log as CSV (the download is itself audited)",
+    "security.view": "See failed sign-ins, locked accounts and signed-in staff sessions",
+    "security.unlock": "Lift a sign-in lock",
+    "security.sessions.revoke": "Sign out another staff member's session",
+    "datarequests.list": "See customer data export and deletion requests",
+    "datarequests.decide": "Complete or decline a customer data request",
+    "my.datarequests.list": "See my own data requests",
+    "my.datarequests.create": "Ask for my data or for my account to be deleted",
+    "my.datarequests.cancel": "Cancel my waiting data request",
+    "my.datarequests.download": "Download my data after approval"
   },
   "public": {
     "api": [
@@ -181,7 +191,11 @@
         "chat.messages.send",
         "chat.messages.read",
         "chat.ws.connect",
-        "chat.ws.send"
+        "chat.ws.send",
+        "my.datarequests.list",
+        "my.datarequests.create",
+        "my.datarequests.cancel",
+        "my.datarequests.download"
       ],
       "routes": [
         "/customer/pay/:id",
@@ -470,7 +484,13 @@
         "content.publish",
         "marketing.manage",
         "marketing.send",
-        "reports.view"
+        "reports.view",
+        "audit.export",
+        "security.view",
+        "security.unlock",
+        "security.sessions.revoke",
+        "datarequests.list",
+        "datarequests.decide"
       ],
       "routes": [
         "/customers/:id"
@@ -592,8 +612,24 @@
           "id": "settings",
           "label": "Settings",
           "path": "/settings",
-          "description": "Shop details and GST number, opening hours, cancellation and payment-hold windows, discount cap, idle timeout and rating bands. Audit log and security arrive in Task 5d.",
+          "description": "Shop details and GST number, opening hours, cancellation and payment-hold windows, discount cap, idle timeout and rating bands.",
           "task": "Task 5b",
+          "status": "available"
+        },
+        {
+          "id": "audit-log",
+          "label": "Audit Log",
+          "path": "/audit-log",
+          "description": "Who did what and when, with filters and a CSV download. Secrets are never shown.",
+          "task": "Task 5d",
+          "status": "available"
+        },
+        {
+          "id": "security",
+          "label": "Security",
+          "path": "/security",
+          "description": "Failed sign-ins and locks, signed-in staff sessions, and customer data requests.",
+          "task": "Task 5d",
           "status": "available"
         }
       ]

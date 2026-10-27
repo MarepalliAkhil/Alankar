@@ -1,15 +1,33 @@
 from django.urls import path
 
+from accounts import security_views as sec
 from billing import admin_views as b
 from billing import report_views as r
 from inventory import admin_views as i
 from marketing import views as m
 from people import admin_views as v
+from people import privacy_views as pv
 from scheduling import catalogue_admin as c
 from website import content_admin as ca
 from website import settings_admin as w
 
 admin_patterns = [
+    path("audit/export/", sec.AuditExportView.as_view(), name="admin-audit-export"),
+    path("audit/", sec.AuditLogView.as_view(), name="admin-audit"),
+    path("security/", sec.SecurityOverviewView.as_view(), name="admin-security"),
+    path("security/unlock/", sec.UnlockView.as_view(), name="admin-security-unlock"),
+    path("security/sessions/", sec.StaffSessionListView.as_view(), name="admin-sessions"),
+    path(
+        "security/sessions/<str:jti>/revoke/",
+        sec.StaffSessionRevokeView.as_view(),
+        name="admin-session-revoke",
+    ),
+    path("data-requests/", pv.AdminDataRequestListView.as_view(), name="admin-data-requests"),
+    path(
+        "data-requests/<uuid:pk>/decide/",
+        pv.AdminDataRequestDecideView.as_view(),
+        name="admin-data-request-decide",
+    ),
     path("staff/<uuid:pk>/details/", v.StaffDetailsView.as_view(), name="admin-staff-details"),
     path(
         "staff/<uuid:pk>/link-profile/", v.StaffLinkProfileView.as_view(), name="admin-staff-link"

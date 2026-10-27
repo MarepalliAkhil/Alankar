@@ -92,6 +92,13 @@ class AuditLog(models.Model):
         MARKETING_CHANGED = "marketing_changed", "Offers, coupons or loyalty settings changed"
         CAMPAIGN_SENT = "campaign_sent", "Campaign sent"
         REPORT_EXPORTED = "report_exported", "Report downloaded"
+        AUDIT_EXPORTED = "audit_exported", "Audit log downloaded"
+        SESSION_REVOKED = "session_revoked", "Staff session signed out by the admin"
+        LOCK_CLEARED = "lock_cleared", "Locked account unlocked by the admin"
+        DATA_REQUESTED = "data_requested", "Customer asked for their data or deletion"
+        DATA_REQUEST_DECIDED = "data_request_decided", "Data request decided"
+        DATA_EXPORTED = "data_exported", "Customer downloaded their data"
+        CUSTOMER_ANONYMIZED = "customer_anonymized", "Customer account anonymized"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)
