@@ -7,9 +7,10 @@
 - Task 4 (stylist slice 4a, Zen Chat 4b): DONE. Verified on the owner's PC (2026-10-27): tests,
   lint, typecheck, build and the browser walkthroughs passed. Sandbox at hand-off: pytest all
   passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
-- Task 5a (admin: team and catalogue): IMPLEMENTED in the build sandbox, waiting for the owner's PC
-  run (migrate, pytest, npm test, walkthrough below). Then 5b (operations), 5c (content, marketing,
-  reports), 5d (security and audit). One sub-task at a time; wait for "passed".
+- Task 5a (admin: team and catalogue): DONE. Verified on the owner's PC (2026-10-27).
+  Task 5b (operations): IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate,
+  pytest, npm test, walkthrough below). Then 5c (content, marketing, reports), 5d
+  (security and audit). One sub-task at a time; wait for "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -470,3 +471,55 @@
    (a reason is required). Book a visit on a requested day first to see the "Approve anyway" warning.
 6. Deactivate the stylist: their open session stops at once and they leave the Team page.
 7. Audit: Staff page > Recent security activity shows the changes.
+
+## Task 5b: decisions
+- Admin Inventory page (/inventory for the admin; receptionists keep the view-only page): Products
+  (add, edit, hide, delete only if never stocked), Stock ledger (per product or all), Suppliers
+  (add, edit, hide, delete only if never used). A stock level is never typed in: the product form has
+  no stock field and the API refuses `stock`. Levels change only by a ledger row: stock received
+  (optional supplier), count adjustment (+/-, reason required) or wastage (reason required). A
+  movement that would take stock below zero is refused. Low-stock alert at or below the product's
+  level, shown as a banner and a badge. New ledger reasons: wastage, return. Audited: PRODUCT_CHANGED,
+  SUPPLIER_CHANGED, STOCK_MOVED (with level after).
+- Not built (not on the owner's list): purchase orders, product cost price. Say if you want them.
+- Refunds were already the only way to correct a paid invoice (Task 3c: invoice stays immutable,
+  receptionist asks, admin decides, reason required, audited). 5b adds: the admin can tick, when
+  approving or refunding directly, which products go back on the shelf (ledger row "return" linked to
+  the invoice, never more than were sold) and whether to take back loyalty points. Points: the share
+  of the earned points in proportion to the amount refunded, never below the customer's balance; if
+  the refund empties the invoice, points used as part payment are given back. A decided refund can
+  no longer be changed or deleted (model guard). The receptionist cannot choose reversals (400).
+  Nothing is reversed unless ticked.
+- Cash close review: the admin sees every signed close (POS / Billing > Cash closes), with
+  difference, and marks it reviewed once. A close with a cash difference needs a note. The counts
+  themselves stay as signed (review is stored separately). Audited: CASH_CLOSE_REVIEWED.
+- Settings page (/settings): shop details (address, phone, email, map link, GST number with format
+  check; stored with the public contact block), opening hours (drive booking and the public list of
+  hours, closed days show as Closed), free-cancellation window, payment hold time, discount cap,
+  receptionist idle timeout (5 to 120 minutes; the desk reads it from the server with each activity
+  ping), and rating bands with minimum ratings and the flag level (highest first, last band must start
+  at 0). Each section saves on its own; changes are audited as SETTINGS_CHANGED with {field: [old, new]};
+  saving unchanged values writes no entry. The discount cap moved from the Staff page to Settings.
+- Settings audit and security log pages arrive in 5d; Users & Roles is still not on any list.
+- Policy: new actions inventory.manage, inventory.stock, cash.close.review, settings.business.read and
+  .update (admin only), with denial tests for customer, stylist, receptionist and guest.
+- Migrations: billing 0006, inventory 0002, people 0008, accounts 0012 and 0013.
+
+## Task 5b: owner browser walkthrough (to verify on the PC)
+1. Admin > Inventory: add a product with opening stock 4 and low-stock level 5: the low-stock banner
+   and badge show. Edit it: there is no stock field. Change stock > Stock received 10 (pick a
+   supplier): level 14, the Stock ledger tab shows both rows. Try wastage without a reason: refused.
+   Try writing off more than is in stock: refused.
+2. Suppliers tab: add one, use it in a delivery, then try Delete: refused (Hide works).
+3. As receptionist, sell the product at POS. As admin, POS / Billing > Invoices > open the invoice >
+   Refund: tick "put back on the shelf 1" and "take back loyalty points", refund. Inventory shows
+   the unit back (ledger row "Returned by a customer"). Try putting back more than was sold: refused.
+4. Receptionist: sign off the cash close (Cash Close). Admin: POS / Billing > Cash closes > Mark
+   reviewed (a note is needed if the count was off). Reviewing twice is refused.
+5. Admin > Settings: change the phone and GST number: the public footer shows the new phone at once.
+   Close Monday in Opening hours: the public hours list shows "Monday: Closed" and Monday has no
+   slots on the booking page. Change the free-cancellation window to 48 and the discount cap to 5:
+   the receptionist's checkout cap is 5%. Set the idle timeout to 5: the receptionist is signed out
+   after 5 quiet minutes. Change a rating band: Earnings uses it.
+6. Staff page > Recent security activity (and the Django audit table) show each change with old and
+   new values.

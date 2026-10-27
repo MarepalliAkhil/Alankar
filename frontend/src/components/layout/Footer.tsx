@@ -46,7 +46,7 @@ export function Footer() {
                 <p key={row.days} className="flex gap-sm text-text-muted">
                   <Clock aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
-                    {row.days}: {row.open} – {row.close}
+                    {row.closed ? `${row.days}: Closed` : `${row.days}: ${row.open} – ${row.close}`}
                   </span>
                 </p>
               ))}

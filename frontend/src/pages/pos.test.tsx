@@ -269,6 +269,8 @@ describe('POS / Billing', () => {
       expect(posApi.decideRefund).toHaveBeenCalledWith('r1', {
         decision: 'approve',
         method: 'cash',
+        restock: [],
+        reverse_loyalty: false,
       }),
     );
   });

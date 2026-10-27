@@ -24,13 +24,11 @@ MAX_SESSION_HOURS = 16
 class ActivityView(APIView):
     policy_action = "work.ping"
 
-    @extend_schema(
-        summary="The page saw real activity (keeps the session alive)", responses={204: None}
-    )
+    @extend_schema(summary="The page saw real activity (keeps the session alive)")
     def post(self, request: Request) -> Response:
         if not work.ping(request.user):
             return Response({"detail": "Session expired."}, status=status.HTTP_401_UNAUTHORIZED)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"idle_minutes": int(work.idle_limit().total_seconds() // 60)})
 
 
 def parse_month(value) -> tuple[int, int]:

@@ -168,6 +168,7 @@ class LoyaltyEntry(models.Model):
     class Reason(models.TextChoices):
         EARNED = "earned", "Earned on a visit"
         REDEEMED = "redeemed", "Used at checkout"
+        REFUND = "refund", "Adjusted by a refund"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(

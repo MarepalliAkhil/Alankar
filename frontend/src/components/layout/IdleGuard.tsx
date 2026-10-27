@@ -4,9 +4,10 @@ import { pingActivity } from '../../api/work';
 import { useSession } from '../../session/session-context';
 import { Button, Modal } from '../ui';
 
-/** The server signs a receptionist out after this long without activity. Keep in step with it. */
+/** Until the server says otherwise (its answer to each ping), the limit is 15 minutes. */
 export const IDLE_LIMIT_MS = 15 * 60 * 1000;
 export const IDLE_WARNING_MS = 14 * 60 * 1000;
+const WARNING_LEAD_MS = 60 * 1000;
 const PING_EVERY_MS = 60 * 1000;
 const CHECK_EVERY_MS = 5 * 1000;
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'] as const;
@@ -22,6 +23,7 @@ export function IdleGuard() {
   const lastActive = useRef(Date.now());
   const lastPing = useRef(0);
   const warning = useRef(false);
+  const limitMs = useRef(IDLE_LIMIT_MS);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -29,9 +31,13 @@ export function IdleGuard() {
       const now = Date.now();
       if (now - lastPing.current >= PING_EVERY_MS) {
         lastPing.current = now;
-        pingActivity().catch(() => {
-          // A refused ping means the server already ended the session; the app signs out.
-        });
+        pingActivity()
+          .then((answer) => {
+            if (answer?.idle_minutes) limitMs.current = answer.idle_minutes * 60 * 1000;
+          })
+          .catch(() => {
+            // A refused ping means the server already ended the session; the app signs out.
+          });
       }
     };
     const seen = () => {
@@ -44,12 +50,12 @@ export function IdleGuard() {
 
     const timer = window.setInterval(() => {
       const idle = Date.now() - lastActive.current;
-      if (idle >= IDLE_LIMIT_MS) {
+      if (idle >= limitMs.current) {
         window.clearInterval(timer);
         void signOut().finally(() => navigate('/login?role=receptionist&reason=idle'));
-      } else if (idle >= IDLE_WARNING_MS) {
+      } else if (idle >= limitMs.current - WARNING_LEAD_MS) {
         warning.current = true;
-        setSecondsLeft(Math.max(1, Math.ceil((IDLE_LIMIT_MS - idle) / 1000)));
+        setSecondsLeft(Math.max(1, Math.ceil((limitMs.current - idle) / 1000)));
       }
     }, CHECK_EVERY_MS);
 
@@ -64,7 +70,11 @@ export function IdleGuard() {
     lastActive.current = Date.now();
     lastPing.current = Date.now();
     setSecondsLeft(null);
-    pingActivity().catch(() => undefined);
+    pingActivity()
+      .then((answer) => {
+        if (answer?.idle_minutes) limitMs.current = answer.idle_minutes * 60 * 1000;
+      })
+      .catch(() => undefined);
   };
 
   return (

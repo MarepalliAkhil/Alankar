@@ -11,6 +11,9 @@ import {
   type PayMethod,
   type RefundRow,
 } from '../../api/pos';
+import { CashClosesPanel } from '../../components/admin/CashClosesPanel';
+import { ReversalFields } from '../../components/admin/ReversalFields';
+import { noReversal, toReversal, type ReversalChoice } from '../../components/admin/reversal';
 import { CheckoutModal } from '../../components/desk/CheckoutModal';
 import { InvoiceModal } from '../../components/desk/InvoiceModal';
 import { PageHeader } from '../../components/layout/PageContainer';
@@ -34,7 +37,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 import { useSession } from '../../session/session-context';
 
-type Tab = 'counter' | 'invoices' | 'refunds';
+type Tab = 'counter' | 'invoices' | 'refunds' | 'closes';
 
 /** POS / Billing: bill checked-in visits, look up invoices, and (admin) decide refunds. */
 export default function PosPage() {
@@ -48,7 +51,12 @@ export default function PosPage() {
   const tabs = [
     { id: 'counter' as const, label: 'Counter' },
     { id: 'invoices' as const, label: 'Invoices' },
-    ...(isAdmin ? [{ id: 'refunds' as const, label: 'Refunds' }] : []),
+    ...(isAdmin
+      ? [
+          { id: 'refunds' as const, label: 'Refunds' },
+          { id: 'closes' as const, label: 'Cash closes' },
+        ]
+      : []),
   ];
 
   return (
@@ -62,6 +70,7 @@ export default function PosPage() {
         {tab === 'counter' && <Counter onBill={setBilling} onOpen={setViewing} />}
         {tab === 'invoices' && <Invoices onOpen={setViewing} />}
         {tab === 'refunds' && isAdmin && <Refunds />}
+        {tab === 'closes' && isAdmin && <CashClosesPanel />}
       </TabPanel>
       {billing && (
         <CheckoutModal
@@ -215,13 +224,14 @@ function Refunds() {
   const [deciding, setDeciding] = useState<{ refund: RefundRow; approve: boolean } | null>(null);
   const [method, setMethod] = useState<PayMethod>('cash');
   const [note, setNote] = useState('');
+  const [undo, setUndo] = useState<ReversalChoice>(noReversal);
   const [problem, setProblem] = useState('');
 
   const decide = useMutation({
     mutationFn: () =>
       decideRefund(deciding!.refund.id, {
         decision: deciding!.approve ? 'approve' : 'reject',
-        ...(deciding!.approve ? { method } : { note }),
+        ...(deciding!.approve ? { method, ...toReversal(undo) } : { note }),
       }),
     onSuccess: () => {
       toast.show({
@@ -230,6 +240,7 @@ function Refunds() {
       });
       setDeciding(null);
       setNote('');
+      setUndo(noReversal);
       void queryClient.invalidateQueries({ queryKey: ['pos-refunds'] });
     },
     onError: (error) => setProblem(errorDetail(error) ?? 'Could not save the decision.'),
@@ -307,6 +318,15 @@ function Refunds() {
           }
         >
           <div className="flex flex-col gap-md">
+            {deciding.approve && (
+              <ReversalFields
+                returnable={deciding.refund.returnable ?? []}
+                earned={deciding.refund.loyalty_earned ?? 0}
+                redeemed={deciding.refund.loyalty_redeemed ?? 0}
+                value={undo}
+                onChange={setUndo}
+              />
+            )}
             {deciding.approve ? (
               <Select
                 label="Money goes back by"

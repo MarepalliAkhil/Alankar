@@ -12,6 +12,24 @@ from django.conf import settings
 from django.db import models
 
 
+class Supplier(models.Model):
+    """Who stock is bought from. Hidden (is_active = false) instead of deleted once used."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=120, unique=True)
+    contact_person = models.CharField(max_length=120, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    notes = models.CharField(max_length=300, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Product(models.Model):
     """Retail product sold at the counter. `unit_price` includes GST."""
 
@@ -38,6 +56,8 @@ class StockMovement(models.Model):
         PURCHASE = "purchase", "Stock received"
         SALE = "sale", "Sold at the counter"
         ADJUSTMENT = "adjustment", "Stock count adjustment"
+        WASTAGE = "wastage", "Wastage (damaged, expired or used up)"
+        RETURN = "return", "Returned by a customer (refund)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
@@ -52,6 +72,9 @@ class StockMovement(models.Model):
     )
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    supplier = models.ForeignKey(
+        Supplier, null=True, blank=True, on_delete=models.PROTECT, related_name="movements"
     )
     note = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

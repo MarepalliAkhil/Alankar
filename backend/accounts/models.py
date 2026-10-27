@@ -77,6 +77,11 @@ class AuditLog(models.Model):
         STYLIST_LINKED = "stylist_linked", "Stylist account linked to a team profile"
         DAY_OFF_REQUESTED = "day_off_requested", "Days off requested"
         DAY_OFF_WITHDRAWN = "day_off_withdrawn", "Days off request withdrawn"
+        PRODUCT_CHANGED = "product_changed", "Product added or changed"
+        SUPPLIER_CHANGED = "supplier_changed", "Supplier added or changed"
+        STOCK_MOVED = "stock_moved", "Stock received, adjusted or written off"
+        CASH_CLOSE_REVIEWED = "cash_close_reviewed", "Cash close reviewed by the admin"
+        SETTINGS_CHANGED = "settings_changed", "Business settings changed"
         WORK_SESSION_CORRECTED = "work_session_corrected", "Working hours corrected by the admin"
         STAFF_PROFILE_UPDATED = "staff_profile_updated", "Staff details changed by the admin"
         CATALOGUE_CHANGED = "catalogue_changed", "Services, categories or rooms changed"
@@ -218,7 +223,7 @@ class WorkSession(models.Model):
 
     class EndReason(models.TextChoices):
         LOGOUT = "logout", "Signed out"
-        IDLE = "idle", "Signed out after 15 minutes idle"
+        IDLE = "idle", "Signed out after being idle"
         REPLACED = "replaced", "Signed in again elsewhere"
         CORRECTED = "corrected", "Closed by the admin"
 

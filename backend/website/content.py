@@ -82,3 +82,11 @@ PAY_DEFAULTS = {
 def pay_rules() -> dict:
     stored = content("pay_rules", {}) or {}
     return {**PAY_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}
+
+
+# Security rules (admin-editable). The idle limit signs a receptionist out after this long.
+def security_settings() -> dict:
+    from django.conf import settings
+
+    stored = content("security", {}) or {}
+    return {"idle_minutes": stored.get("idle_minutes") or settings.SALON_AUTH["IDLE_MINUTES"]}

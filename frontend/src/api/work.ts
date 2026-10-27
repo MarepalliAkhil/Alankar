@@ -24,8 +24,9 @@ export interface MyHours {
 }
 
 /** Tells the server the receptionist is really using the page (keeps the session alive). */
-export async function pingActivity(): Promise<void> {
-  await api.post('/auth/activity/');
+export async function pingActivity(): Promise<{ idle_minutes: number }> {
+  const { data } = await api.post<{ idle_minutes: number }>('/auth/activity/');
+  return data;
 }
 
 export async function getMyHours(month?: string): Promise<MyHours> {

@@ -8,14 +8,12 @@ import { serverFieldErrors } from '../../api/client';
 import {
   createInvite,
   deactivateStaff,
-  getPosSettings,
   listAudit,
   listInvites,
   listStaff,
   reactivateStaff,
   resendInvite,
   setHourlyRate,
-  setPosSettings,
   type StaffInvite,
   type StaffMember,
   type StaffRole,
@@ -391,8 +389,6 @@ export default function StaffManagementPage() {
 
       <DaysOffPanel />
 
-      <BillingSettings />
-
       <section aria-labelledby="invites-title" className="flex flex-col gap-md">
         <h2 id="invites-title" className="text-lg font-semibold text-text">
           Invites
@@ -561,64 +557,5 @@ function RateEditor({ member, onSaved }: { member: StaffMember; onSaved: () => v
         Save rate
       </Button>
     </form>
-  );
-}
-
-/** The most a receptionist may discount a bill, as a percentage. */
-function BillingSettings() {
-  const toast = useToast();
-  const queryClient = useQueryClient();
-  const settings = useQuery({ queryKey: ['pos-settings'], queryFn: getPosSettings });
-  const [value, setValue] = useState<string | null>(null);
-  const [problem, setProblem] = useState('');
-  const save = useMutation({
-    mutationFn: (percent: number) => setPosSettings({ discount_cap_percent: percent }),
-    onSuccess: () => {
-      setValue(null);
-      void queryClient.invalidateQueries({ queryKey: ['pos-settings'] });
-      toast.show({ tone: 'success', title: 'Discount cap saved' });
-    },
-    onError: (error) => setProblem(genericErrorMessage(error, 'Could not save. Please try again.')),
-  });
-  const shown = value ?? String(settings.data?.discount_cap_percent ?? '');
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const number = Number(shown);
-    if (shown.trim() === '' || !Number.isInteger(number) || number < 0 || number > 100) {
-      setProblem('Enter a whole number from 0 to 100.');
-      return;
-    }
-    setProblem('');
-    save.mutate(number);
-  };
-  return (
-    <Card variant="dense" as="section" aria-labelledby="billing-title">
-      <h2 id="billing-title" className="text-lg font-semibold text-text">
-        Billing
-      </h2>
-      {settings.isPending ? (
-        <LoadingState label="Loading billing settings…" lines={1} />
-      ) : settings.isError ? (
-        <ErrorState
-          description="We couldn't load the billing settings."
-          onRetry={() => void settings.refetch()}
-        />
-      ) : (
-        <form onSubmit={submit} noValidate className="mt-md flex flex-wrap items-start gap-md">
-          <Input
-            label="Discount cap (%)"
-            hint="The most a receptionist can take off a bill at checkout."
-            inputMode="numeric"
-            value={shown}
-            onChange={(event) => setValue(event.target.value)}
-            error={problem || undefined}
-            className="w-28"
-          />
-          <Button type="submit" loading={save.isPending} className="mt-7">
-            Save discount cap
-          </Button>
-        </form>
-      )}
-    </Card>
   );
 }

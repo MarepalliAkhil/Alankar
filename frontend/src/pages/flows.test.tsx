@@ -47,6 +47,10 @@ vi.mock('../api/billing', async (importOriginal) => {
     submitRating: vi.fn(),
   };
 });
+vi.mock('../api/admin', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/admin')>()),
+  listDaysOff: vi.fn().mockResolvedValue([]),
+}));
 vi.mock('../api/staff', () => ({
   listStaff: vi.fn(),
   listInvites: vi.fn(),

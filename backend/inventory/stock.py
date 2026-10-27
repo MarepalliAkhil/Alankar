@@ -21,7 +21,16 @@ def level(product: Product) -> int:
     ]
 
 
-def move(product: Product, delta: int, reason: str, *, actor=None, invoice=None, note: str = ""):
+def move(
+    product: Product,
+    delta: int,
+    reason: str,
+    *,
+    actor=None,
+    invoice=None,
+    note: str = "",
+    supplier=None,
+):
     """Writes one ledger row. The caller holds the product row lock (select_for_update)."""
     if delta < 0 and level(product) + delta < 0:
         raise StockError(f"Only {level(product)} of {product.name} in stock.")
@@ -31,5 +40,6 @@ def move(product: Product, delta: int, reason: str, *, actor=None, invoice=None,
         reason=reason,
         actor=actor if getattr(actor, "is_authenticated", False) else None,
         invoice=invoice,
+        supplier=supplier,
         note=note[:200],
     )

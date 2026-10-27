@@ -75,7 +75,7 @@ describe('My Hours & Pay', () => {
     vi.mocked(getSession).mockResolvedValue(userFor('receptionist'));
     vi.mocked(publicApi.getSite).mockResolvedValue(site);
     vi.mocked(publicApi.getServices).mockResolvedValue([haircut, beard]);
-    vi.mocked(workApi.pingActivity).mockResolvedValue();
+    vi.mocked(workApi.pingActivity).mockResolvedValue({ idle_minutes: 15 });
     vi.mocked(workApi.getMyHours).mockResolvedValue(hours);
   });
 
@@ -150,7 +150,7 @@ describe('idle sign-out', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     signOut.mockResolvedValue(undefined);
-    vi.mocked(workApi.pingActivity).mockResolvedValue();
+    vi.mocked(workApi.pingActivity).mockResolvedValue({ idle_minutes: 15 });
     vi.useFakeTimers();
   });
   afterEach(() => vi.useRealTimers());
@@ -170,6 +170,20 @@ describe('idle sign-out', () => {
       await vi.advanceTimersByTimeAsync(IDLE_WARNING_MS - 20000);
     });
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it('uses the limit the admin set (the server reports it with each ping)', async () => {
+    vi.mocked(workApi.pingActivity).mockResolvedValue({ idle_minutes: 30 });
+    mount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(IDLE_LIMIT_MS + 6000);
+    });
+    expect(signOut).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+    });
+    expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it('signs out at the limit and goes to the login page', async () => {

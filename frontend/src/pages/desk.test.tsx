@@ -33,6 +33,10 @@ vi.mock('../api/public', () => ({
   getTeam: vi.fn(),
   getPolicyPage: vi.fn(),
 }));
+vi.mock('../api/admin', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/admin')>()),
+  listDaysOff: vi.fn().mockResolvedValue([]),
+}));
 vi.mock('../api/staff', () => ({
   listStaff: vi.fn(),
   listInvites: vi.fn(),
@@ -349,7 +353,6 @@ describe('staff pay and billing settings (admin)', () => {
     ]);
     vi.mocked(staffApi.listInvites).mockResolvedValue([]);
     vi.mocked(staffApi.listAudit).mockResolvedValue([]);
-    vi.mocked(staffApi.getPosSettings).mockResolvedValue({ discount_cap_percent: 20 });
   });
 
   it('saves a receptionist hourly rate and only offers it for receptionists', async () => {
@@ -368,30 +371,11 @@ describe('staff pay and billing settings (admin)', () => {
     await waitFor(() => expect(staffApi.setHourlyRate).toHaveBeenCalledWith('s9', '180.50'));
   });
 
-  it('shows and saves the discount cap, rejecting values outside 0 to 100', async () => {
-    vi.mocked(staffApi.setPosSettings).mockResolvedValue({ discount_cap_percent: 15 });
-    const user = userEvent.setup();
-    renderAt('/staff');
-    const input = await screen.findByLabelText(/Discount cap/);
-    expect(input).toHaveValue('20');
-    await user.clear(input);
-    await user.type(input, '150');
-    await user.click(screen.getByRole('button', { name: 'Save discount cap' }));
-    expect(await screen.findByText('Enter a whole number from 0 to 100.')).toBeInTheDocument();
-    expect(staffApi.setPosSettings).not.toHaveBeenCalled();
-    await user.clear(input);
-    await user.type(input, '15');
-    await user.click(screen.getByRole('button', { name: 'Save discount cap' }));
-    await waitFor(() =>
-      expect(staffApi.setPosSettings).toHaveBeenCalledWith({ discount_cap_percent: 15 }),
-    );
-  });
-
   it('keeps the receptionist away from the Staff page', async () => {
     vi.mocked(getSession).mockResolvedValue(userFor('receptionist'));
     renderAt('/staff');
-    await waitFor(() => expect(staffApi.getPosSettings).not.toHaveBeenCalled());
-    expect(screen.queryByLabelText(/Discount cap/)).not.toBeInTheDocument();
+    await screen.findByText("You don't have access to this page");
+    expect(staffApi.listStaff).not.toHaveBeenCalled();
   });
 });
 

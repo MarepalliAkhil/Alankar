@@ -50,8 +50,14 @@ export interface TeamMember {
 export interface SiteData {
   hero: { headline?: string; subtitle?: string } | null;
   about: { heading?: string; body?: string } | null;
-  contact: { address?: string; phone?: string; email?: string; map_url?: string } | null;
-  hours: { days: string; open: string; close: string }[] | null;
+  contact: {
+    address?: string;
+    phone?: string;
+    email?: string;
+    map_url?: string;
+    gst_number?: string;
+  } | null;
+  hours: { days: string; open: string; close: string; closed?: boolean }[] | null;
   social: { label: string; url: string }[] | null;
   video: { url?: string } | null;
   achievements: { id: number; label: string; value: number; suffix: string }[];

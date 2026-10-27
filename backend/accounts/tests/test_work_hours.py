@@ -82,7 +82,7 @@ def test_activity_pings_keep_the_session_alive(desk):
     session = only_session(user)
     session.last_seen_at = timezone.now() - timedelta(minutes=10)
     session.save()
-    assert post(client, "/api/auth/activity/").status_code == 204
+    assert post(client, "/api/auth/activity/").status_code == 200
     session.refresh_from_db()
     assert timezone.now() - session.last_seen_at < timedelta(seconds=30)
 

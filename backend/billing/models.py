@@ -104,6 +104,10 @@ class Refund(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     decision_note = models.CharField(max_length=300, blank=True)
+    # What the admin chose to reverse when approving: products put back on the shelf as
+    # [{"product": id, "name": ..., "quantity": n}], and loyalty points taken back (or given back).
+    restocked = models.JSONField(default=list, blank=True)
+    loyalty_adjusted = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
 
@@ -112,6 +116,17 @@ class Refund(models.Model):
 
     def __str__(self) -> str:
         return f"Refund {self.amount} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        # A decided refund is a financial record: it never changes again.
+        if not self._state.adding:
+            still_open = Refund.objects.filter(pk=self.pk, status=Refund.Status.PENDING_APPROVAL)
+            if not still_open.exists():
+                raise InvoiceError("A decided refund cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise InvoiceError("A refund cannot be deleted.")
 
 
 class InvoiceError(Exception):
@@ -236,6 +251,12 @@ class CashClose(models.Model):
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )
     closed_at = models.DateTimeField()
+    # The admin's review (set once, with queryset.update; the counts above never change).
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=300, blank=True)
 
     class Meta:
         ordering = ["-business_date"]

@@ -77,6 +77,14 @@ def visit_card(appt: Appointment) -> dict:
     }
 
 
+def returnable_data(invoice: Invoice) -> list[dict]:
+    return [
+        {"product": str(pid), "name": name, "quantity": left}
+        for pid, (name, left) in refunds.returnable(invoice).items()
+        if left > 0
+    ]
+
+
 def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
     data = {
         "id": str(invoice.id),
@@ -103,6 +111,7 @@ def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
         "discount_reason": invoice.discount_reason,
         "loyalty_redeemed": invoice.loyalty_redeemed,
         "loyalty_earned": invoice.loyalty_earned,
+        "returnable": returnable_data(invoice),
         "stylist_name": (
             invoice.appointment.stylist.display_name if invoice.appointment.stylist_id else None
         ),
@@ -140,6 +149,12 @@ def refund_data(refund: Refund) -> dict:
         "service_name": appt.service_name,
         "invoice_number": refund.invoice.number if refund.invoice_id else None,
         "requested_by": refund.requested_by.full_name if refund.requested_by_id else None,
+        "restocked": refund.restocked,
+        "loyalty_adjusted": refund.loyalty_adjusted,
+        "invoice_id": str(refund.invoice_id) if refund.invoice_id else None,
+        "returnable": returnable_data(refund.invoice) if refund.invoice_id else [],
+        "loyalty_earned": refund.invoice.loyalty_earned if refund.invoice_id else 0,
+        "loyalty_redeemed": refund.invoice.loyalty_redeemed if refund.invoice_id else 0,
     }
 
 
@@ -355,10 +370,17 @@ class DeskInvoiceDetailView(APIView):
 # --------------------------------------------------------------------------- refunds
 
 
+class RestockLine(serializers.Serializer):
+    product = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1, max_value=1000)
+
+
 class RefundRequestSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
     reason = serializers.CharField(min_length=3, max_length=300)
     method = serializers.ChoiceField(choices=["cash", "card", "upi"], required=False, default="")
+    restock = RestockLine(many=True, required=False, default=list)
+    reverse_loyalty = serializers.BooleanField(required=False, default=False)
 
 
 class InvoiceRefundView(APIView):
@@ -371,6 +393,10 @@ class InvoiceRefundView(APIView):
         data = body.validated_data
         if not Invoice.objects.filter(pk=pk).exists():
             raise Http404
+        if (data["restock"] or data["reverse_loyalty"]) and request.user.role != "admin":
+            return Response(
+                {"detail": "Only the admin can put stock or loyalty points back."}, status=400
+            )
         try:
             refund = refunds.request_refund(
                 pk,
@@ -378,6 +404,11 @@ class InvoiceRefundView(APIView):
                 amount=data["amount"],
                 reason=data["reason"],
                 method=data["method"],
+                restock=[
+                    {"product": str(r["product"]), "quantity": r["quantity"]}
+                    for r in data["restock"]
+                ],
+                reverse_loyalty=data["reverse_loyalty"],
             )
         except CheckoutError as exc:
             return error_response(exc)
@@ -399,6 +430,9 @@ class InvoiceRefundView(APIView):
                 refund=str(refund.id),
                 amount=str(refund.amount),
                 method=refund.method,
+                reason=refund.reason,
+                restocked=refund.restocked,
+                loyalty_adjusted=refund.loyalty_adjusted,
             )
         refund = Refund.objects.select_related(
             "payment__appointment", "invoice", "requested_by"
@@ -422,6 +456,8 @@ class DecisionSerializer(serializers.Serializer):
     decision = serializers.ChoiceField(choices=["approve", "reject"])
     method = serializers.ChoiceField(choices=["cash", "card", "upi"], required=False, default="")
     note = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    restock = RestockLine(many=True, required=False, default=list)
+    reverse_loyalty = serializers.BooleanField(required=False, default=False)
 
 
 class RefundDecisionView(APIView):
@@ -437,7 +473,16 @@ class RefundDecisionView(APIView):
         approve = data["decision"] == "approve"
         try:
             refund = refunds.decide(
-                pk, actor=request.user, approve=approve, method=data["method"], note=data["note"]
+                pk,
+                actor=request.user,
+                approve=approve,
+                method=data["method"],
+                note=data["note"],
+                restock=[
+                    {"product": str(r["product"]), "quantity": r["quantity"]}
+                    for r in data["restock"]
+                ],
+                reverse_loyalty=data["reverse_loyalty"],
             )
         except CheckoutError as exc:
             return error_response(exc)
@@ -449,6 +494,9 @@ class RefundDecisionView(APIView):
             refund=str(refund.id),
             amount=str(refund.amount),
             method=refund.method,
+            reason=refund.reason,
+            restocked=refund.restocked,
+            loyalty_adjusted=refund.loyalty_adjusted,
         )
         refund = Refund.objects.select_related(
             "payment__appointment", "invoice", "requested_by"

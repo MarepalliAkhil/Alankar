@@ -52,6 +52,25 @@ export interface RefundRow {
   service_name: string;
   invoice_number: string | null;
   requested_by: string | null;
+  /** Products the admin put back on the shelf, and loyalty points taken back (+ given back). */
+  restocked?: { product: string; name: string; quantity: number }[];
+  loyalty_adjusted?: number;
+  invoice_id?: string | null;
+  /** What could still go back on the shelf for this invoice. */
+  returnable?: Returnable[];
+  loyalty_earned?: number;
+  loyalty_redeemed?: number;
+}
+
+export interface Returnable {
+  product: string;
+  name: string;
+  quantity: number;
+}
+
+export interface Reversal {
+  restock: { product: string; quantity: number }[];
+  reverse_loyalty: boolean;
 }
 
 export interface InvoiceDetail extends InvoiceRow {
@@ -64,6 +83,7 @@ export interface InvoiceDetail extends InvoiceRow {
   discount_reason: string;
   loyalty_redeemed: number;
   loyalty_earned: number;
+  returnable?: Returnable[];
   stylist_name: string | null;
   items: {
     kind: 'service' | 'product';
@@ -165,7 +185,7 @@ export async function getInvoice(id: string): Promise<InvoiceDetail> {
 
 export async function requestRefund(
   invoiceId: string,
-  payload: { amount: string; reason: string; method?: PayMethod },
+  payload: { amount: string; reason: string; method?: PayMethod } & Partial<Reversal>,
 ): Promise<RefundRow> {
   const { data } = await api.post<RefundRow>(`/desk/invoices/${invoiceId}/refunds/`, payload);
   return data;
@@ -178,7 +198,11 @@ export async function listPendingRefunds(): Promise<RefundRow[]> {
 
 export async function decideRefund(
   id: string,
-  payload: { decision: 'approve' | 'reject'; method?: PayMethod; note?: string },
+  payload: {
+    decision: 'approve' | 'reject';
+    method?: PayMethod;
+    note?: string;
+  } & Partial<Reversal>,
 ): Promise<RefundRow> {
   const { data } = await api.post<RefundRow>(`/desk/refunds/${id}/decision/`, payload);
   return data;

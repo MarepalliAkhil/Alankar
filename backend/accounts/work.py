@@ -11,17 +11,17 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import User, WorkSession
+from website.content import security_settings
 
 E_ = WorkSession.EndReason
 
 
 def idle_limit() -> timedelta:
-    return timedelta(minutes=settings.SALON_AUTH["IDLE_MINUTES"])
+    return timedelta(minutes=int(security_settings()["idle_minutes"]))
 
 
 def tracked(user) -> bool:

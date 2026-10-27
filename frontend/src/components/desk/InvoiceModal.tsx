@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Printer } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { errorDetail } from '../../api/client';
+import { ReversalFields } from '../admin/ReversalFields';
+import { noReversal, toReversal, type ReversalChoice } from '../admin/reversal';
 import { getInvoice, requestRefund, type PayMethod } from '../../api/pos';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 import { useSession } from '../../session/session-context';
@@ -22,6 +24,7 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [method, setMethod] = useState<PayMethod>('cash');
+  const [undo, setUndo] = useState<ReversalChoice>(noReversal);
   const [problem, setProblem] = useState('');
 
   const invoice = useQuery({
@@ -31,7 +34,12 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
   const isAdmin = user?.role === 'admin';
 
   const refund = useMutation({
-    mutationFn: () => requestRefund(invoiceId, { amount, reason, ...(isAdmin ? { method } : {}) }),
+    mutationFn: () =>
+      requestRefund(invoiceId, {
+        amount,
+        reason,
+        ...(isAdmin ? { method, ...toReversal(undo) } : {}),
+      }),
     onSuccess: (row) => {
       toast.show({
         tone: 'success',
@@ -40,6 +48,7 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
       setAsking(false);
       setAmount('');
       setReason('');
+      setUndo(noReversal);
       void queryClient.invalidateQueries({ queryKey: ['pos-invoice', invoiceId] });
       void queryClient.invalidateQueries({ queryKey: ['pos-refunds'] });
     },
@@ -182,6 +191,15 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
               />
+              {isAdmin && (
+                <ReversalFields
+                  returnable={data.returnable ?? []}
+                  earned={data.loyalty_earned}
+                  redeemed={data.loyalty_redeemed}
+                  value={undo}
+                  onChange={setUndo}
+                />
+              )}
               {isAdmin && (
                 <Select
                   label="Money goes back by"

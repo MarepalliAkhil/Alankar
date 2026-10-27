@@ -99,7 +99,12 @@
     "staff.daysoff.list": "List stylists' days-off requests",
     "staff.daysoff.decide": "Approve or decline a days-off request",
     "catalogue.read": "Read all categories, services and rooms (also hidden ones)",
-    "catalogue.write": "Create, edit and delete categories, services and rooms"
+    "catalogue.write": "Create, edit and delete categories, services and rooms",
+    "inventory.manage": "Manage products and suppliers (never the stock level directly)",
+    "inventory.stock": "Receive, adjust or write off stock and read the stock ledger",
+    "cash.close.review": "See the receptionists' cash closes and mark them reviewed",
+    "settings.business.read": "Read the business settings",
+    "settings.business.update": "Change the business settings (audited with old and new values)"
   },
   "public": {
     "api": [
@@ -445,7 +450,12 @@
         "staff.daysoff.list",
         "staff.daysoff.decide",
         "catalogue.read",
-        "catalogue.write"
+        "catalogue.write",
+        "inventory.manage",
+        "inventory.stock",
+        "cash.close.review",
+        "settings.business.read",
+        "settings.business.update"
       ],
       "routes": [
         "/customers/:id"
@@ -519,7 +529,7 @@
           "id": "pos",
           "label": "POS / Billing",
           "path": "/pos",
-          "description": "Bill visits, see all invoices, and approve or reject refunds.",
+          "description": "Bill visits, see all invoices, decide and issue refunds (with stock and loyalty reversal), and review cash closes.",
           "task": "Task 3c",
           "status": "available"
         },
@@ -527,9 +537,9 @@
           "id": "inventory",
           "label": "Inventory",
           "path": "/inventory",
-          "description": "Products, suppliers, purchase orders and the stock ledger.",
-          "task": "Task 5",
-          "status": "planned"
+          "description": "Products, suppliers and the stock ledger: receive, adjust or write off stock, with low-stock alerts.",
+          "task": "Task 5b",
+          "status": "available"
         },
         {
           "id": "marketing",
@@ -559,9 +569,9 @@
           "id": "settings",
           "label": "Settings",
           "path": "/settings",
-          "description": "Business details, users and roles, audit log and security.",
-          "task": "Task 5",
-          "status": "planned"
+          "description": "Shop details and GST number, opening hours, cancellation and payment-hold windows, discount cap, idle timeout and rating bands. Audit log and security arrive in Task 5d.",
+          "task": "Task 5b",
+          "status": "available"
         }
       ]
     }
