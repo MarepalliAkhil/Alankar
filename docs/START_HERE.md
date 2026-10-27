@@ -73,7 +73,7 @@ This replaces the memory a new session doesn't have.
 5. **Task 5:** admin slice (staff, services/catalogue, inventory, marketing, reports, settings, audit, security, refunds).
 6. **Task 6:** ratings, work sessions, payroll, Staff Summary graphs.
 7. **Task 7:** hardening and a Playwright full-workflow test with four users.
-8. **Task 8:** "AI Alankar Intelligence" chatbot: port `reference/chatbot_reference/` into `backend/chatbot/` following `docs/CHATBOT_ALGORITHM.md` (no LLMs, no Ollama, no keys), connect it to the database, build the corner widget, then wow features. **Task 9:** "For Zenotians" page content (you provide it), then deployment.
+8. **Task 8:** "AI Alankar Intelligence" chatbot: port `reference/chatbot_reference/` into `backend/chatbot/` following `docs/CHATBOT_ALGORITHM.md` (no LLMs, no Ollama, no keys), connect it to the database, build the corner widget, then wow features. **Task 9:** deployment. **Task 10:** the "For Zenotians" page, built to `docs/MASTER_NOTES.md` section 36 (left sidebar: Overview, About me as a resume, The project, How it maps to Zenoti, Engineering decisions, Try the demo, Contact; admin-editable; About me only from the resume you provide; Zenoti-inspired but no Zenoti logo or wordmark; footer "Independent portfolio project, not affiliated with Zenoti").
 Split any task that feels too big into two. Ask me (in the planning chat) for the exact prompt for each task if you want one written in detail.
 
 ## What this chat is still good for

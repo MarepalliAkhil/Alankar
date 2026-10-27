@@ -415,6 +415,7 @@ New notifications: payment link sent (customer); payment received (customer rece
 ## 33. "For Zenotians" page **LOCKED** (content pending)
 
 - A page at `/zenotians`, linked from the navbar as a set-apart item. The owner will specify the content later; build the route, layout shell and an admin-editable content area now. This is the one intentional exception to the "no placeholder pages" rule, and it must be marked clearly as content-pending in `docs/PROGRESS.md`.
+- **Superseded by section 36 (Update 4): the full specification is built as Task 10.**
 
 ## 34. Data model additions
 
@@ -437,3 +438,65 @@ New notifications: payment link sent (customer); payment received (customer rece
 - The chatbot improves through the admin: unanswered questions are logged (anonymous, normalized) and the admin adds knowledge entries and synonyms.
 - Realistic accuracy: about 75 to 90% on brand-new questions on day one, rising as knowledge is added; it says "I'm not sure" instead of guessing.
 - The chatbot panel title remains exactly "AI Alankar Intelligence" (owner-chosen); nothing else in the product uses the word "AI".
+
+---
+
+# UPDATE 4: "For Zenotians" page specification (Task 10) **LOCKED**
+
+## 36. "For Zenotians" page (Task 10)
+
+Route stays `/zenotians`. This replaces the "content pending" shell of section 33 and the old
+"8b / Task 9" slot: the page is built as **Task 10**, after the product itself works. The route and
+shell from Task 0 stay until then.
+
+**Layout:** a left sidebar (a top tab strip on small screens) with these sections, in this order:
+
+1. **Overview**: who I am, what this project is, and a short "start here" for a reviewer.
+2. **About me**: the resume, shown as sections: Header (name, role, location, links), Summary,
+   Education, Skills, Projects, Certifications.
+3. **The project**: what the platform does, the four roles, a short tour of the main flows.
+4. **How it maps to Zenoti**: a table or cards of salon-software capabilities and where each one
+   lives in this project (booking, schedule, POS, inventory, payroll, ratings, reports, and so on),
+   including what is simulated or left out.
+5. **Engineering decisions**: why the choices were made (request-then-assign booking with row
+   locking and 409 plus nearest slots, role isolation from one policy file, field-level encryption
+   with blind index, stock as a ledger, immutable invoices, no LLMs with a deterministic chatbot,
+   audit log, tests).
+6. **Try the demo**: demo sign-in details for each role (from the seeded demo accounts, shown only
+   when the demo mode is on) and links to open the app as each role.
+7. **Contact**: email, GitHub, LinkedIn and a short note on what the owner is looking for.
+
+**Content rules:**
+- **About me comes only from the resume the owner provides.** Never invent or embellish a job,
+  degree, skill, date or number. Until the owner provides the resume, the About me section shows a
+  clearly marked "content pending" state (this stays the one allowed placeholder, listed in
+  `docs/PROGRESS.md`).
+- About me, Overview, Contact and the other text blocks are stored in the database and edited by
+  the **admin only** (Settings or a Zenotians editor, decided in Task 5/10). No hard-coded personal
+  content in components. Resume sections are structured records (header, summary, education
+  entries, skill groups, project entries, certification entries) with a sort order and a visible
+  toggle, so a section with no data is hidden.
+- The text is plain text with simple formatting only (no HTML from the editor), so it cannot inject
+  scripts. Links are checked to be http(s) or mailto.
+
+**Look and feel:** inspired by the clean, light look of Zenoti's own site (soft neutral background,
+white cards with thin borders, generous spacing, a calm accent colour, left navigation), but **not a
+copy**: no Zenoti logo, wordmark, images, text or code, and no exact reproduction of their layout.
+Colours, radii and spacing come from `frontend/src/design/tokens.ts` like every other page, so the
+stage 2 redesign can restyle it. The sidebar is keyboard accessible, the active section follows the
+scroll position, each section has a stable URL hash (`/zenotians#about-me`), and the page works
+on a phone.
+
+**Footer note (always visible on this page):** "Independent portfolio project, not affiliated with
+Zenoti."
+
+**Never:** use another company's logo or wordmark, imply endorsement or affiliation, or show a
+fabricated testimonial or metric. Statements about the project (test counts, features) must match
+what is actually built; the page reads them from `docs/PROGRESS.md`-style facts kept in the
+database content, edited by the admin, not guessed.
+
+**Definition of done (Task 10):** sidebar and all seven sections work; About me renders from the
+database and is admin-editable with an audit entry per change; empty sections are hidden; the footer
+note is present; tests for allowed and denied edits (only the admin can edit; the public can read);
+keyboard and phone checks; `docs/PROGRESS.md` updated, with the content-pending marker removed once
+the owner's resume is loaded.

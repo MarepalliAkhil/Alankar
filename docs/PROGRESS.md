@@ -281,6 +281,9 @@
   `shared/policy.json` (`status: planned|available`).
 
 ## Known issues
+- Task 10 (planned, spec in MASTER_NOTES section 36): "For Zenotians" page with a left sidebar
+  (Overview, About me as a resume, The project, How it maps to Zenoti, Engineering decisions, Try
+  the demo, Contact). The owner must supply the resume before About me can be filled.
 - "For Zenotians" page content is pending from the owner (the one allowed placeholder; the
   page shows a "content on its way" notice and is marked `data-content-pending`).
 - `npm audit` reports 12 advisories in dev-only tooling; review separately.
