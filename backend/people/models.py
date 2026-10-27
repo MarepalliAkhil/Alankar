@@ -7,6 +7,8 @@ from core import crypto
 from core.fields import EncryptedTextField
 
 PHONE_CONTEXT = "people.customerprofile.phone"
+ALLERGIES_CONTEXT = "people.customerprofile.allergies"
+PREFERENCES_CONTEXT = "people.customerprofile.preferences"
 
 
 class CustomerProfile(models.Model):
@@ -20,6 +22,8 @@ class CustomerProfile(models.Model):
     )
     phone = EncryptedTextField(context=PHONE_CONTEXT)
     phone_index = models.CharField(max_length=64, db_index=True)
+    allergies = EncryptedTextField(context=ALLERGIES_CONTEXT, blank=True, default="")
+    preferences = EncryptedTextField(context=PREFERENCES_CONTEXT, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
@@ -38,8 +42,8 @@ def phone_index(raw: str) -> str:
 class StylistProfile(models.Model):
     """Public team profile (customer-safe: no phone, no pay, no schedule).
 
-    `user` links the profile to a stylist account once that person has accepted an invite;
-    only linked, active stylists can be chosen when booking (Task 2b).
+    `user` links the profile to a stylist account (linking arrives with the stylist slice). A
+    profile whose linked account is deactivated cannot be booked or assigned.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

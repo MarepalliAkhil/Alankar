@@ -39,7 +39,7 @@ python -m pip install --upgrade pip
 pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py create_admin --email you@example.com --name "Your Name"   # first admin (asks for a password)
-python manage.py seed_demo   # demo services, prices, team, contact, hours, policies, FAQ (safe to re-run)
+python manage.py seed_demo   # demo services, prices, team, rooms, contact, hours, policies, FAQ (safe to re-run)
 cd ..
 
 # 4. Frontend
@@ -129,6 +129,12 @@ Notes:
   itself always stays debug-only.
 - This is a normal email service; it has nothing to do with AI (the no-LLM rule is unaffected).
 - Never share the app password. If you paste a log anywhere, remove that line first.
+
+## Booking flow and expiry (Task 2b)
+
+Customers send booking requests, the receptionist or admin confirms them (Appointments page),
+and the customer pays with the mock gateway. Unpaid holds expire by themselves whenever
+appointments are read; to also run it on a schedule: `python manage.py expire_payments`.
 
 ## Checks
 

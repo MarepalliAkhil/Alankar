@@ -16,6 +16,7 @@ auth_patterns = [
         views.PasswordResetConfirmView.as_view(),
         name="auth-password-reset-confirm",
     ),
+    path("password/change/", views.PasswordChangeView.as_view(), name="auth-password-change"),
     path("invite/", views.InviteCheckView.as_view(), name="auth-invite-check"),
     path("invite/accept/", views.InviteAcceptView.as_view(), name="auth-invite-accept"),
 ]

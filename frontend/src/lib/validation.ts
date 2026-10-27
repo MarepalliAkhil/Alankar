@@ -11,3 +11,9 @@ export function fieldErrors<K extends string = string>(
   }
   return out as Partial<Record<K, string>>;
 }
+
+/** "+91 98765-43210" -> "9876543210" (same rule as the server). */
+export const normalisePhone = (value: string) =>
+  value.replace(/[\s-]/g, '').replace(/^(\+91|0)/, '');
+
+export const isIndianMobile = (value: string) => /^[6-9]\d{9}$/.test(normalisePhone(value));

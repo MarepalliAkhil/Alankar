@@ -2,6 +2,9 @@
 
 ## Status
 - Task 0 (scaffold and foundation): DONE (verified on the owner's PC, 2026-10-26).
+- Task 2b (booking flow): DONE. Verified on the owner's PC (2026-10-27): booking request, confirm,
+  payment-link email, mock payment and receipt emails working. Sandbox: pytest 163 passed, ruff
+  clean, vitest 101 passed, eslint, typecheck, prettier clean.
 - Task 2a (real email + catalogue/site content in the database + public website): DONE.
   Verified on the owner's PC (2026-10-26): migrate, seed_demo, pytest 122 passed, ruff, eslint,
   typecheck; real Gmail sending confirmed (send_test_email + staff invites); admin sign-in OK.
@@ -87,7 +90,7 @@
   - README.md with Windows run instructions.
 
 ## In progress
-- Task 2b: plan sent to the owner, waiting for approval.
+- Nothing in progress. Next: Task 2c (invoices + rating gate) and the customer OTP; plan to be approved.
 
 ## Done (Task 1 details)
 - Task 1: auth and policy.
@@ -103,7 +106,7 @@
 ## Task 2 split (owner-approved)
 - 2a (this step): real email (SMTP) + catalogue and site content in the database (demo seed)
   + public website from the database.
-- 2b (next): booking sheet, booking requests, confirm (receptionist/admin API), payment link,
+- 2b (done): booking sheet, booking requests, confirm (receptionist/admin API), payment link,
   mock gateway, expiry, My Appointments cards, Profile. Payment-link emails use the 2a mailer.
 - 2c (after Task 3 checkout exists): customer invoices and the mandatory rating gate.
 - Small task after the booking flow works: simulated customer OTP shown in the dev mailbox.
@@ -135,6 +138,47 @@
   all declared as public actions in shared/policy.json. New public routes: /privacy, /terms,
   /cancellation-policy.
 
+## Task 2b decisions
+- New data: `Appointment` (service/price/duration snapshot, preferred and assigned stylist, room,
+  encrypted contact phone, notes and allergies, customer flags arrived / reschedule_requested /
+  cancel_requested), `AppointmentEvent` (status history), `Room` (seed_demo adds 7 demo rooms),
+  `PaymentLink` (token hash only), `Payment` (mock), `Refund`. Customer profile gained
+  allergies + preferences (encrypted).
+- Booking rules live in SiteContent key `booking` with defaults (Admin edits them in Task 5):
+  15-minute slot grid, 60 min minimum lead, 60 days ahead, weekly shop hours (Mon-Sat 10-20,
+  Sun 10-18), hold 6 h, prepayment 100%, free cancellation 24 h, GST 18%.
+- Flow: customer sends a REQUEST (no time is held) -> receptionist/admin confirms with stylist,
+  time and room -> AWAITING PAYMENT (slot held) + payment link email -> mock gateway pays ->
+  SCHEDULED + receipt email. Reject needs a reason (emailed). Unpaid past the deadline ->
+  PAYMENT EXPIRED, slot released, customer emailed; the desk can confirm again or reject.
+- Hold = 6 hours, but never later than 30 minutes before the visit (minimum 15 minutes).
+- Overlaps are checked per stylist and per room, with `atomic` + `select_for_update`; a clash
+  returns 409 with the 3 nearest free times. Expiry runs on every read and via
+  `python manage.py expire_payments` (schedule it every few minutes in production).
+- Only the newest payment link works; the customer may resend (once a minute) and the desk may
+  resend. The link token is stored hashed and never written to the audit log.
+- Customer actions per state: cancel (free before the 24 h window: refund recorded; inside the
+  window it becomes a "cancel request" flag for the desk), I'm here (same day only),
+  reschedule request (a flag with a preferred time; the desk handles it in Task 3).
+- Stylists see nothing until Task 4 (they have no booking or appointment API access).
+- Policy: new actions for booking, my.*, desk.* and auth.password_change; param route
+  `/customer/pay/:id`; the Appointments menu for receptionist/admin is now "available" as a
+  simple request list (Task 3 replaces it with full cards and the schedule board).
+- Password change: `POST /api/auth/password/change/` (current password required, other sessions
+  signed out, new cookies for this one, audited).
+- Times are shown in the shop time zone (Asia/Kolkata) whatever the device says.
+
+## Task 2b: owner browser walkthrough (to verify on the PC)
+1. Sign in as customer, open Salon, click a service, Book this service. Pick a time, tick the
+   policy box, Send booking request. A "Requested" card appears in My Appointments.
+2. Sign in as receptionist (other browser or private window) -> Appointments -> Confirm ->
+   choose stylist, room, time -> Confirm and send payment link. Open the dev mailbox
+   (/dev/mailbox) or your inbox for the link.
+3. Customer: My Appointments -> Pay now (or the emailed link) -> "Simulate failed payment"
+   (hold stays) -> Pay. The card becomes Scheduled and a receipt email arrives.
+4. Try Reject (reason required), Resend link, Cancel, I'm here, Reschedule, Profile and
+   Change password.
+
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it
   arrives in) via `PlannedPage`. Remove each one as its task is built. Status lives in
@@ -144,4 +188,3 @@
 - "For Zenotians" page content is pending from the owner (the one allowed placeholder; the
   page shows a "content on its way" notice and is marked `data-content-pending`).
 - `npm audit` reports 12 advisories in dev-only tooling; review separately.
-- Footer has no policy links yet (policy pages come with the public website in Task 2).

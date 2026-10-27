@@ -27,7 +27,23 @@
     "public.services": "List and search active services",
     "public.service": "Read one active service",
     "public.team": "List public team profiles",
-    "public.page": "Read a policy page (privacy, terms, cancellation)"
+    "public.page": "Read a policy page (privacy, terms, cancellation)",
+    "auth.password_change": "Change my own password",
+    "booking.options": "Read booking sheet options for a service",
+    "booking.slots": "List free start times and the price for a service choice",
+    "booking.create": "Send a booking request",
+    "my.appointments.list": "List my own booking requests and appointments",
+    "my.appointments.read": "Read one of my own appointments",
+    "my.appointments.update": "Cancel, flag (I'm here, reschedule, cancel request) or resend the payment link for my own appointment",
+    "my.payment.read": "Read the payment due for my own appointment",
+    "my.payment.pay": "Pay for my own appointment (mock gateway)",
+    "my.profile.read": "Read my profile",
+    "my.profile.update": "Update my profile",
+    "desk.appointments.list": "List all booking requests and appointments",
+    "desk.appointments.read": "Read one appointment with confirm options",
+    "desk.appointments.confirm": "Confirm a request (stylist, time, room) and send a payment link",
+    "desk.appointments.reject": "Reject a request with a reason",
+    "desk.appointments.resend_link": "Send a fresh payment link"
   },
   "public": {
     "api": [
@@ -72,9 +88,22 @@
       "label": "Customer",
       "home": "/customer-dashboard",
       "api": [
-        "auth.me"
+        "auth.me",
+        "auth.password_change",
+        "booking.options",
+        "booking.slots",
+        "booking.create",
+        "my.appointments.list",
+        "my.appointments.read",
+        "my.appointments.update",
+        "my.payment.read",
+        "my.payment.pay",
+        "my.profile.read",
+        "my.profile.update"
       ],
-      "routes": [],
+      "routes": [
+        "/customer/pay/:id"
+      ],
       "menu": [
         {
           "id": "home",
@@ -90,7 +119,7 @@
           "path": "/customer/book",
           "description": "Pick a service, preferred time and stylist, then send a booking request.",
           "task": "Task 2b",
-          "status": "planned"
+          "status": "available"
         },
         {
           "id": "appointments",
@@ -98,7 +127,7 @@
           "path": "/customer/appointments",
           "description": "Your booking requests and visits as cards: pay, reschedule, cancel, I'm here.",
           "task": "Task 2b",
-          "status": "planned"
+          "status": "available"
         },
         {
           "id": "chat",
@@ -122,7 +151,7 @@
           "path": "/customer/profile",
           "description": "Your contact details, allergies and preferences.",
           "task": "Task 2b",
-          "status": "planned"
+          "status": "available"
         }
       ]
     },
@@ -130,7 +159,13 @@
       "label": "Receptionist",
       "home": "/dashboard",
       "api": [
-        "auth.me"
+        "auth.me",
+        "auth.password_change",
+        "desk.appointments.list",
+        "desk.appointments.read",
+        "desk.appointments.confirm",
+        "desk.appointments.reject",
+        "desk.appointments.resend_link"
       ],
       "routes": [],
       "menu": [
@@ -146,9 +181,9 @@
           "id": "appointments",
           "label": "Appointments",
           "path": "/appointments",
-          "description": "Booking request cards: confirm with stylist, time and room, or reject.",
-          "task": "Task 3",
-          "status": "planned"
+          "description": "Booking requests: confirm with stylist, time and room, or reject. Full cards and schedule arrive in Task 3.",
+          "task": "Task 2b",
+          "status": "available"
         },
         {
           "id": "schedule",
@@ -204,7 +239,8 @@
       "label": "Stylist",
       "home": "/my-day",
       "api": [
-        "auth.me"
+        "auth.me",
+        "auth.password_change"
       ],
       "routes": [],
       "menu": [
@@ -261,7 +297,13 @@
         "staff.invites.resend",
         "staff.deactivate",
         "staff.reactivate",
-        "audit.list"
+        "audit.list",
+        "auth.password_change",
+        "desk.appointments.list",
+        "desk.appointments.read",
+        "desk.appointments.confirm",
+        "desk.appointments.reject",
+        "desk.appointments.resend_link"
       ],
       "routes": [],
       "menu": [
@@ -277,9 +319,9 @@
           "id": "appointments",
           "label": "Appointments",
           "path": "/appointments",
-          "description": "All booking requests and appointments as cards.",
-          "task": "Task 3",
-          "status": "planned"
+          "description": "Booking requests: confirm with stylist, time and room, or reject. Full cards and schedule arrive in Task 3.",
+          "task": "Task 2b",
+          "status": "available"
         },
         {
           "id": "schedule",

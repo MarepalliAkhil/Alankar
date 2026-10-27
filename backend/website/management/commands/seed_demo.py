@@ -3,20 +3,28 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from people.models import StylistProfile
-from scheduling.models import Service, ServiceAddon, ServiceCategory, ServiceVariant
-from website.demo_data import CATALOGUE, FAQS, SITE_CONTENT, TEAM
+from scheduling.models import Room, Service, ServiceAddon, ServiceCategory, ServiceVariant
+from website.demo_data import CATALOGUE, FAQS, ROOMS, SITE_CONTENT, TEAM
 from website.models import KnowledgeEntry, SiteContent
 
 
 class Command(BaseCommand):
     help = (
         "Load demo website content: Indian-salon services with prices, team profiles, "
-        "contact, hours, policies and FAQ. Safe to run again (existing items are kept)."
+        "rooms, booking rules, contact, hours, policies and FAQ. Safe to run again "
+        "(existing items are kept)."
     )
 
     @transaction.atomic
     def handle(self, *args, **options):
-        created = {"categories": 0, "services": 0, "team": 0, "content": 0, "faq": 0}
+        created = {
+            "categories": 0,
+            "services": 0,
+            "team": 0,
+            "rooms": 0,
+            "content": 0,
+            "faq": 0,
+        }
         services_by_division: dict[str, list[Service]] = {}
         for c_order, (division, category_name, services) in enumerate(CATALOGUE):
             category, made = ServiceCategory.objects.get_or_create(
@@ -72,6 +80,11 @@ class Command(BaseCommand):
             if made:
                 for division in divisions:
                     profile.services.add(*services_by_division.get(division, []))
+        for order, (name, division) in enumerate(ROOMS):
+            _, made = Room.objects.get_or_create(
+                name=name, defaults={"division": division, "sort_order": order}
+            )
+            created["rooms"] += int(made)
         for key, value in SITE_CONTENT.items():
             _, made = SiteContent.objects.get_or_create(key=key, defaults={"value": value})
             created["content"] += int(made)

@@ -11,3 +11,36 @@ POLICY_PAGES = {
 def content(key: str, default=None):
     row = SiteContent.objects.filter(key=key).first()
     return row.value if row else default
+
+
+# Booking rules (admin-editable in Settings, Task 5). Stored under SiteContent key "booking";
+# missing keys fall back to these defaults from docs/MASTER_NOTES.md section 30.
+BOOKING_DEFAULTS = {
+    "slot_step_minutes": 15,
+    "min_lead_minutes": 60,
+    "max_days_ahead": 60,
+    "hold_hours": 6,
+    "deposit_percent": 100,
+    "free_cancel_hours": 24,
+    "gst_percent": 18,
+    # Weekday (mon..sun) -> [open, close] in shop local time; null means closed.
+    "weekly_hours": {
+        "mon": ["10:00", "20:00"],
+        "tue": ["10:00", "20:00"],
+        "wed": ["10:00", "20:00"],
+        "thu": ["10:00", "20:00"],
+        "fri": ["10:00", "20:00"],
+        "sat": ["10:00", "20:00"],
+        "sun": ["10:00", "18:00"],
+    },
+}
+
+
+def booking_settings() -> dict:
+    stored = content("booking", {}) or {}
+    merged = {**BOOKING_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}
+    merged["weekly_hours"] = {
+        **BOOKING_DEFAULTS["weekly_hours"],
+        **(stored.get("weekly_hours") or {}),
+    }
+    return merged

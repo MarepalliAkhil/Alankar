@@ -13,6 +13,8 @@ class MailOutbox(models.Model):
         INVITE = "invite", "Staff invite"
         PASSWORD_RESET = "password_reset", "Password reset"
         NOTICE = "notice", "Notice"
+        PAYMENT_LINK = "payment_link", "Payment link"
+        BOOKING = "booking", "Booking update"
         TEST = "test", "Test email"
 
     class Status(models.TextChoices):

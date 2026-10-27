@@ -39,6 +39,17 @@ export function isRole(value: unknown): value is Role {
 
 const cleanPath = (path: string) => path.split(/[?#]/)[0] || '/';
 
+/** True when `path` matches a policy route; `:name` segments match one non-empty segment. */
+export function matchesRoute(pattern: string, path: string): boolean {
+  const want = pattern.split('/');
+  const got = cleanPath(path).split('/');
+  if (want.length !== got.length) return false;
+  return want.every((part, i) => (part.startsWith(':') ? got[i] !== '' : part === got[i]));
+}
+
+const listed = (routes: string[], path: string) =>
+  routes.some((route) => matchesRoute(route, path));
+
 export const roleLabel = (role: Role) => policy.roles[role].label;
 export const homeFor = (role: Role) => policy.roles[role].home;
 export const menuFor = (role: Role): MenuItem[] => policy.roles[role].menu;
@@ -56,7 +67,7 @@ export function isPublicRoute(path: string): boolean {
 export function canAccess(role: Role | null | undefined, path: string): boolean {
   if (isPublicRoute(path)) return true;
   if (!role) return false;
-  return routesFor(role).includes(cleanPath(path));
+  return listed(routesFor(role), path);
 }
 
 export function canCall(role: Role | null | undefined, action: string): boolean {
@@ -69,7 +80,7 @@ export function menuItemFor(role: Role, path: string): MenuItem | undefined {
 }
 
 export function rolesForPath(path: string): Role[] {
-  return ROLES.filter((role) => routesFor(role).includes(cleanPath(path)));
+  return ROLES.filter((role) => listed(routesFor(role), path));
 }
 
 /** All role paths grouped by layout: customer pages live inside the public site. */

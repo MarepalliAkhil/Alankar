@@ -23,6 +23,7 @@ const PolicyPage = lazy(() => import('./pages/public/PolicyPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'));
+const PayPage = lazy(() => import('./pages/customer/PayPage'));
 const RolePage = lazy(() => import('./pages/app/RolePage'));
 const DesignSystemPage = lazy(() => import('./pages/dev/DesignSystemPage'));
 const MailboxPage = lazy(() => import('./pages/dev/MailboxPage'));
@@ -62,9 +63,12 @@ export function AppRoutes() {
             </RequireRole>
           }
         >
-          {paths.customer.map((path) => (
-            <Route key={path} path={path} element={<RolePage path={path} />} />
-          ))}
+          <Route path="/customer/pay/:id" element={<PayPage />} />
+          {paths.customer
+            .filter((path) => !path.includes(':'))
+            .map((path) => (
+              <Route key={path} path={path} element={<RolePage path={path} />} />
+            ))}
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

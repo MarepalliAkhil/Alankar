@@ -21,6 +21,7 @@ from accounts.serializers import (
     GENERIC_LOGIN_ERROR,
     LoginSerializer,
     MeSerializer,
+    PasswordChangeSerializer,
     PasswordResetRequestSerializer,
     RegisterSerializer,
     SetPasswordWithTokenSerializer,
@@ -388,3 +389,36 @@ class InviteAcceptView(AuthThrottleMixin, APIView):
             invite.save(update_fields=["accepted_at"])
         audit(AuditLog.Action.INVITE_ACCEPTED, request=request, actor=user, target=user)
         return Response({"detail": "Your password is set. You can now sign in.", "role": user.role})
+
+
+class PasswordChangeView(AuthThrottleMixin, APIView):
+    """Signed-in password change. Other sessions are signed out; this one gets new cookies."""
+
+    policy_action = "auth.password_change"
+
+    @extend_schema(summary="Change my password", request=PasswordChangeSerializer)
+    def post(self, request: Request) -> Response:
+        serializer = PasswordChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(serializer.validated_data["current_password"]):
+            return Response(
+                {"current_password": ["Your current password is not correct."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        new_password = serializer.validated_data["new_password"]
+        try:
+            check_password_strength(new_password, user)
+        except Exception as exc:  # ValidationError keyed as "password"; rename the field
+            detail = getattr(exc, "detail", {})
+            return Response(
+                {"new_password": detail.get("password", ["Choose a stronger password."])},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        revoke_all_refresh_tokens(user)
+        audit(AuditLog.Action.PASSWORD_CHANGED, request=request, actor=user, target=user)
+        response = Response({"detail": "Your password has been changed."})
+        set_session_cookies(response, RefreshToken.for_user(user))
+        return response

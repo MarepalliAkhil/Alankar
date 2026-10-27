@@ -24,6 +24,8 @@ Callback = Callable[[MailOutbox], None] | None
 BUTTON_LABELS = {
     MailOutbox.Kind.INVITE: "Set your password",
     MailOutbox.Kind.PASSWORD_RESET: "Choose a new password",
+    MailOutbox.Kind.PAYMENT_LINK: "Review and pay",
+    MailOutbox.Kind.BOOKING: "View my appointments",
 }
 
 

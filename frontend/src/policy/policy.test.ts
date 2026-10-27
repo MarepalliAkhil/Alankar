@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ROLES,
   canAccess,
+  matchesRoute,
   canCall,
   homeFor,
   menuFor,
@@ -66,5 +67,14 @@ describe('role policy (shared with the backend)', () => {
         expect(item.task).toMatch(/^Task \d+[a-z]?$/);
       }
     }
+  });
+
+  it('matches parameter routes such as the payment page', () => {
+    expect(matchesRoute('/customer/pay/:id', '/customer/pay/abc-123')).toBe(true);
+    expect(matchesRoute('/customer/pay/:id', '/customer/pay/')).toBe(false);
+    expect(matchesRoute('/customer/pay/:id', '/customer/pay/a/b')).toBe(false);
+    expect(canAccess('customer', '/customer/pay/abc-123?link=tok')).toBe(true);
+    expect(canAccess('receptionist', '/customer/pay/abc-123')).toBe(false);
+    expect(canAccess(null, '/customer/pay/abc-123')).toBe(false);
   });
 });

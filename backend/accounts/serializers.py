@@ -150,3 +150,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = ["id", "action", "actor_email", "email", "ip_address", "metadata", "created_at"]
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)

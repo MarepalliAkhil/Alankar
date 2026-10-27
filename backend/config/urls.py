@@ -5,6 +5,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from accounts.staff_views import AuditLogListView
 from accounts.urls import auth_patterns, staff_patterns
+from scheduling.urls import booking_patterns, desk_patterns, my_patterns
 
 urlpatterns = [
     path("api/", include("core.urls")),
@@ -12,6 +13,9 @@ urlpatterns = [
     path("api/staff/", include(staff_patterns)),
     path("api/audit/", AuditLogListView.as_view(), name="audit-list"),
     path("api/public/", include("website.urls")),
+    path("api/booking/", include(booking_patterns)),
+    path("api/my/", include(my_patterns)),
+    path("api/desk/", include(desk_patterns)),
 ]
 
 if settings.SALON_API_DOCS:

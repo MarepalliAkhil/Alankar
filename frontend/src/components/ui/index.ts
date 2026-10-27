@@ -21,5 +21,6 @@ export { Spinner } from './Spinner';
 export { StatusBadge } from './StatusBadge';
 export { Table, type Column } from './Table';
 export { TabPanel, Tabs, type TabItem } from './Tabs';
+export { Textarea } from './Textarea';
 export { ToastProvider } from './Toast';
 export { useToast, type ToastTone } from './toast-context';

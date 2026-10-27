@@ -17,10 +17,7 @@ import {
 } from '../../components/ui';
 import { brand } from '../../config/brand';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { fieldErrors } from '../../lib/validation';
-
-/** Indian mobile number: optional +91 / 0 prefix, then 10 digits starting 6-9. */
-const normalisePhone = (value: string) => value.replace(/[\s-]/g, '').replace(/^(\+91|0)/, '');
+import { fieldErrors, normalisePhone } from '../../lib/validation';
 
 const schema = z
   .object({

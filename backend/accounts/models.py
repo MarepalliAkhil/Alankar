@@ -45,6 +45,7 @@ class AuditLog(models.Model):
         PASSWORD_RESET_DONE = "password_reset_done", "Password reset completed"
         INVITE_RESENT = "invite_resent", "Staff invite resent"
         EMAIL_FAILED = "email_failed", "Email could not be sent"
+        PASSWORD_CHANGED = "password_changed", "Password changed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

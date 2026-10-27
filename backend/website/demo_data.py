@@ -325,6 +325,24 @@ SITE_CONTENT = {
     ],
     "social": [],
     "video": {"url": ""},
+    "booking": {
+        "slot_step_minutes": 15,
+        "min_lead_minutes": 60,
+        "max_days_ahead": 60,
+        "hold_hours": 6,
+        "deposit_percent": 100,
+        "free_cancel_hours": 24,
+        "gst_percent": 18,
+        "weekly_hours": {
+            "mon": ["10:00", "20:00"],
+            "tue": ["10:00", "20:00"],
+            "wed": ["10:00", "20:00"],
+            "thu": ["10:00", "20:00"],
+            "fri": ["10:00", "20:00"],
+            "sat": ["10:00", "20:00"],
+            "sun": ["10:00", "18:00"],
+        },
+    },
     "policies": {
         "cancellation": (
             "You can cancel free of charge up to 24 hours before your appointment; the "
@@ -371,4 +389,16 @@ FAQS = [
         "Yes. We are a unisex salon, spa and beauty parlor; use the Men, Women and Kids filters "
         "on each page.",
     ),
+]
+
+
+# Demo rooms: (name, division)
+ROOMS = [
+    ("Salon chair 1", "salon"),
+    ("Salon chair 2", "salon"),
+    ("Salon chair 3", "salon"),
+    ("Spa room 1", "spa"),
+    ("Spa room 2", "spa"),
+    ("Parlor room 1", "beauty-parlor"),
+    ("Parlor room 2", "beauty-parlor"),
 ]
