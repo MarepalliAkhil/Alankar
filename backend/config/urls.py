@@ -8,6 +8,7 @@ from accounts.urls import auth_patterns, staff_patterns
 from people.admin_urls import admin_patterns
 from people.stylist_urls import stylist_patterns
 from scheduling.urls import booking_patterns, desk_patterns, my_patterns
+from wallet.urls import desk_wallet_patterns, my_waitlist_patterns, my_wallet_patterns
 
 urlpatterns = [
     path("api/", include("core.urls")),
@@ -17,7 +18,10 @@ urlpatterns = [
     path("api/settings/pos/", PosSettingsView.as_view(), name="settings-pos"),
     path("api/public/", include("website.urls")),
     path("api/booking/", include(booking_patterns)),
+    path("api/my/wallet/", include(my_wallet_patterns)),
+    path("api/my/waitlist/", include(my_waitlist_patterns)),
     path("api/my/", include(my_patterns)),
+    path("api/desk/wallet/", include(desk_wallet_patterns)),
     path("api/desk/", include(desk_patterns)),
     path("api/stylist/", include(stylist_patterns)),
     path("api/chat/", include("chat.urls")),

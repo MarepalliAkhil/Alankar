@@ -154,10 +154,17 @@ export async function payAppointment(
   id: string,
   outcome: 'success' | 'fail',
   link?: string | null,
+  gift?: { code: string; amount?: string } | null,
 ): Promise<{ appointment: CustomerAppointment }> {
   const { data } = await api.post<{ appointment: CustomerAppointment }>(
     `/my/appointments/${id}/payment/`,
-    { outcome, link: link ?? '' },
+    {
+      outcome,
+      link: link ?? '',
+      ...(gift?.code
+        ? { gift_card_code: gift.code, ...(gift.amount ? { gift_card_amount: gift.amount } : {}) }
+        : {}),
+    },
   );
   return data;
 }

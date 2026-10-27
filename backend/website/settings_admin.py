@@ -82,6 +82,7 @@ class HoursSerializer(serializers.Serializer):
 class BookingRulesSerializer(serializers.Serializer):
     free_cancel_hours = serializers.IntegerField(min_value=0, max_value=720, required=False)
     hold_hours = serializers.IntegerField(min_value=1, max_value=72, required=False)
+    waitlist_offer_minutes = serializers.IntegerField(min_value=5, max_value=240, required=False)
 
 
 class BillingSerializer(serializers.Serializer):
@@ -156,6 +157,7 @@ def snapshot() -> dict:
         "booking": {
             "free_cancel_hours": booking["free_cancel_hours"],
             "hold_hours": booking["hold_hours"],
+            "waitlist_offer_minutes": booking["waitlist_offer_minutes"],
         },
         "billing": {"discount_cap_percent": pos_settings()["discount_cap_percent"]},
         "security": security_settings(),

@@ -99,7 +99,7 @@ const settings: opsApi.BusinessSettings = {
       sun: null,
     },
   },
-  booking: { free_cancel_hours: 24, hold_hours: 6 },
+  booking: { free_cancel_hours: 24, hold_hours: 6, waitlist_offer_minutes: 15 },
   billing: { discount_cap_percent: 20 },
   security: { idle_minutes: 15 },
   rating: {
@@ -232,7 +232,7 @@ describe('settings', () => {
     const user = userEvent.setup();
     vi.mocked(opsApi.saveSettings).mockResolvedValue({
       ...settings,
-      booking: { free_cancel_hours: 48, hold_hours: 3 },
+      booking: { free_cancel_hours: 48, hold_hours: 3, waitlist_offer_minutes: 15 },
     });
     renderAt('/settings');
     const cancel = await screen.findByLabelText(/Free cancellation until/);
@@ -244,7 +244,7 @@ describe('settings', () => {
     await user.click(screen.getByRole('button', { name: 'Save booking rules' }));
     await waitFor(() =>
       expect(opsApi.saveSettings).toHaveBeenCalledWith({
-        booking: { free_cancel_hours: 48, hold_hours: 3 },
+        booking: { free_cancel_hours: 48, hold_hours: 3, waitlist_offer_minutes: 15 },
       }),
     );
   });

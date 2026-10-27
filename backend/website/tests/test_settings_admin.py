@@ -39,7 +39,11 @@ def audits(section=None):
 
 def test_reads_the_current_settings(admin):
     data = call(admin[0], "get", URL).json()
-    assert data["booking"] == {"free_cancel_hours": 24, "hold_hours": 6}
+    assert data["booking"] == {
+        "free_cancel_hours": 24,
+        "hold_hours": 6,
+        "waitlist_offer_minutes": 15,
+    }
     assert data["billing"]["discount_cap_percent"] == 20
     assert data["security"]["idle_minutes"] == 15
     assert data["shop"]["phone"]

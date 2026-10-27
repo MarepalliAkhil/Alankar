@@ -41,7 +41,10 @@ def scheduled(customer_client, desk_client, cat) -> str:
 
 
 def move_to_today(appt_id, hours_from_now=1):
-    start = timezone.now() + timedelta(hours=hours_from_now)
+    now = timezone.now()
+    start = now + timedelta(hours=hours_from_now)
+    if timezone.localtime(start).date() != timezone.localtime(now).date():
+        start = now  # late evening: stay on the same shop day
     Appointment.objects.filter(pk=appt_id).update(start=start, end=start + timedelta(minutes=30))
 
 

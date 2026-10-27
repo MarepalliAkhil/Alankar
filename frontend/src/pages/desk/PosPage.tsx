@@ -16,6 +16,7 @@ import { ReversalFields } from '../../components/admin/ReversalFields';
 import { noReversal, toReversal, type ReversalChoice } from '../../components/admin/reversal';
 import { CheckoutModal } from '../../components/desk/CheckoutModal';
 import { InvoiceModal } from '../../components/desk/InvoiceModal';
+import { SellPanel } from '../../components/desk/SellPanel';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Badge,
@@ -37,7 +38,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 import { useSession } from '../../session/session-context';
 
-type Tab = 'counter' | 'invoices' | 'refunds' | 'closes';
+type Tab = 'counter' | 'sell' | 'invoices' | 'refunds' | 'closes';
 
 /** POS / Billing: bill checked-in visits, look up invoices, and (admin) decide refunds. */
 export default function PosPage() {
@@ -50,6 +51,7 @@ export default function PosPage() {
 
   const tabs = [
     { id: 'counter' as const, label: 'Counter' },
+    { id: 'sell' as const, label: 'Sell' },
     { id: 'invoices' as const, label: 'Invoices' },
     ...(isAdmin
       ? [
@@ -68,6 +70,7 @@ export default function PosPage() {
       <Tabs items={tabs} value={tab} onChange={setTab} label="Billing sections" idPrefix="pos" />
       <TabPanel idPrefix="pos" id={tab}>
         {tab === 'counter' && <Counter onBill={setBilling} onOpen={setViewing} />}
+        {tab === 'sell' && <SellPanel />}
         {tab === 'invoices' && <Invoices onOpen={setViewing} />}
         {tab === 'refunds' && isAdmin && <Refunds />}
         {tab === 'closes' && isAdmin && <CashClosesPanel />}

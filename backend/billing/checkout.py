@@ -12,7 +12,6 @@ Until the stylist slice (Task 4) exists, a checked-in visit is walked through "s
 
 from __future__ import annotations
 
-import secrets
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
@@ -21,8 +20,15 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from accounts.models import User
-from billing import pos
-from billing.models import Invoice, InvoiceItem, InvoiceSequence, Payment, Refund
+from billing import pos, tender
+from billing.models import (
+    Invoice,
+    InvoiceCredit,
+    InvoiceItem,
+    InvoiceSequence,
+    Payment,
+    Refund,
+)
 from billing.pos import METHODS, CheckoutError, Line, Totals, money
 from core import brand
 from core.mail import frontend_link, queue_mail
@@ -34,6 +40,9 @@ from marketing.models import CouponRedemption
 from people.models import LoyaltyEntry, Rating
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus
+from wallet import credits as wallet_credits
+from wallet import giftcards
+from wallet.errors import WalletError
 from website.content import pos_settings
 
 S = AppointmentStatus
@@ -149,8 +158,20 @@ def _coupon(code, *, customer, discount_percent, lock: bool):
     return coupon
 
 
+BIG = Decimal("99999999")
+
+
 def _build(
-    appt: Appointment, rows, *, discount_percent, redeem_points, actor, coupon=None
+    appt: Appointment,
+    rows,
+    *,
+    discount_percent,
+    redeem_points,
+    actor,
+    coupon=None,
+    membership=None,
+    use_session=False,
+    package_credit=None,
 ) -> Totals:
     cap = max_discount_percent(actor)
     if discount_percent < 0 or discount_percent > cap:
@@ -192,6 +213,23 @@ def _build(
             raise CheckoutError(
                 f"The discount and the coupon together cannot be more than {cap:f}% of the bill."
             )
+    if package_credit is not None and use_session:
+        raise CheckoutError("Pay the service with a package or a membership session, not both.")
+    credit_cap = None
+    if package_credit is not None:
+        credit_cap = package_credit.unit_value
+    elif use_session:
+        credit_cap = BIG
+    service_line_obj = lines[0]
+
+    def member_applies(ln) -> bool:
+        if membership is None:
+            return False
+        if ln.kind == "product":
+            return membership.applies_to_products
+        # A service paid by an included session is not discounted a second time.
+        return not (use_session and ln is service_line_obj)
+
     t = pos.compute(
         lines,
         discount_percent=discount_percent,
@@ -201,6 +239,9 @@ def _build(
         rules=pos_settings(),
         coupon_amount=coupon_amount,
         coupon_applies=(lambda ln: coupons.eligible(ln, coupon)) if coupon else (lambda ln: True),
+        member_percent=membership.discount_percent if membership else Decimal("0"),
+        member_applies=member_applies,
+        credit_cap=credit_cap,
     )
     t.coupon_code = coupon.code if coupon else ""
     return t
@@ -221,6 +262,39 @@ def _options(data: dict):
     return discount, reason, redeem, tip
 
 
+def _wallet_choice(appt: Appointment, data: dict, *, lock: bool):
+    """(membership, use_session, package_credit) chosen for this bill, checked against the
+    customer's own packages and membership."""
+    membership = wallet_credits.membership_benefits(appt.customer)
+    use_session = bool(data.get("membership_session"))
+    package_id = data.get("package") or None
+    try:
+        if use_session:
+            membership = (
+                wallet_credits.lock_membership(appt.customer, appt.service) if lock else membership
+            )
+            if not wallet_credits.session_available(membership, appt.service):
+                raise WalletError("No included membership session is available for this service.")
+        credit = None
+        if package_id:
+            if lock:
+                credit = wallet_credits.lock_package_credit(package_id, appt.customer, appt.service)
+            else:
+                credit = next(
+                    (
+                        c
+                        for c in wallet_credits.package_credits(appt.customer, appt.service)
+                        if str(c.pk) == str(package_id)
+                    ),
+                    None,
+                )
+                if credit is None:
+                    raise WalletError("That package cannot pay for this service.")
+    except WalletError as exc:
+        raise CheckoutError(exc.message, code=exc.code) from exc
+    return membership, use_session, credit
+
+
 def quote(appt_id, data: dict, *, actor) -> dict:
     """What the bill would be. Writes nothing."""
     appt = Appointment.objects.select_related("customer", "stylist").get(pk=appt_id)
@@ -233,30 +307,74 @@ def quote(appt_id, data: dict, *, actor) -> dict:
     coupon = _coupon(
         data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=False
     )
+    membership, use_session, credit = _wallet_choice(appt, data, lock=False)
     totals = _build(
-        appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor, coupon=coupon
+        appt,
+        rows,
+        discount_percent=discount,
+        redeem_points=redeem,
+        actor=actor,
+        coupon=coupon,
+        membership=membership,
+        use_session=use_session,
+        package_credit=credit,
     )
-    return {"totals": totals, "tip": tip, "points": points_balance(appt.customer)}
+    return {
+        "totals": totals,
+        "tip": tip,
+        "points": points_balance(appt.customer),
+        "wallet": wallet_credits.for_visit(appt.customer, appt.service),
+        "package": credit,
+        "membership_session": use_session,
+    }
 
 
-def _validate_payments(payments, due: Decimal) -> list[tuple[str, Decimal]]:
+def _validate_payments(payments, due: Decimal) -> list[tuple[str, Decimal, str]]:
     rows = []
+    codes = set()
     for row in payments or []:
         method = str(row.get("method", "")).lower()
         amount = money(_decimal(row.get("amount"), "Payment amount"))
-        if method not in METHODS:
-            raise CheckoutError("Pay by cash, card or UPI.")
+        code = str(row.get("code") or "")
+        if method == "gift_card":
+            normalized = giftcards.normalize(code)
+            if not normalized:
+                raise CheckoutError("Enter the gift card code.")
+            if normalized in codes:
+                raise CheckoutError("Use each gift card once on a bill.")
+            codes.add(normalized)
+        elif method not in METHODS:
+            raise CheckoutError("Pay by cash, card, UPI or gift card.")
         if amount <= 0:
             raise CheckoutError("Each payment must be more than zero.")
-        rows.append((method, amount))
-    if sum((a for _, a in rows), ZERO) != due:
+        rows.append((method, amount, code))
+    if sum((a for _, a, _ in rows), ZERO) != due:
         raise CheckoutError(f"Payments must add up to Rs. {due} (the amount due plus any tip).")
     return rows
 
 
-def checkout(appt_id, data: dict, *, actor) -> Invoice:
+def _find_cards(payments, *, actor, ip) -> dict[str, object]:
+    """Looks gift cards up before the transaction starts, so wrong guesses are counted even when
+    the checkout is then refused. Returns {normalized code: card}."""
+    found = {}
+    for row in payments or []:
+        if str(row.get("method", "")).lower() != "gift_card":
+            continue
+        try:
+            card = giftcards.find(str(row.get("code") or ""), user=actor, ip=ip)
+            giftcards.check_usable(card)
+        except giftcards.GiftCardError as exc:
+            raise CheckoutError(
+                exc.message, code="throttled" if exc.code == "throttled" else "invalid"
+            ) from exc
+        found[giftcards.normalize(str(row.get("code")))] = card
+    return found
+
+
+def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
     now = timezone.now()
     discount, reason, redeem, tip = _options(data)
+    cards = _find_cards(data.get("payments"), actor=actor, ip=ip)
     with transaction.atomic():
         appt = (
             Appointment.objects.select_for_update(of=("self",))
@@ -274,8 +392,17 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
         coupon = _coupon(
             data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=True
         )
+        membership, use_session, credit = _wallet_choice(appt, data, lock=True)
         t = _build(
-            appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor, coupon=coupon
+            appt,
+            rows,
+            discount_percent=discount,
+            redeem_points=redeem,
+            actor=actor,
+            coupon=coupon,
+            membership=membership,
+            use_session=use_session,
+            package_credit=credit,
         )
         payments = _validate_payments(data.get("payments"), t.payable_now + tip)
 
@@ -305,6 +432,9 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             discount_reason=reason if discount > 0 else "",
             coupon_code=t.coupon_code,
             coupon_amount=t.coupon_amount,
+            member_plan=membership.plan_name if membership else "",
+            member_discount_amount=t.member_discount,
+            credit_amount=t.credit_amount,
             loyalty_redeemed=t.loyalty_redeemed,
             loyalty_earned=t.loyalty_earned,
             tip_amount=tip,
@@ -334,16 +464,49 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             CouponRedemption.objects.create(
                 coupon=coupon, invoice=invoice, customer=appt.customer, amount=t.coupon_amount
             )
-        for method, amount in payments:
-            Payment.objects.create(
+        if t.credit_amount > 0:
+            if credit is not None:
+                InvoiceCredit.objects.create(
+                    invoice=invoice,
+                    kind=InvoiceCredit.Kind.PACKAGE,
+                    description=f"{credit.purchase.name}: {credit.service_name}",
+                    amount=t.credit_amount,
+                    source_id=credit.pk,
+                )
+                wallet_credits.use_package(credit, invoice, actor)
+            else:
+                InvoiceCredit.objects.create(
+                    invoice=invoice,
+                    kind=InvoiceCredit.Kind.MEMBERSHIP,
+                    description=f"{membership.plan_name}: included session",
+                    amount=t.credit_amount,
+                    source_id=membership.pk,
+                )
+                wallet_credits.use_membership_session(membership, invoice, actor)
+        gift_rows = []
+        for method, amount, code in sorted(
+            payments,
+            key=lambda r: str(cards[giftcards.normalize(r[2])].pk) if r[0] == "gift_card" else "",
+        ):
+            payment = Payment.objects.create(
                 appointment=appt,
                 invoice=invoice,
                 kind=Payment.Kind.CHECKOUT,
                 method=method,
                 amount=amount,
                 status=Payment.Status.SUCCEEDED,
-                reference=f"{method[:4].upper()}-{secrets.token_hex(6).upper()}",
+                reference=tender.reference(method[:4].upper()),
             )
+            if method == "gift_card":
+                card = cards[giftcards.normalize(code)]
+                try:
+                    giftcards.redeem(card.pk, amount, payment=payment, actor=actor)
+                except giftcards.GiftCardError as exc:
+                    raise CheckoutError(
+                        exc.message, code="conflict" if exc.code == "insufficient" else "invalid"
+                    ) from exc
+                gift_rows.append((card, amount))
+        invoice._gift_rows = gift_rows
         if t.loyalty_redeemed:
             LoyaltyEntry.objects.create(
                 customer=appt.customer,
@@ -394,12 +557,17 @@ def receipt_text(appt: Appointment, invoice: Invoice, t: Totals) -> str:
         lines.append(f"  {line.description}{suffix}: Rs. {line.amount}")
     if invoice.service_changes:
         lines.append(f"  ({invoice.service_changes})")
-    manual = t.discount_amount - t.coupon_amount
+    if t.member_discount > 0:
+        lines.append(f"  Member discount ({invoice.member_plan}): -Rs. {t.member_discount}")
+    manual = t.discount_amount - t.coupon_amount - t.member_discount
     if manual > 0:
         lines.append(f"  Discount ({invoice.discount_percent.normalize()}%): -Rs. {manual}")
     if t.coupon_amount > 0:
         lines.append(f"  Coupon {invoice.coupon_code}: -Rs. {t.coupon_amount}")
     lines.append(f"Total: Rs. {t.total} (GST included: Rs. {t.gst_amount})")
+    if t.credit_amount > 0:
+        for credit in invoice.credits.all():
+            lines.append(f"Paid with {credit.description}: Rs. {credit.amount}")
     if t.loyalty_redeemed:
         lines.append(f"Paid with loyalty points: Rs. {t.loyalty_value}")
     if invoice.prepaid_amount:

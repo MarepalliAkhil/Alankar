@@ -144,7 +144,7 @@ export type WeeklyHours = Record<string, [string, string] | null>;
 export interface BusinessSettings {
   shop: { address: string; phone: string; email: string; map_url: string; gst_number: string };
   hours: { weekly_hours: WeeklyHours };
-  booking: { free_cancel_hours: number; hold_hours: number };
+  booking: { free_cancel_hours: number; hold_hours: number; waitlist_offer_minutes: number };
   billing: { discount_cap_percent: number };
   security: { idle_minutes: number };
   rating: {

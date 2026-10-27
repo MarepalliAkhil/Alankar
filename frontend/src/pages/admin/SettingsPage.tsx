@@ -293,6 +293,7 @@ function wholeNumber(text: string, min: number, max: number): number | null {
 function BookingSection({ value }: { value: BusinessSettings['booking'] }) {
   const [cancel, setCancel] = useState(String(value.free_cancel_hours));
   const [hold, setHold] = useState(String(value.hold_hours));
+  const [offer, setOffer] = useState(String(value.waitlist_offer_minutes));
   const { save, problem, setProblem } = useSection();
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -301,8 +302,12 @@ function BookingSection({ value }: { value: BusinessSettings['booking'] }) {
     if (c === null)
       return setProblem('Free-cancellation window: a whole number of hours, 0 to 720.');
     if (h === null) return setProblem('Payment hold time: a whole number of hours, 1 to 72.');
+    const o = wholeNumber(offer, 5, 240);
+    if (o === null) return setProblem('Waitlist offer hold: a whole number of minutes, 5 to 240.');
     setProblem('');
-    save.mutate({ booking: { free_cancel_hours: c, hold_hours: h } });
+    save.mutate({
+      booking: { free_cancel_hours: c, hold_hours: h, waitlist_offer_minutes: o },
+    });
   };
   return (
     <Section
@@ -325,6 +330,13 @@ function BookingSection({ value }: { value: BusinessSettings['booking'] }) {
           inputMode="numeric"
           value={hold}
           onChange={(e) => setHold(e.target.value)}
+        />
+        <Input
+          label="Waitlist offer is held for (minutes)"
+          hint="A freed slot is held for the first person in line this long, then moves to the next."
+          inputMode="numeric"
+          value={offer}
+          onChange={(e) => setOffer(e.target.value)}
         />
       </div>
     </Section>

@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from billing.models import Invoice, InvoiceItem
+from billing.models import Invoice, InvoiceCredit, InvoiceItem
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
@@ -11,8 +11,15 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
         fields = ["description", "quantity", "unit_price", "amount"]
 
 
+class InvoiceCreditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceCredit
+        fields = ["kind", "description", "amount"]
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
+    credits = InvoiceCreditSerializer(many=True, read_only=True)
     service_name = serializers.CharField(source="appointment.service_name", read_only=True)
     visit_start = serializers.DateTimeField(source="appointment.start", read_only=True)
     stylist_name = serializers.SerializerMethodField()
@@ -35,6 +42,10 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "total",
             "prepaid_amount",
             "balance_paid",
+            "member_plan",
+            "member_discount_amount",
+            "credit_amount",
+            "credits",
             "service_changes",
             "items",
         ]

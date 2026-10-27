@@ -19,6 +19,7 @@ from core.models import MailOutbox
 from inventory import stock
 from inventory.models import Product, StockMovement
 from people.models import LoyaltyEntry
+from wallet import giftcards
 
 ZERO = Decimal("0")
 
@@ -140,12 +141,19 @@ def _decide(
     note = (note or "").strip()
     if approve:
         method = (method or "").lower()
-        if method not in METHODS:
+        to_card = refund.payment.method == "gift_card"
+        if to_card:
+            method = "gift_card"  # the money goes back onto the gift card that paid
+        elif method not in METHODS:
             raise CheckoutError("Choose how the money goes back: cash, card or UPI.")
         _reverse(refund, actor, restock or [], reverse_loyalty)
         refund.status = Refund.Status.PROCESSED
         refund.method = method
         refund.processed_at = timezone.now()
+        if to_card:
+            giftcards.refund_payment(
+                refund.payment, refund.amount, actor=actor, note=f"Refund: {refund.reason}"
+            )
         text = f"Your refund of Rs. {refund.amount} has been approved and is on its way."
         subject = "your refund"
     else:

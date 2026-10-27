@@ -121,7 +121,32 @@
     "my.datarequests.list": "See my own data requests",
     "my.datarequests.create": "Ask for my data or for my account to be deleted",
     "my.datarequests.cancel": "Cancel my waiting data request",
-    "my.datarequests.download": "Download my data after approval"
+    "my.datarequests.download": "Download my data after approval",
+    "packages.read": "See packages and what customers bought",
+    "packages.edit": "Create and change packages",
+    "memberships.read": "See membership plans and members",
+    "memberships.edit": "Create and change membership plans",
+    "giftcards.read": "See gift cards (last four characters only)",
+    "giftcards.manage": "Cancel a gift card",
+    "sales.read": "See package, membership and gift-card sales",
+    "wallet.refund": "Refund a package or put a used session back",
+    "waitlist.read": "See the waitlist",
+    "waitlist.manage": "Remove someone from the waitlist",
+    "wallet.catalogue": "See packages and plans on sale",
+    "wallet.customer": "See a customer's packages and membership at the counter",
+    "wallet.sell": "Sell a package, membership or gift card at the counter",
+    "wallet.giftcheck": "Check a gift card code at the counter",
+    "my.wallet.read": "See my packages, membership and gift cards",
+    "my.packages.buy": "Buy a package online",
+    "my.memberships.join": "Join a membership online",
+    "my.memberships.renew": "Renew my membership",
+    "my.memberships.cancel": "Cancel my membership",
+    "my.giftcards.buy": "Buy a gift card online",
+    "my.giftcards.check": "Check a gift card code",
+    "my.waitlist.list": "See my waitlist entries",
+    "my.waitlist.create": "Join the waitlist",
+    "my.waitlist.cancel": "Leave the waitlist",
+    "my.waitlist.respond": "Accept or decline a freed slot"
   },
   "public": {
     "api": [
@@ -195,7 +220,18 @@
         "my.datarequests.list",
         "my.datarequests.create",
         "my.datarequests.cancel",
-        "my.datarequests.download"
+        "my.datarequests.download",
+        "my.wallet.read",
+        "my.packages.buy",
+        "my.memberships.join",
+        "my.memberships.renew",
+        "my.memberships.cancel",
+        "my.giftcards.buy",
+        "my.giftcards.check",
+        "my.waitlist.list",
+        "my.waitlist.create",
+        "my.waitlist.cancel",
+        "my.waitlist.respond"
       ],
       "routes": [
         "/customer/pay/:id",
@@ -243,6 +279,22 @@
           "status": "available"
         },
         {
+          "id": "wallet",
+          "label": "My Wallet",
+          "path": "/customer/wallet",
+          "description": "Your packages, membership and gift cards. Buy, renew or cancel.",
+          "task": "Task 5e-1",
+          "status": "available"
+        },
+        {
+          "id": "waitlist",
+          "label": "Waitlist",
+          "path": "/customer/waitlist",
+          "description": "Wait for a slot to open; accept an offer within the hold time.",
+          "task": "Task 5e-1",
+          "status": "available"
+        },
+        {
           "id": "profile",
           "label": "Profile",
           "path": "/customer/profile",
@@ -284,7 +336,11 @@
         "cash.close.sign",
         "inventory.view",
         "work.ping",
-        "hours.read"
+        "hours.read",
+        "wallet.catalogue",
+        "wallet.customer",
+        "wallet.sell",
+        "wallet.giftcheck"
       ],
       "routes": [
         "/customers/:id"
@@ -490,7 +546,21 @@
         "security.unlock",
         "security.sessions.revoke",
         "datarequests.list",
-        "datarequests.decide"
+        "datarequests.decide",
+        "packages.read",
+        "packages.edit",
+        "memberships.read",
+        "memberships.edit",
+        "giftcards.read",
+        "giftcards.manage",
+        "sales.read",
+        "wallet.refund",
+        "waitlist.read",
+        "waitlist.manage",
+        "wallet.catalogue",
+        "wallet.customer",
+        "wallet.sell",
+        "wallet.giftcheck"
       ],
       "routes": [
         "/customers/:id"
@@ -590,6 +660,30 @@
           "path": "/marketing",
           "description": "Offers, coupons (rules, dates and limits), loyalty rules, and campaigns to customers who opted in.",
           "task": "Task 5c",
+          "status": "available"
+        },
+        {
+          "id": "packages",
+          "label": "Packages & Plans",
+          "path": "/packages",
+          "description": "Packages (bundles of sessions) and membership plans: define them, see who bought them, refund unused sessions.",
+          "task": "Task 5e-1",
+          "status": "available"
+        },
+        {
+          "id": "gift-cards",
+          "label": "Gift Cards",
+          "path": "/gift-cards",
+          "description": "Gift cards sold, balances and ledger. Only the last four characters of a code are shown.",
+          "task": "Task 5e-1",
+          "status": "available"
+        },
+        {
+          "id": "waitlist",
+          "label": "Waitlist",
+          "path": "/waitlist",
+          "description": "Customers waiting for a slot, the offers made, and removals.",
+          "task": "Task 5e-1",
           "status": "available"
         },
         {

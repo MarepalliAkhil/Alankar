@@ -38,6 +38,7 @@ class Line:
     gst_percent: Decimal | None = None  # products
     gst_included: Decimal | None = None  # services: GST inside `amount` before any discount
     product: object = None
+    member: Decimal = ZERO  # membership discount on this line (inside `discount`)
     discount: Decimal = ZERO
     after: Decimal = ZERO
     gst: Decimal = ZERO
@@ -60,6 +61,8 @@ class Totals:
     max_redeemable: int = 0
     coupon_amount: Decimal = ZERO
     coupon_code: str = ""
+    member_discount: Decimal = ZERO  # membership discount (inside discount_amount)
+    credit_amount: Decimal = ZERO  # package or included-session value that paid for the service
 
 
 def compute(
@@ -72,12 +75,19 @@ def compute(
     rules: dict,
     coupon_amount: Decimal = ZERO,
     coupon_applies=lambda line: True,
+    member_percent: Decimal = ZERO,
+    member_applies=lambda line: True,
+    credit_cap: Decimal | None = None,
 ) -> Totals:
     t = Totals(lines=lines)
     pct = Decimal(discount_percent)
+    mpct = Decimal(member_percent)
     for line in lines:
-        line.discount = money(line.amount * pct / 100)
+        # A membership discount comes off first; the manual discount is taken from what is left.
+        line.member = money(line.amount * mpct / 100) if mpct > 0 and member_applies(line) else ZERO
+        line.discount = line.member + money((line.amount - line.member) * pct / 100)
         line.after = line.amount - line.discount
+        t.member_discount += line.member
     if coupon_amount > 0:
         # The coupon is shared out over the lines it applies to, in proportion to their price.
         targets = [ln for ln in lines if coupon_applies(ln)]
@@ -102,11 +112,17 @@ def compute(
         t.total += line.after
         t.gst_amount += line.gst
     t.subtotal = t.total - t.gst_amount
-    t.prepaid_applied = min(prepaid, t.total)
+    if credit_cap is not None:
+        # A package session or an included membership session pays for the service line (up to the
+        # session's value); the online prepayment, points and cash cover the rest.
+        service = next(ln for ln in lines if ln.kind == "service")
+        t.credit_amount = min(Decimal(credit_cap), service.after)
+    after_credit = t.total - t.credit_amount
+    t.prepaid_applied = min(prepaid, after_credit)
     t.excess_prepaid = prepaid - t.prepaid_applied
 
     value = Decimal(rules["loyalty_point_value"])
-    owed = t.total - t.prepaid_applied
+    owed = after_credit - t.prepaid_applied
     by_share = (t.total * Decimal(rules["loyalty_max_redeem_percent"]) / 100) // value
     t.max_redeemable = int(max(ZERO, min(Decimal(points_available), by_share, owed // value)))
     if redeem_points < 0:
@@ -119,6 +135,6 @@ def compute(
     t.loyalty_redeemed = redeem_points
     t.loyalty_value = value * redeem_points
     t.payable_now = owed - t.loyalty_value
-    paid_in_money = t.total - t.loyalty_value
+    paid_in_money = t.total - t.credit_amount - t.loyalty_value
     t.loyalty_earned = int(paid_in_money // 100 * Decimal(rules["loyalty_points_per_100"]))
     return t

@@ -7,10 +7,12 @@ this module checks *whether* the change is allowed for the appointment's current
 
 from __future__ import annotations
 
-import secrets
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from types import SimpleNamespace
 
 from django.db import transaction
 from django.db.models import Q, QuerySet
@@ -18,6 +20,7 @@ from django.utils import timezone
 
 from accounts import otp
 from accounts.tokens import hash_token, new_link_token
+from billing import tender
 from billing.models import Payment, PaymentLink, Refund
 from core import brand
 from core.mail import frontend_link, queue_mail
@@ -34,6 +37,7 @@ from scheduling.models import (
     ServiceAddon,
     ServiceVariant,
 )
+from wallet import giftcards
 from website.content import booking_settings
 
 S = AppointmentStatus
@@ -201,15 +205,47 @@ def check_bookable_time(start: datetime, minutes: int) -> None:
         raise BookingError("Choose one of the available times.")
 
 
+_exempt_offer: ContextVar = ContextVar("exempt_offer", default=None)
+
+
+@contextmanager
+def exempt_offer(offer_id):
+    """While a waitlisted customer accepts their offer, their own held slot is not 'busy'."""
+    token = _exempt_offer.set(offer_id)
+    try:
+        yield
+    finally:
+        _exempt_offer.reset(token)
+
+
 def busy_ranges(
     *, stylist_ids=(), room_ids=(), day_from: datetime, day_to: datetime, exclude=None
 ) -> list[Appointment]:
+    from waitlist.models import WaitlistOffer
+
+    who = Q(stylist_id__in=list(stylist_ids)) | Q(room_id__in=list(room_ids))
     qs = Appointment.objects.filter(
         status__in=BLOCKING_STATUSES, start__lt=day_to, end__gt=day_from
-    ).filter(Q(stylist_id__in=list(stylist_ids)) | Q(room_id__in=list(room_ids)))
+    ).filter(who)
     if exclude is not None:
         qs = qs.exclude(pk=exclude.pk)
-    return list(qs.only("id", "stylist_id", "room_id", "start", "end"))
+    busy = list(qs.only("id", "stylist_id", "room_id", "start", "end"))
+    # A slot offered to a waitlisted customer is held for them until the offer ends.
+    held = WaitlistOffer.objects.filter(
+        status=WaitlistOffer.Status.PENDING,
+        expires_at__gt=timezone.now(),
+        start__lt=day_to,
+        end__gt=day_from,
+    ).filter(who)
+    if _exempt_offer.get() is not None:
+        held = held.exclude(pk=_exempt_offer.get())
+    busy += [
+        SimpleNamespace(
+            id=o.pk, stylist_id=o.stylist_id, room_id=o.room_id, start=o.start, end=o.end
+        )
+        for o in held
+    ]
+    return busy
 
 
 def _free(busy: list[Appointment], start: datetime, end: datetime, *, stylist=None, room=None):
@@ -298,6 +334,17 @@ def record(appt: Appointment, action: str, actor=None, from_status: str = "", no
     )
 
 
+def _slot_of(appt: Appointment):
+    return appt.stylist, appt.start, appt.end, appt.room
+
+
+def _offer_freed(slot) -> None:
+    """A booking left this slot free: offer it to the waitlist (see waitlist/engine.py)."""
+    from waitlist import engine
+
+    engine.offer_freed(*slot)
+
+
 def when_text(dt: datetime) -> str:
     return local(dt).strftime("%a %d %b %Y, %I:%M %p")
 
@@ -361,7 +408,11 @@ def expire_due(now: datetime | None = None) -> int:
                 "The payment link for your booking expired, so the held time was released. "
                 "Please contact us or send a new request if you still want this visit.",
             )
+            _offer_freed(_slot_of(appt))
             count += 1
+    from waitlist import engine
+
+    engine.expire_offers(now)
     return count
 
 
@@ -578,6 +629,7 @@ def reschedule(
         if appt.status not in MOVABLE:
             raise BookingError("Only held or scheduled bookings can be moved.")
         old_start = appt.start
+        old_slot = _slot_of(appt)
         if (
             old_start == start
             and appt.stylist_id == stylist.id
@@ -601,6 +653,7 @@ def reschedule(
             email_customer(
                 appt, "your booking was moved", "Your booking has been moved to a new time."
             )
+        _offer_freed(old_slot)
     return appt
 
 
@@ -629,6 +682,7 @@ def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
         if appt.status not in CANCELLABLE:
             raise BookingError("Only held, scheduled or checked-in bookings can be cancelled.")
         previous = appt.status
+        slot = _slot_of(appt)
         appt.status = S.CANCELLED
         appt.cancel_reason = reason
         appt.cancel_requested = False
@@ -646,6 +700,7 @@ def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
         if pending:
             intro += f"\nYour online payment of Rs. {pending} will be refunded once approved."
         email_customer(appt, "booking cancelled", intro)
+        _offer_freed(slot)
     return appt
 
 
@@ -851,9 +906,30 @@ def active_link(appt: Appointment, token: str | None) -> PaymentLink | None:
     return links.first()
 
 
-def pay(appt_id, *, customer, token: str | None, succeed: bool) -> tuple[Appointment, bool]:
-    """Mock gateway result. Returns (appointment, paid)."""
+def pay(
+    appt_id,
+    *,
+    customer,
+    token: str | None,
+    succeed: bool,
+    gift_code: str = "",
+    gift_amount=None,
+    ip: str | None = None,
+    request=None,
+) -> tuple[Appointment, bool]:
+    """Pays the held booking. Returns (appointment, paid).
+
+    A gift card can pay all or part of it; any rest goes through the simulated gateway
+    (`succeed` is that gateway's result). If the gateway part fails, nothing is taken from the
+    card either.
+    """
     expire_due()
+    card = None
+    if gift_code:
+        try:
+            card = giftcards.find(gift_code, user=customer, ip=ip, request=request)
+        except giftcards.GiftCardError as exc:
+            raise BookingError(exc.message, code=exc.code) from exc
     with transaction.atomic():
         appt = Appointment.objects.select_for_update().get(pk=appt_id, customer=customer)
         if appt.status == S.PAYMENT_EXPIRED:
@@ -869,24 +945,51 @@ def pay(appt_id, *, customer, token: str | None, succeed: bool) -> tuple[Appoint
                 "from My Appointments.",
                 code="conflict",
             )
-        reference = f"MOCK-{secrets.token_hex(6).upper()}"
-        if not succeed:
+        due = link.amount
+        from_card = Decimal("0")
+        if card is not None:
+            try:
+                balance = giftcards.check_usable(card)
+            except giftcards.GiftCardError as exc:
+                raise BookingError(exc.message, code=exc.code) from exc
+            wanted = due if gift_amount in (None, "") else Decimal(str(gift_amount))
+            from_card = min(wanted, balance, due)
+            if from_card <= 0:
+                raise BookingError("Enter an amount to take from the gift card.")
+        rest = due - from_card
+        if rest > 0 and not succeed:
             Payment.objects.create(
                 appointment=appt,
                 link=link,
-                amount=link.amount,
+                amount=rest,
                 status=Payment.Status.FAILED,
-                reference=reference,
+                reference=tender.reference("MOCK"),
             )
             record(appt, "payment_failed", actor=customer, from_status=appt.status)
             return appt, False
-        Payment.objects.create(
-            appointment=appt,
-            link=link,
-            amount=link.amount,
-            status=Payment.Status.SUCCEEDED,
-            reference=reference,
-        )
+        reference = tender.reference("MOCK")
+        if from_card > 0:
+            gift_payment = Payment.objects.create(
+                appointment=appt,
+                link=link,
+                method="gift_card",
+                amount=from_card,
+                status=Payment.Status.SUCCEEDED,
+                reference=tender.reference("GIFT"),
+            )
+            try:
+                giftcards.redeem(card.pk, from_card, payment=gift_payment, actor=customer)
+            except giftcards.GiftCardError as exc:
+                raise BookingError(exc.message, code="conflict") from exc
+            appt._gift_used = (card, from_card)
+        if rest > 0:
+            Payment.objects.create(
+                appointment=appt,
+                link=link,
+                amount=rest,
+                status=Payment.Status.SUCCEEDED,
+                reference=reference,
+            )
         link.status = PaymentLink.Status.PAID
         link.paid_at = timezone.now()
         link.save(update_fields=["status", "paid_at"])
@@ -894,10 +997,11 @@ def pay(appt_id, *, customer, token: str | None, succeed: bool) -> tuple[Appoint
         appt.awaiting_payment_until = None
         appt.save(update_fields=["status", "awaiting_payment_until", "updated_at"])
         record(appt, "paid", actor=customer, from_status=S.AWAITING_PAYMENT, note=reference)
+        how = f" Rs. {from_card} came from your gift card." if from_card > 0 else ""
         email_customer(
             appt,
             "payment received",
-            f"Thank you! We received Rs. {link.amount} (reference {reference}). "
+            f"Thank you! We received Rs. {due} (reference {reference}).{how} "
             "Your appointment is booked.",
         )
     return appt, True
@@ -952,6 +1056,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
         appt = Appointment.objects.select_for_update().get(pk=appt_id, customer=customer)
         _require(appt, "cancel")
         previous = appt.status
+        slot = _slot_of(appt)
         appt.status = S.CANCELLED
         appt.cancel_reason = reason
         appt.awaiting_payment_until = None
@@ -966,7 +1071,11 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
                 amount=payment.amount,
                 status=Refund.Status.PROCESSED,
                 reason="Free cancellation by the customer",
+                method="gift_card" if payment.method == "gift_card" else "",
                 processed_at=timezone.now(),
+            )
+            giftcards.refund_payment(
+                payment, payment.amount, actor=customer, note="Free cancellation"
             )
             refunded += payment.amount
         record(appt, "cancelled", actor=customer, from_status=previous, note=reason)
@@ -974,6 +1083,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
         if refunded:
             intro += f" A refund of Rs. {refunded} has been processed."
         email_customer(appt, "booking cancelled", intro)
+        _offer_freed(slot)
     return appt
 
 

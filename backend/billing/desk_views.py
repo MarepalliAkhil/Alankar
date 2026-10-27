@@ -12,7 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.audit import audit
+from accounts.audit import audit, client_ip
 from accounts.models import AuditLog
 from billing import cashclose, checkout, refunds
 from billing.models import Invoice, Refund
@@ -20,6 +20,7 @@ from billing.pos import CheckoutError
 from inventory import stock
 from inventory.models import Product
 from scheduling.models import Appointment
+from wallet import giftcards
 from website.content import pos_settings
 
 
@@ -28,6 +29,7 @@ def error_response(exc: CheckoutError) -> Response:
         "conflict": status.HTTP_409_CONFLICT,
         "stock": status.HTTP_409_CONFLICT,
         "not_found": status.HTTP_404_NOT_FOUND,
+        "throttled": status.HTTP_429_TOO_MANY_REQUESTS,
     }.get(exc.code, status.HTTP_400_BAD_REQUEST)
     body = {"detail": exc.message}
     if exc.code == "stock":
@@ -111,6 +113,13 @@ def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
         "discount_reason": invoice.discount_reason,
         "coupon_code": invoice.coupon_code,
         "coupon_amount": money_str(invoice.coupon_amount),
+        "member_plan": invoice.member_plan,
+        "member_discount_amount": money_str(invoice.member_discount_amount),
+        "credit_amount": money_str(invoice.credit_amount),
+        "credits": [
+            {"kind": c.kind, "description": c.description, "amount": money_str(c.amount)}
+            for c in invoice.credits.all()
+        ],
         "loyalty_redeemed": invoice.loyalty_redeemed,
         "loyalty_earned": invoice.loyalty_earned,
         "returnable": returnable_data(invoice),
@@ -160,6 +169,40 @@ def refund_data(refund: Refund) -> dict:
     }
 
 
+def wallet_data(result: dict) -> dict:
+    """What the customer's packages and membership offer for this visit."""
+    wallet = result["wallet"]
+    m = wallet["membership"]
+    return {
+        "membership": (
+            {
+                "plan_name": m.plan_name,
+                "discount_percent": money_str(m.discount_percent),
+                "applies_to_products": m.applies_to_products,
+                "sessions_left": m.sessions_left,
+                "period_end": m.period_end,
+                "status": m.status,
+            }
+            if m
+            else None
+        ),
+        "session_available": wallet["session_available"],
+        "using_session": result["membership_session"],
+        "packages": [
+            {
+                "id": str(c.id),
+                "name": c.purchase.name,
+                "service_name": c.service_name,
+                "remaining": c.remaining,
+                "unit_value": money_str(c.unit_value),
+                "expires_at": c.purchase.expires_at,
+            }
+            for c in wallet["packages"]
+        ],
+        "using_package": str(result["package"].id) if result["package"] else None,
+    }
+
+
 def totals_data(result: dict) -> dict:
     t = result["totals"]
     tip = result["tip"]
@@ -180,6 +223,9 @@ def totals_data(result: dict) -> dict:
         "discount_amount": money_str(t.discount_amount),
         "coupon_code": t.coupon_code,
         "coupon_amount": money_str(t.coupon_amount),
+        "member_discount": money_str(t.member_discount),
+        "credit_amount": money_str(t.credit_amount),
+        "wallet": wallet_data(result),
         "subtotal": money_str(t.subtotal),
         "gst_amount": money_str(t.gst_amount),
         "total": money_str(t.total),
@@ -202,8 +248,9 @@ class ProductLine(serializers.Serializer):
 
 
 class PaymentLine(serializers.Serializer):
-    method = serializers.ChoiceField(choices=["cash", "card", "upi"])
+    method = serializers.ChoiceField(choices=["cash", "card", "upi", "gift_card"])
     amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
+    code = serializers.CharField(max_length=60, required=False, allow_blank=True, default="")
 
 
 class BillSerializer(serializers.Serializer):
@@ -221,6 +268,10 @@ class BillSerializer(serializers.Serializer):
         max_digits=10, decimal_places=2, required=False, default=0, min_value=0
     )
     payments = PaymentLine(many=True, required=False, default=list)
+    # A package session (the id of one of the customer's package credits) or an included
+    # membership session pays for the service.
+    package = serializers.UUIDField(required=False, allow_null=True, default=None)
+    membership_session = serializers.BooleanField(required=False, default=False)
 
 
 def bill_data(serializer: BillSerializer) -> dict:
@@ -232,8 +283,10 @@ def bill_data(serializer: BillSerializer) -> dict:
             for row in data["products"]
         ],
         "payments": [
-            {"method": row["method"], "amount": str(row["amount"])} for row in data["payments"]
+            {"method": row["method"], "amount": str(row["amount"]), "code": row.get("code", "")}
+            for row in data["payments"]
         ],
+        "package": str(data["package"]) if data.get("package") else None,
     }
 
 
@@ -320,7 +373,9 @@ class PosCheckoutView(APIView):
         body.is_valid(raise_exception=True)
         data = bill_data(body)
         try:
-            invoice = checkout.checkout(data["appointment"], data, actor=request.user)
+            invoice = checkout.checkout(
+                data["appointment"], data, actor=request.user, ip=client_ip(request)
+            )
         except Appointment.DoesNotExist as exc:
             raise Http404 from exc
         except CheckoutError as exc:
@@ -336,7 +391,19 @@ class PosCheckoutView(APIView):
             discount_percent=str(invoice.discount_percent),
             tip=str(invoice.tip_amount),
             methods=sorted({p.method for p in invoice.payments.all()}),
+            credits=[f"{c.kind}: {c.description}" for c in invoice.credits.all()],
+            member_plan=invoice.member_plan,
         )
+        for card, amount in getattr(invoice, "_gift_rows", []):
+            audit(
+                AuditLog.Action.GIFT_CARD_REDEEMED,
+                request=request,
+                actor=request.user,
+                target=invoice.customer,
+                card=giftcards.mask(card.last4),
+                amount=str(amount),
+                invoice=invoice.number,
+            )
         return Response(invoice_data(invoice_queryset().get(pk=invoice.pk), True), status=201)
 
 

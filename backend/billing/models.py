@@ -175,6 +175,11 @@ class Invoice(models.Model):
     # A coupon used on the bill; its rupees are already inside discount_amount.
     coupon_code = models.CharField(max_length=24, blank=True)
     coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Membership benefits: the percent taken off (its rupees are inside discount_amount) and the
+    # value of a package or included-membership session that paid for the service.
+    member_plan = models.CharField(max_length=80, blank=True)
+    member_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    credit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     # Loyalty points used as part payment (1 point = Rs. 1 by default) and points earned.
     loyalty_redeemed = models.PositiveIntegerField(default=0)
     loyalty_earned = models.PositiveIntegerField(default=0)
@@ -228,6 +233,36 @@ class InvoiceItem(models.Model):
 
     def __str__(self) -> str:
         return self.description
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")
+
+
+class InvoiceCredit(models.Model):
+    """A package session or an included membership session that paid for part of the bill."""
+
+    class Kind(models.TextChoices):
+        PACKAGE = "package", "Package session"
+        MEMBERSHIP = "membership", "Membership session"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="credits")
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    description = models.CharField(max_length=200)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    # The package credit or membership that was used.
+    source_id = models.UUIDField()
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return f"InvoiceCredit {self.pk}"
 
     def save(self, *args, **kwargs):
         if not self._state.adding:

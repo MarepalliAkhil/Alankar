@@ -68,7 +68,7 @@ describe('role policy (shared with the backend)', () => {
     for (const role of ROLES) {
       for (const item of policy.roles[role].menu) {
         expect(item.description.length).toBeGreaterThan(10);
-        expect(item.task).toMatch(/^Task \d+[a-z]?$/);
+        expect(item.task).toMatch(/^Task \d+[a-z]?(-\d+)?$/);
       }
     }
   });

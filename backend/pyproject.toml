@@ -12,6 +12,8 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 "people/tests/*" = ["F401", "F811"]
 "chat/tests/*" = ["F401", "F811"]
 "scheduling/tests/*" = ["F401", "F811"]
+"wallet/tests/*" = ["F401", "F811"]
+"waitlist/tests/*" = ["F401", "F811"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

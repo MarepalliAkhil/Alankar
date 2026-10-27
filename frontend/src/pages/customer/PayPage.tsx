@@ -1,20 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, CreditCard, TriangleAlert } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { getPayment, payAppointment } from '../../api/booking';
+import { checkMyGiftCard } from '../../api/wallet';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
   Card,
   EmptyState,
   ErrorState,
+  Input,
   LoadingState,
   StatusBadge,
   useToast,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { formatDateTime, formatINR } from '../../lib/format';
+import { formatDateTime, formatINR, formatINRExact } from '../../lib/format';
 
 /**
  * Mock payment gateway (v1). No card details are ever asked for: the two buttons simulate a
@@ -34,8 +37,31 @@ export default function PayPage() {
     retry: false,
   });
 
+  const [giftCode, setGiftCode] = useState('');
+  const [giftAmount, setGiftAmount] = useState('');
+  const [giftNote, setGiftNote] = useState<{ text: string; bad: boolean } | null>(null);
+  const checkGift = useMutation({
+    mutationFn: () => checkMyGiftCard(giftCode),
+    onSuccess: (card) =>
+      setGiftNote({
+        text: `${card.masked} has ${formatINRExact(card.balance)} to spend.`,
+        bad: false,
+      }),
+    onError: (error) =>
+      setGiftNote({
+        text: genericErrorMessage(error, 'That gift card code is not valid.'),
+        bad: true,
+      }),
+  });
+
   const pay = useMutation({
-    mutationFn: (outcome: 'success' | 'fail') => payAppointment(id, outcome, link),
+    mutationFn: (outcome: 'success' | 'fail') =>
+      payAppointment(
+        id,
+        outcome,
+        link,
+        giftCode.trim() ? { code: giftCode.trim(), amount: giftAmount.trim() } : null,
+      ),
     onSuccess: () => {
       toast.show({
         tone: 'success',
@@ -140,6 +166,46 @@ export default function PayPage() {
           <p className="text-2xl font-semibold text-text">{formatINR(amount)}</p>
           {expires && (
             <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
+          <Input
+            label="Gift card code (optional)"
+            hint="It pays all or part of the amount. The rest is paid below."
+            autoComplete="off"
+            value={giftCode}
+            onChange={(e) => {
+              setGiftCode(e.target.value);
+              setGiftNote(null);
+            }}
+          />
+          <Input
+            label="Amount to take from the gift card (₹, optional)"
+            inputMode="decimal"
+            value={giftAmount}
+            onChange={(e) => setGiftAmount(e.target.value)}
+          />
+          <div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={giftCode.trim() === ''}
+              loading={checkGift.isPending}
+              onClick={() => checkGift.mutate()}
+            >
+              Check balance
+            </Button>
+          </div>
+          {giftNote && (
+            <p
+              role={giftNote.bad ? 'alert' : 'status'}
+              className={
+                giftNote.bad ? 'text-sm font-medium text-danger-text' : 'text-sm text-text'
+              }
+            >
+              {giftNote.text}
+            </p>
           )}
         </div>
         <p className="text-xs text-text-muted">

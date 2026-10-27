@@ -127,7 +127,33 @@ export interface BillInput {
   /** One coupon code per bill (optional). */
   coupon?: string;
   tip: string;
-  payments?: { method: PayMethod; amount: string }[];
+  payments?: { method: PayMethod | 'gift_card'; amount: string; code?: string }[];
+  /** The id of one of the customer's package credits (a session pays for the service). */
+  package?: string | null;
+  /** Use an included membership session for the service. */
+  membership_session?: boolean;
+}
+
+export interface QuoteWallet {
+  membership: {
+    plan_name: string;
+    discount_percent: string;
+    applies_to_products: boolean;
+    sessions_left: number;
+    period_end: string;
+    status: string;
+  } | null;
+  session_available: boolean;
+  using_session: boolean;
+  packages: {
+    id: string;
+    name: string;
+    service_name: string;
+    remaining: number;
+    unit_value: string;
+    expires_at: string;
+  }[];
+  using_package: string | null;
 }
 
 export interface Quote {
@@ -144,6 +170,9 @@ export interface Quote {
   discount_amount: string;
   coupon_code?: string;
   coupon_amount?: string;
+  member_discount?: string;
+  credit_amount?: string;
+  wallet?: QuoteWallet;
   subtotal: string;
   gst_amount: string;
   total: string;

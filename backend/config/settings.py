@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "chat",
     "marketing",
     "website",
+    "wallet",
+    "waitlist",
 ]
 
 MIDDLEWARE = [

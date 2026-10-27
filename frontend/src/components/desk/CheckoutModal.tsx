@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { errorDetail } from '../../api/client';
+import { checkDeskGiftCard } from '../../api/wallet';
 import {
   checkout,
   getQuote,
@@ -9,10 +10,12 @@ import {
   type BillInput,
   type InvoiceDetail,
   type PayMethod,
+  type QuoteWallet,
 } from '../../api/pos';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 import {
   Button,
+  Checkbox,
   ErrorState,
   IconButton,
   Input,
@@ -26,12 +29,22 @@ const methods = [
   { value: 'cash', label: 'Cash' },
   { value: 'card', label: 'Card' },
   { value: 'upi', label: 'UPI' },
+  { value: 'gift_card', label: 'Gift card' },
 ];
 
 interface PayRow {
-  method: PayMethod;
+  method: PayMethod | 'gift_card';
   amount: string;
+  code: string;
+  note: string;
 }
+
+const emptyRow = (method: PayRow['method'] = 'cash'): PayRow => ({
+  method,
+  amount: '',
+  code: '',
+  note: '',
+});
 
 /** The checkout screen: products, discount, loyalty points, tip and (split) payment. */
 export function CheckoutModal({
@@ -53,7 +66,9 @@ export function CheckoutModal({
   const [coupon, setCoupon] = useState('');
   const [points, setPoints] = useState('');
   const [tip, setTip] = useState('');
-  const [payments, setPayments] = useState<PayRow[]>([{ method: 'cash', amount: '' }]);
+  const [packageCredit, setPackageCredit] = useState('');
+  const [useSession, setUseSession] = useState(false);
+  const [payments, setPayments] = useState<PayRow[]>([emptyRow()]);
   const [problem, setProblem] = useState('');
 
   const context = useQuery({
@@ -70,8 +85,10 @@ export function CheckoutModal({
       redeem_points: Number(points) || 0,
       coupon,
       tip: tip || '0',
+      package: packageCredit || null,
+      membership_session: useSession,
     }),
-    [appointmentId, cart, discount, reason, points, coupon, tip],
+    [appointmentId, cart, discount, reason, points, coupon, tip, packageCredit, useSession],
   );
 
   const quote = useQuery({
@@ -88,7 +105,11 @@ export function CheckoutModal({
         ...bill,
         payments: payments
           .filter((row) => Number(row.amount) > 0)
-          .map((row) => ({ method: row.method, amount: row.amount })),
+          .map((row) => ({
+            method: row.method,
+            amount: row.amount,
+            ...(row.method === 'gift_card' ? { code: row.code } : {}),
+          })),
       }),
     onSuccess: (invoice) => {
       toast.show({ tone: 'success', title: `Invoice ${invoice.number} issued` });
@@ -121,6 +142,16 @@ export function CheckoutModal({
     });
   const updatePayment = (index: number, patch: Partial<PayRow>) =>
     setPayments((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const checkCard = async (index: number) => {
+    try {
+      const card = await checkDeskGiftCard(payments[index].code);
+      updatePayment(index, {
+        note: `${card.masked} has ${formatINRExact(card.balance)} to spend.`,
+      });
+    } catch (error) {
+      updatePayment(index, { note: errorDetail(error) ?? 'That gift card code is not valid.' });
+    }
+  };
   const fillRemaining = (index: number) => {
     const others = payments.reduce(
       (sum, row, i) => sum + (i === index ? 0 : Number(row.amount) || 0),
@@ -310,6 +341,14 @@ export function CheckoutModal({
             />
           </section>
 
+          <WalletChoices
+            wallet={quote.data?.wallet}
+            packageCredit={packageCredit}
+            onPackage={setPackageCredit}
+            useSession={useSession}
+            onSession={setUseSession}
+          />
+
           <section aria-label="Bill" className="rounded-card bg-primary-soft p-md text-sm">
             {quoteError ? (
               <p role="alert" className="text-danger-text">
@@ -319,17 +358,34 @@ export function CheckoutModal({
               <dl className="grid grid-cols-[1fr_auto] gap-x-md gap-y-1">
                 <dt>Items</dt>
                 <dd>{formatINRExact(quote.data.gross)}</dd>
-                {Number(quote.data.discount_amount) - Number(quote.data.coupon_amount ?? 0) > 0 && (
+                {Number(quote.data.discount_amount) -
+                  Number(quote.data.coupon_amount ?? 0) -
+                  Number(quote.data.member_discount ?? 0) >
+                  0 && (
                   <>
                     <dt>Discount</dt>
                     <dd>
                       −{' '}
                       {formatINRExact(
                         (
-                          Number(quote.data.discount_amount) - Number(quote.data.coupon_amount ?? 0)
+                          Number(quote.data.discount_amount) -
+                          Number(quote.data.coupon_amount ?? 0) -
+                          Number(quote.data.member_discount ?? 0)
                         ).toFixed(2),
                       )}
                     </dd>
+                  </>
+                )}
+                {Number(quote.data.member_discount ?? 0) > 0 && (
+                  <>
+                    <dt>Member discount</dt>
+                    <dd>− {formatINRExact(quote.data.member_discount ?? '0')}</dd>
+                  </>
+                )}
+                {Number(quote.data.credit_amount ?? 0) > 0 && (
+                  <>
+                    <dt>Paid with a package or member session</dt>
+                    <dd>− {formatINRExact(quote.data.credit_amount ?? '0')}</dd>
                   </>
                 )}
                 {Number(quote.data.coupon_amount ?? 0) > 0 && (
@@ -387,7 +443,11 @@ export function CheckoutModal({
                   label={`Method ${index + 1}`}
                   value={row.method}
                   onChange={(event) =>
-                    updatePayment(index, { method: event.target.value as PayMethod })
+                    updatePayment(index, {
+                      method: event.target.value as PayRow['method'],
+                      code: '',
+                      note: '',
+                    })
                   }
                   options={methods}
                 />
@@ -399,6 +459,25 @@ export function CheckoutModal({
                   value={row.amount}
                   onChange={(event) => updatePayment(index, { amount: event.target.value })}
                 />
+                {row.method === 'gift_card' && (
+                  <>
+                    <Input
+                      label={`Gift card code ${index + 1}`}
+                      autoComplete="off"
+                      value={row.code}
+                      onChange={(event) =>
+                        updatePayment(index, { code: event.target.value, note: '' })
+                      }
+                    />
+                    <Button
+                      variant="secondary"
+                      disabled={row.code.trim() === ''}
+                      onClick={() => void checkCard(index)}
+                    >
+                      Check balance
+                    </Button>
+                  </>
+                )}
                 <Button variant="secondary" onClick={() => fillRemaining(index)}>
                   Fill remaining
                 </Button>
@@ -409,13 +488,18 @@ export function CheckoutModal({
                     icon={<Trash2 className="h-4 w-4" />}
                   />
                 )}
+                {row.note && (
+                  <p role="status" className="basis-full text-sm text-text-muted">
+                    {row.note}
+                  </p>
+                )}
               </div>
             ))}
             <div className="flex items-center justify-between text-sm">
               <Button
                 variant="ghost"
                 leftIcon={<Plus className="h-4 w-4" />}
-                onClick={() => setPayments((rows) => [...rows, { method: 'card', amount: '' }])}
+                onClick={() => setPayments((rows) => [...rows, emptyRow('card')])}
               >
                 Split payment
               </Button>
@@ -436,5 +520,57 @@ export function CheckoutModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Package sessions and the included membership session that can pay for this service. */
+function WalletChoices({
+  wallet,
+  packageCredit,
+  onPackage,
+  useSession,
+  onSession,
+}: {
+  wallet: QuoteWallet | undefined;
+  packageCredit: string;
+  onPackage: (id: string) => void;
+  useSession: boolean;
+  onSession: (on: boolean) => void;
+}) {
+  if (!wallet || (!wallet.membership && wallet.packages.length === 0)) return null;
+  return (
+    <section
+      aria-label="Packages and membership"
+      className="flex flex-col gap-sm rounded-card border border-border p-md"
+    >
+      <h3 className="text-sm font-semibold text-text">Packages and membership</h3>
+      {wallet.membership && (
+        <p className="text-sm text-text-muted">
+          Member: {wallet.membership.plan_name} ({Number(wallet.membership.discount_percent)}% off
+          is applied automatically).
+        </p>
+      )}
+      {wallet.packages.length > 0 && (
+        <Select
+          label="Use a package session"
+          value={packageCredit}
+          placeholder="Do not use a package"
+          disabled={useSession}
+          onChange={(event) => onPackage(event.target.value)}
+          options={wallet.packages.map((p) => ({
+            value: p.id,
+            label: `${p.name}: ${p.remaining} × ${p.service_name} left`,
+          }))}
+        />
+      )}
+      {wallet.session_available && (
+        <Checkbox
+          label={`Use a free membership session (${wallet.membership?.sessions_left ?? 0} left)`}
+          checked={useSession}
+          disabled={packageCredit !== ''}
+          onChange={(event) => onSession(event.target.checked)}
+        />
+      )}
+    </section>
   );
 }

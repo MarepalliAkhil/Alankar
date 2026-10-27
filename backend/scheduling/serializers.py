@@ -100,6 +100,10 @@ class RescheduleSerializer(serializers.Serializer):
 class PaySerializer(serializers.Serializer):
     outcome = serializers.ChoiceField(choices=["success", "fail"])
     link = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    gift_card_code = serializers.CharField(max_length=60, required=False, allow_blank=True)
+    gift_card_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True, min_value=0
+    )
 
 
 class _AppointmentBase(serializers.ModelSerializer):

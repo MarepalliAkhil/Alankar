@@ -241,7 +241,7 @@ describe('payment page', () => {
     renderAt('/customer/pay/ap2?link=tok123');
     await user.click(await screen.findByRole('button', { name: /^Pay ₹500/ }));
     await waitFor(() =>
-      expect(bookingApi.payAppointment).toHaveBeenCalledWith('ap2', 'success', 'tok123'),
+      expect(bookingApi.payAppointment).toHaveBeenCalledWith('ap2', 'success', 'tok123', null),
     );
   });
 

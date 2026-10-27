@@ -16,7 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.audit import audit
+from accounts.audit import audit, client_ip
 from accounts.models import AuditLog
 from billing.models import Payment
 from people import desk as customer_desk
@@ -40,6 +40,7 @@ from scheduling.serializers import (
     ScheduleItemSerializer,
     SlotQuerySerializer,
 )
+from wallet import giftcards
 from website.content import booking_settings
 from website.serializers import ServiceSerializer
 from website.views import active_services
@@ -61,7 +62,7 @@ def booking_error(exc: booking.BookingError) -> Response:
     if exc.code == "conflict":
         code = status.HTTP_409_CONFLICT
         body["slots"] = [slot.isoformat() for slot in exc.slots]
-    elif exc.code == "too_soon":
+    elif exc.code in ("too_soon", "throttled"):
         code = status.HTTP_429_TOO_MANY_REQUESTS
     elif exc.code == "email_unverified":
         code = status.HTTP_403_FORBIDDEN
@@ -330,15 +331,29 @@ class PaymentView(APIView):
         body = PaySerializer(data=request.data)
         body.is_valid(raise_exception=True)
         try:
-            _, paid = booking.pay(
+            booked, paid = booking.pay(
                 pk,
                 customer=request.user,
                 token=body.validated_data.get("link") or None,
                 succeed=body.validated_data["outcome"] == "success",
+                gift_code=body.validated_data.get("gift_card_code") or "",
+                gift_amount=body.validated_data.get("gift_card_amount"),
+                ip=client_ip(request),
+                request=request,
             )
         except booking.BookingError as exc:
             return booking_error(exc)
         appt = own_appointment(request, pk)
+        used = getattr(booked, "_gift_used", None)
+        if paid and used:
+            audit(
+                AuditLog.Action.GIFT_CARD_REDEEMED,
+                request=request,
+                actor=request.user,
+                card=giftcards.mask(used[0].last4),
+                amount=str(used[1]),
+                appointment=str(pk),
+            )
         if not paid:
             return Response(
                 {

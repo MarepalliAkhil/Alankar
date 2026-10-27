@@ -18,6 +18,8 @@ from chat.models import Message
 from core.models import MailOutbox
 from people.models import CustomerNote, CustomerProfile, LoyaltyEntry, Rating
 from scheduling.models import Appointment, AppointmentStatus
+from waitlist.models import WaitlistEntry
+from wallet.models import GiftCard, Sale
 
 DELETED_NAME = "Deleted customer"
 EXPORT_DAYS = 7
@@ -105,6 +107,7 @@ def export_data(user: User) -> dict:
             {"points": e.points, "reason": e.reason, "at": e.created_at.isoformat()}
             for e in LoyaltyEntry.objects.filter(customer=user)
         ],
+        "wallet": wallet_export(user),
         "ratings": [
             {"stars": r.stars, "comment": r.comment, "at": r.submitted_at.isoformat()}
             for r in Rating.objects.filter(customer=user, status=Rating.Status.SUBMITTED)
@@ -135,6 +138,13 @@ def anonymize(user: User) -> None:
         allergies="",
     )
     CustomerNote.objects.filter(customer=user).delete()
+    WaitlistEntry.objects.filter(customer=user).delete()
+    # Sales are records, so only the personal fields are replaced.
+    Sale.objects.filter(customer=user).update(buyer_name=DELETED_NAME, buyer_email="")
+    GiftCard.objects.filter(buyer=user).update(buyer_name=DELETED_NAME)
+    GiftCard.objects.filter(recipient_email__iexact=old_email).update(
+        recipient_name="", recipient_email="", message=""
+    )
     Message.objects.filter(thread__customer=user).delete()
     Rating.objects.filter(customer=user).update(comment="")
     MailOutbox.objects.filter(to_email__iexact=old_email).update(
@@ -161,3 +171,53 @@ def anonymize(user: User) -> None:
     user.is_active = False
     user.set_unusable_password()
     user.save()
+
+
+def wallet_export(user: User) -> dict:
+    """Packages, membership, gift cards (last four characters only) and waitlist entries."""
+    from wallet import data
+
+    wallet = data.customer_wallet(user)
+    return {
+        "packages": [
+            {
+                "name": p["name"],
+                "price_paid": p["price_paid"],
+                "purchased_at": p["purchased_at"].isoformat(),
+                "expires_at": p["expires_at"].isoformat(),
+                "sessions": [
+                    {"service": c["service_name"], "bought": c["quantity"], "left": c["remaining"]}
+                    for c in p["credits"]
+                ],
+            }
+            for p in wallet["packages"]
+        ],
+        "membership": (
+            {
+                "plan": wallet["membership"]["plan_name"],
+                "status": wallet["membership"]["status"],
+                "valid_until": wallet["membership"]["period_end"].isoformat(),
+                "sessions_left": wallet["membership"]["sessions_left"],
+            }
+            if wallet["membership"]
+            else None
+        ),
+        "gift_cards": [
+            {
+                "card": c["masked"],
+                "role": c["role"],
+                "balance": c["balance"],
+                "expires_at": c["expires_at"].isoformat(),
+            }
+            for c in wallet["gift_cards"]
+        ],
+        "waitlist": [
+            {
+                "service": e.service.name,
+                "from": e.window_start.isoformat(),
+                "to": e.window_end.isoformat(),
+                "status": e.status,
+            }
+            for e in WaitlistEntry.objects.filter(customer=user).select_related("service")
+        ],
+    }

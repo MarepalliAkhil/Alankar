@@ -11,7 +11,10 @@
   Task 5b (operations): DONE. Verified on the owner's PC (2026-10-27).
   Task 5c (content editor, marketing, reports): DONE. Verified on the owner's PC (2026-10-27).
   Task 5d (audit log, security, data requests): DONE. Verified on the owner's PC (2026-10-27).
-  Next: Task 5e (growth features, split 5e-1 to 5e-4; plan awaiting the owner's OK). One sub-task at a time; wait for "passed".
+  Task 5e (growth features) is split 5e-1..5e-4 (owner-approved). One sub-task at a time; wait for "passed".
+  Task 5e-1 (packages, memberships, gift cards, waitlist): IMPLEMENTED in the build sandbox, waiting for the
+  owner's PC run (migrate, pytest, npm test, walkthrough below). Next: 5e-2 (per-customer coupons, scheduled
+  campaigns, reports by hour and payment method with the peak-hours heatmap and CSV).
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -655,3 +658,73 @@
    list, it is as "Deleted customer" with no phone or notes.
 9. Receptionist, stylist and customer: no Audit Log or Security in their menus; /audit-log and /security
    show the "not allowed" page.
+
+## Task 5e-1: decisions
+- New apps `wallet` (packages, membership plans, gift cards, sales) and `waitlist`. Policy actions, menu items
+  (admin: Packages & Plans, Gift Cards, Waitlist; customer: My Wallet, Waitlist) and audit actions were added.
+- One payment path: `billing/tender.py` charges (simulated) for everything sold online; at the counter the
+  receptionist picks cash, card or UPI. Every sale makes an immutable `Sale` (SAL-YYYY-nnnnn) which cash close
+  includes in the till expectation. Declined online payments create nothing.
+- Packages: price is shared over the sessions by list price (paise rounded down) to give each session a value.
+  A session is used at checkout and becomes an invoice-level non-cash line (`InvoiceCredit`), so an invoice
+  always adds up: total = online prepayment + package/membership credit + loyalty + payments (incl. gift card).
+  The session ledger (`PackageEntry`) is append-only. Admin can refund the unused sessions (not after expiry) at
+  their share of the price, or put a used session back with a reason.
+- Memberships: a percentage off every bill (optionally on products) and optional free sessions per period.
+  The member discount comes off first, the manual discount on what is left. One open membership per customer
+  (database constraint). Cancel keeps the benefits until the period ends. Renewal is manual and simulated.
+  Plan terms are copied at joining, so later edits never change current members.
+- Gift cards: 20-character codes from a 32-letter alphabet without look-alike characters (100 bits), made with
+  `secrets`. Only an HMAC hash and the last 4 characters are stored: the code is shown once to the buyer (counter
+  or online) and emailed to the recipient (simulated mail). A lost code means the admin cancels the card and sells
+  a new one. Lists, API and audit log show only the last 4. Wrong codes are limited to 5 per user and 10 per IP
+  per 15 minutes (429, audit entry "Gift code locked"); the error never says whether a code exists.
+  The balance is the sum of an append-only ledger; redemption locks the card row, so two payments at once can
+  never overspend. Gift cards pay at the counter (method "gift_card", can be split) and in the online booking
+  payment (all or part; the rest goes through the test gateway; if the gateway fails nothing is taken from the
+  card). A cancelled booking or a refund of a gift-card payment returns the money to the card (an expired card gets
+  30 extra days). Failed-guess counts are written outside the main transaction so a rollback never erases them.
+- GST on package, membership and gift-card sales is recognised when the sessions are used on an invoice (a gift
+  card is a voucher, not a sale of services), so the sale receipt carries no GST line.
+- Waitlist: a customer asks for a service (and optionally a stylist) inside a time window; at most 5 open
+  requests. When a booking is cancelled, rescheduled away or a payment hold expires, the first matching person (by
+  join order) gets the slot for `waitlist_offer_minutes` (default 15, Settings > Booking rules). The hold is real:
+  pending offers count as busy for everyone else. Accept books the slot (awaiting payment, like any booking) under
+  a row lock; two accepts at once book it only once. An unanswered or declined offer moves to the next person;
+  the person goes back to waiting (never offered the same slot twice). A rejected request frees nothing because a
+  request holds no slot. Real SMS/WhatsApp stays out of scope: offers are emailed through the simulated mailbox.
+- Privacy (5d) now also removes a deleted customer's waitlist entries and blanks buyer/recipient details on their
+  sales and gift cards; the data export includes their wallet. Item 9 (delete/anonymize) is covered by the 5d
+  tests, including the "blocked while a visit is open" test.
+- Known limits: the member discount is not counted against the receptionist's discount cap; invoices paid with a
+  package/membership session are not cash-refunded (the admin puts the session back instead).
+- Test fix outside 5e: `move_to_today` in scheduling/tests/test_desk_customers.py failed between about 22:30 and
+  midnight shop time (it put the visit after midnight); it now stays on the same shop day.
+- Sandbox results: pytest all passed (about 160 new tests), ruff and migrations check clean; vitest 287 passed
+  (21 new), eslint, prettier and typecheck clean (only the known missing-recharts error in the sandbox; the
+  production build could not run here, please run `npm run build`).
+
+## Task 5e-1: owner browser walkthrough (to verify on the PC)
+1. Admin > Packages & Plans: create a package (for example 3 haircuts for a lower price) and a membership plan
+   (10% off, 1 free session, choose the service). Switch one off and on.
+2. Receptionist > POS > Sell: sell the package to a customer in cash; sell a gift card of 1000 (buyer name
+   "Walk-in", recipient email). The code appears once; copy it. Closing the window never shows it again.
+3. Customer > My Wallet: the package shows its sessions left. Buy a membership (test payment) and a second package.
+   Try "Simulate failed payment": nothing is bought. Buy a gift card with a recipient email: the code is shown
+   once; Admin > Mailbox shows the email with the code.
+4. Receptionist: check in that customer's visit, open POS > Bill. Pick "Use a package session" (or the free
+   membership session): the service line is paid by the session; products still need payment. Add a gift card
+   payment: type the code, Check balance, split with cash. Complete. The invoice shows member discount and credit.
+5. Admin > Packages & Plans > Packages sold: see the ledger, Put back the used session with a reason, or Refund
+   unused sessions. Sales tab: every sale. Cash close includes the counter sales.
+6. Admin > Gift Cards: only the last 4 characters; History shows the ledger; Cancel card needs a reason, and the
+   code stops working.
+7. Customer: type 5 wrong gift codes (Check balance): the sixth says wait 15 minutes. The Audit Log shows
+   "Gift code locked".
+8. Customer pays a booking from My Appointments > Pay with the gift card code (part or all).
+9. Waitlist: customer A books and pays a slot. Customer B > Waitlist > Join for the same service, window around
+   that time. A cancels. B sees "A slot opened... held for you" with minutes left; Take this slot books it
+   (awaiting payment). A third customer who joined later is offered the slot if B declines or lets it expire.
+   Admin > Waitlist shows everyone; Remove needs a reason. Settings > Booking rules > Waitlist offer hold changes
+   the minutes.
+10. Receptionist/stylist: no Packages, Gift Cards or Waitlist menus; /packages shows the "not allowed" page.

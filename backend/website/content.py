@@ -32,6 +32,8 @@ BOOKING_DEFAULTS = {
     "min_lead_minutes": 60,
     "max_days_ahead": 60,
     "hold_hours": 6,
+    # How long a freed slot is held for the waitlisted customer it is offered to.
+    "waitlist_offer_minutes": 15,
     "deposit_percent": 100,
     "free_cancel_hours": 24,
     "gst_percent": 18,

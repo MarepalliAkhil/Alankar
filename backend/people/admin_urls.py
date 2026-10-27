@@ -8,6 +8,7 @@ from marketing import views as m
 from people import admin_views as v
 from people import privacy_views as pv
 from scheduling import catalogue_admin as c
+from wallet.urls import admin_wallet_patterns
 from website import content_admin as ca
 from website import settings_admin as w
 
@@ -82,4 +83,4 @@ admin_patterns = [
     ),
     path("reports/", r.ReportListView.as_view(), name="admin-reports"),
     path("reports/<slug:name>/", r.ReportView.as_view(), name="admin-report"),
-]
+] + admin_wallet_patterns
