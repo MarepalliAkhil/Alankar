@@ -420,3 +420,23 @@ def test_admin_does_not_close_the_cash_drawer(admin):
         ).status_code
         == 403
     )
+
+
+def test_cancelling_a_paid_visit_leaves_a_refund_for_the_admin_to_approve(
+    catalogue, customer, desk, admin
+):
+    client, _ = customer
+    appt_id = scheduled(client, desk[0], catalogue)
+    cancelled = post(
+        desk[0], f"/api/desk/appointments/{appt_id}/cancel/", {"reason": "stylist ill"}
+    )
+    assert cancelled.status_code == 200
+    pending = admin[0].get("/api/desk/refunds/").json()
+    assert len(pending) == 1 and pending[0]["status"] == "pending_approval"
+    assert desk[0].get("/api/desk/refunds/").status_code == 403
+    done = post(
+        admin[0],
+        f"/api/desk/refunds/{pending[0]['id']}/decision/",
+        {"decision": "approve", "method": "upi"},
+    )
+    assert done.status_code == 200 and done.json()["status"] == "processed"
