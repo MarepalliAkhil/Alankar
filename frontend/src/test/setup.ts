@@ -4,8 +4,8 @@ import { afterEach, beforeAll } from 'vitest';
 import { applyTokens } from '../design/tokens';
 
 // Slower machines (e.g. Windows with antivirus) need more than the 1 s default
-// for findBy*/waitFor to see async renders.
-configure({ asyncUtilTimeout: 5000 });
+// for findBy*/waitFor to see async renders (the first test of a file also loads lazy pages).
+configure({ asyncUtilTimeout: 15000 });
 
 beforeAll(() => {
   applyTokens();
