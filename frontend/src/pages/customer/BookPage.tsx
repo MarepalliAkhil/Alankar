@@ -12,9 +12,11 @@ import {
   sendBookingRequest,
   type BookingOptions,
 } from '../../api/booking';
+import { PENDING_RATINGS_KEY, isRatingsPending } from '../../api/billing';
 import { classifyError, serverFieldErrors } from '../../api/client';
 import { getServices } from '../../api/public';
 import { SlotPicker } from '../../components/booking/SlotPicker';
+import { RatingPrompt } from '../../components/booking/RatingPrompt';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -162,6 +164,13 @@ function BookingSheet({ slug }: { slug: string }) {
       </div>
     );
   }
+  if (options.data.pending_ratings > 0) {
+    return (
+      <div className="flex flex-col gap-lg py-lg">
+        <RatingPrompt />
+      </div>
+    );
+  }
   return <BookingForm options={options.data} />;
 }
 
@@ -259,6 +268,16 @@ function BookingForm({ options }: { options: BookingOptions }) {
           description: nearest.length
             ? 'Pick one of the nearest free times below.'
             : 'Please pick another time.',
+        });
+        return;
+      }
+      if (isRatingsPending(error)) {
+        void queryClient.invalidateQueries({ queryKey: ['booking-options'] });
+        void queryClient.invalidateQueries({ queryKey: PENDING_RATINGS_KEY });
+        toast.show({
+          tone: 'warning',
+          title: 'Rate your recent visit first',
+          description: 'New booking requests open again once you have rated it.',
         });
         return;
       }

@@ -25,11 +25,23 @@ vi.mock('../api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
   registerCustomer: vi.fn(),
+  verifyOtp: vi.fn(),
+  resendOtp: vi.fn(),
+  needsOtp: (result: object) => 'otp_required' in result,
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   checkInvite: vi.fn(),
   acceptInvite: vi.fn(),
 }));
+vi.mock('../api/billing', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../api/billing')>();
+  return {
+    ...real,
+    listMyInvoices: vi.fn(),
+    getPendingRatings: vi.fn().mockResolvedValue({ count: 0, results: [], tags: [] }),
+    submitRating: vi.fn(),
+  };
+});
 vi.mock('../api/staff', () => ({
   listStaff: vi.fn(),
   listInvites: vi.fn(),

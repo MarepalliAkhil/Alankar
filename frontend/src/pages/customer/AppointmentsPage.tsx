@@ -9,6 +9,7 @@ import {
   type CustomerAppointment,
   type MyActionPath,
 } from '../../api/booking';
+import { RatingPrompt } from '../../components/booking/RatingPrompt';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -116,6 +117,7 @@ export default function AppointmentsPage() {
           </Link>
         }
       />
+      <RatingPrompt />
       {list.isPending ? (
         <LoadingState label="Loading your appointments…" />
       ) : list.isError ? (

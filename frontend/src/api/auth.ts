@@ -45,9 +45,39 @@ export async function refreshSession(): Promise<void> {
   await api.post('/auth/refresh/');
 }
 
-export async function login(payload: LoginPayload): Promise<SessionUser> {
-  const { data } = await api.post<SessionUser>('/auth/login/', payload);
+/** Customer sign-in asks for an emailed code before the session starts. */
+export interface OtpPending {
+  otp_required: true;
+  email: string;
+  detail: string;
+}
+
+export type LoginResult = SessionUser | OtpPending;
+
+export function needsOtp(result: LoginResult): result is OtpPending {
+  return 'otp_required' in result && result.otp_required === true;
+}
+
+export async function login(payload: LoginPayload): Promise<LoginResult> {
+  const { data } = await api.post<LoginResult>('/auth/login/', payload);
   return data;
+}
+
+export type OtpPurpose = 'register' | 'login';
+
+/** Checks the 6-digit code; on success the server starts the session. */
+export async function verifyOtp(
+  email: string,
+  code: string,
+  purpose: OtpPurpose,
+): Promise<SessionUser> {
+  const { data } = await api.post<SessionUser>('/auth/otp/verify/', { email, code, purpose });
+  return data;
+}
+
+export async function resendOtp(email: string, purpose: OtpPurpose): Promise<string> {
+  const { data } = await api.post<{ detail: string }>('/auth/otp/resend/', { email, purpose });
+  return data.detail;
 }
 
 export async function logout(): Promise<void> {
@@ -55,9 +85,14 @@ export async function logout(): Promise<void> {
 }
 
 /** Registration never sends a role: the server always creates a customer. */
-export async function registerCustomer(payload: RegisterPayload): Promise<string> {
-  const { data } = await api.post<{ detail: string }>('/auth/register/', payload);
-  return data.detail;
+export async function registerCustomer(
+  payload: RegisterPayload,
+): Promise<{ detail: string; otpRequired: boolean }> {
+  const { data } = await api.post<{ detail: string; otp_required?: boolean }>(
+    '/auth/register/',
+    payload,
+  );
+  return { detail: data.detail, otpRequired: data.otp_required === true };
 }
 
 export async function requestPasswordReset(email: string): Promise<string> {

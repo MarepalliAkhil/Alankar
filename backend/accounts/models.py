@@ -22,6 +22,8 @@ class User(AbstractUser):
     email = models.EmailField("email address", unique=True)
     full_name = models.CharField(max_length=120, blank=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
+    # Set the first time the customer proves they own the email with a one-time code.
+    email_verified_at = models.DateTimeField(null=True, blank=True)
 
     STAFF_ROLES = (Role.RECEPTIONIST, Role.STYLIST)
 
@@ -144,3 +146,33 @@ class PasswordResetToken(models.Model):
 
     def __str__(self) -> str:
         return f"Reset for {self.user_id}"
+
+
+class OtpChallenge(models.Model):
+    """A one-time 6-digit code emailed to a customer (register or sign-in).
+
+    Only a keyed hash of the code is stored. A challenge is valid for a few minutes, allows a
+    few wrong tries, and is closed as soon as it is used or replaced by a newer one.
+    """
+
+    class Purpose(models.TextChoices):
+        REGISTER = "register", "Verify email after registration"
+        LOGIN = "login", "Sign-in code"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="otp_challenges"
+    )
+    purpose = models.CharField(max_length=10, choices=Purpose.choices)
+    code_hash = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    closed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "purpose", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"OTP {self.purpose} for {self.user_id}"

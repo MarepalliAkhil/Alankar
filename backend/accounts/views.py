@@ -14,13 +14,15 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts import lockout
+from accounts import lockout, otp
 from accounts.audit import audit, client_ip
-from accounts.models import AuditLog, PasswordResetToken, StaffInvite, User
+from accounts.models import AuditLog, OtpChallenge, PasswordResetToken, StaffInvite, User
 from accounts.serializers import (
     GENERIC_LOGIN_ERROR,
     LoginSerializer,
     MeSerializer,
+    OtpResendSerializer,
+    OtpVerifySerializer,
     PasswordChangeSerializer,
     PasswordResetRequestSerializer,
     RegisterSerializer,
@@ -103,7 +105,14 @@ class RegisterView(AuthThrottleMixin, APIView):
                 profile.set_phone(data["phone"])
                 profile.save()
             audit(AuditLog.Action.REGISTER, request=request, actor=user, target=user)
-        return Response({"detail": REGISTER_MESSAGE}, status=status.HTTP_201_CREATED)
+            if otp.otp_enabled():
+                try:
+                    otp.issue(user, OtpChallenge.Purpose.REGISTER, request)
+                except otp.OtpThrottled:
+                    pass
+        # Identical for new and existing emails; the code step is shown either way.
+        body = {"detail": REGISTER_MESSAGE, "otp_required": otp.otp_enabled()}
+        return Response(body, status=status.HTTP_201_CREATED)
 
 
 class LoginView(AuthThrottleMixin, APIView):
@@ -151,13 +160,77 @@ class LoginView(AuthThrottleMixin, APIView):
             return Response({"detail": GENERIC_LOGIN_ERROR}, status=status.HTTP_401_UNAUTHORIZED)
 
         lockout.record_success(email, ip)
-        user.last_login = timezone.now()
-        user.save(update_fields=["last_login"])
-        audit(AuditLog.Action.LOGIN_SUCCESS, request=request, actor=user, target=user)
-        rotate_token(request._request)
-        response = Response(MeSerializer(user).data)
-        set_session_cookies(response, RefreshToken.for_user(user))
-        return response
+        if user.role == User.Role.CUSTOMER and otp.otp_enabled():
+            # Right password: now ask for the emailed code before any session starts.
+            try:
+                otp.issue(user, OtpChallenge.Purpose.LOGIN, request)
+            except otp.OtpThrottled:
+                return Response(
+                    {"detail": "Too many codes were requested. Please try again in an hour."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            return Response({"otp_required": True, "email": email, "detail": otp.sent_message()})
+        return start_session(request, user)
+
+
+def start_session(request: Request, user: User) -> Response:
+    """Records the sign-in and returns the user with fresh session cookies."""
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    audit(AuditLog.Action.LOGIN_SUCCESS, request=request, actor=user, target=user)
+    rotate_token(request._request)
+    response = Response(MeSerializer(user).data)
+    set_session_cookies(response, RefreshToken.for_user(user))
+    return response
+
+
+def otp_user(email: str) -> User | None:
+    return User.objects.filter(email__iexact=email, role=User.Role.CUSTOMER, is_active=True).first()
+
+
+class OtpVerifyView(AuthThrottleMixin, APIView):
+    policy_action = "auth.otp_verify"
+    authentication_classes: list = []
+
+    @extend_schema(
+        summary="Check the emailed 6-digit code and start the session",
+        request=OtpVerifySerializer,
+        responses=MeSerializer,
+    )
+    def post(self, request: Request) -> Response:
+        serializer = OtpVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = otp_user(data["email"])
+        if not otp.verify(user, data["purpose"], data["code"]):
+            audit(
+                AuditLog.Action.LOGIN_FAILED,
+                request=request,
+                target=user,
+                email=data["email"],
+                reason="bad_otp",
+                tab="customer",
+            )
+            return Response({"detail": otp.GENERIC_OTP_ERROR}, status=status.HTTP_400_BAD_REQUEST)
+        return start_session(request, user)
+
+
+class OtpResendView(AuthThrottleMixin, APIView):
+    policy_action = "auth.otp_resend"
+    authentication_classes: list = []
+
+    @extend_schema(
+        summary="Email a new 6-digit code", request=OtpResendSerializer, responses={200: None}
+    )
+    def post(self, request: Request) -> Response:
+        serializer = OtpResendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = otp_user(data["email"])
+        if user is not None and otp.otp_enabled():
+            otp.resend(user, data["purpose"], request)
+        # Same answer whether or not a code was sent.
+        return Response({"detail": f"If a code is due, we sent a new one. {otp.sent_message()}"})
 
 
 def rotate_refresh(request: Request) -> tuple[User | None, RefreshToken | None, bool]:

@@ -2,7 +2,9 @@ import { Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
+import { needsOtp } from '../../api/auth';
 import { loginErrorMessage } from '../../api/auth-messages';
+import { OtpStep } from '../../components/auth/OtpStep';
 import { PageContainer } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -31,7 +33,7 @@ type FormErrors = Partial<Record<'email' | 'password', string>>;
 export default function LoginPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { status, user, signIn, signOut } = useSession();
+  const { status, user, signIn, completeOtp, signOut } = useSession();
   const roleParam = params.get('role');
   const role: LoginRole = isLoginRole(roleParam) ? roleParam : 'customer';
   const bookingIntent = params.get('intent') === 'book';
@@ -42,6 +44,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [otp, setOtp] = useState<{ email: string; detail: string } | null>(null);
 
   useDocumentTitle('Login');
 
@@ -69,14 +72,34 @@ export default function LoginPage() {
     setErrors({});
     setSubmitting(true);
     try {
-      const signedIn = await signIn({ role, ...parsed.data });
-      navigate(destinationAfterLogin(signedIn, params.get('next'), bookingIntent), {
+      const result = await signIn({ role, ...parsed.data });
+      if (needsOtp(result)) {
+        setOtp({ email: result.email, detail: result.detail });
+        setPassword('');
+        setSubmitting(false);
+        return;
+      }
+      navigate(destinationAfterLogin(result, params.get('next'), bookingIntent), {
         replace: true,
       });
     } catch (error) {
       setFormError(loginErrorMessage(error));
       setPassword('');
       setSubmitting(false);
+    }
+  };
+
+  const verifyCode = async (code: string) => {
+    if (!otp) return;
+    setSubmitting(true); // keeps the "already signed in" panel from flashing
+    try {
+      const verified = await completeOtp(otp.email, code, 'login');
+      navigate(destinationAfterLogin(verified, params.get('next'), bookingIntent), {
+        replace: true,
+      });
+    } catch (error) {
+      setSubmitting(false);
+      throw error;
     }
   };
 
@@ -111,79 +134,93 @@ export default function LoginPage() {
             : `Welcome back to ${brand.shopName}. Choose who you are and sign in.`}
         </p>
 
-        <Tabs
-          className="mt-lg"
-          items={loginRoles}
-          value={role}
-          onChange={changeRole}
-          label="Sign in as"
-          idPrefix="login"
-        />
-
-        <TabPanel idPrefix="login" id={role} className="mt-lg">
-          <form noValidate onSubmit={onSubmit} className="flex flex-col gap-md">
-            <Input
-              label="Email"
-              type="email"
-              name="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              error={errors.email}
+        {otp ? (
+          <div className="mt-lg">
+            <OtpStep
+              email={otp.email}
+              purpose="login"
+              message={otp.detail}
+              onVerify={verifyCode}
+              onBack={() => setOtp(null)}
             />
-            <PasswordInput
-              label="Password"
-              name="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              error={errors.password}
+          </div>
+        ) : (
+          <>
+            <Tabs
+              className="mt-lg"
+              items={loginRoles}
+              value={role}
+              onChange={changeRole}
+              label="Sign in as"
+              idPrefix="login"
             />
-            {formError && (
-              <p
-                role="alert"
-                className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
-              >
-                {formError}
-              </p>
-            )}
-            <Button type="submit" fullWidth loading={submitting}>
-              Sign in as {roleText}
-            </Button>
-          </form>
 
-          {role === 'customer' ? (
-            <div className="mt-lg flex flex-col items-center gap-sm text-sm text-text-muted">
-              <Link
-                to="/forgot-password"
-                className="font-medium text-primary-hover underline-offset-4 hover:underline"
-              >
-                Forgot your password?
-              </Link>
-              <p>
-                New here?{' '}
-                <Link
-                  to={
-                    params.get('next')
-                      ? `/register?next=${encodeURIComponent(params.get('next') ?? '')}`
-                      : '/register'
-                  }
-                  className="font-medium text-primary-hover underline-offset-4 hover:underline"
-                >
-                  Create an account
-                </Link>
-              </p>
-            </div>
-          ) : (
-            <p className="mt-lg flex items-start gap-sm rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
-              <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover" />
-              Staff accounts are created by the salon admin. If you can&apos;t sign in or forgot
-              your password, ask your admin.
-            </p>
-          )}
-        </TabPanel>
+            <TabPanel idPrefix="login" id={role} className="mt-lg">
+              <form noValidate onSubmit={onSubmit} className="flex flex-col gap-md">
+                <Input
+                  label="Email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  error={errors.email}
+                />
+                <PasswordInput
+                  label="Password"
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  error={errors.password}
+                />
+                {formError && (
+                  <p
+                    role="alert"
+                    className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
+                  >
+                    {formError}
+                  </p>
+                )}
+                <Button type="submit" fullWidth loading={submitting}>
+                  Sign in as {roleText}
+                </Button>
+              </form>
+
+              {role === 'customer' ? (
+                <div className="mt-lg flex flex-col items-center gap-sm text-sm text-text-muted">
+                  <Link
+                    to="/forgot-password"
+                    className="font-medium text-primary-hover underline-offset-4 hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                  <p>
+                    New here?{' '}
+                    <Link
+                      to={
+                        params.get('next')
+                          ? `/register?next=${encodeURIComponent(params.get('next') ?? '')}`
+                          : '/register'
+                      }
+                      className="font-medium text-primary-hover underline-offset-4 hover:underline"
+                    >
+                      Create an account
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-lg flex items-start gap-sm rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
+                  <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover" />
+                  Staff accounts are created by the salon admin. If you can&apos;t sign in or forgot
+                  your password, ask your admin.
+                </p>
+              )}
+            </TabPanel>
+          </>
+        )}
       </Card>
     </PageContainer>
   );

@@ -9,6 +9,7 @@ const StaffManagementPage = lazy(() => import('../admin/StaffManagementPage'));
 const DeskAppointmentsPage = lazy(() => import('../desk/DeskAppointmentsPage'));
 const BookPage = lazy(() => import('../customer/BookPage'));
 const AppointmentsPage = lazy(() => import('../customer/AppointmentsPage'));
+const InvoicesPage = lazy(() => import('../customer/InvoicesPage'));
 const ProfilePage = lazy(() => import('../customer/ProfilePage'));
 
 /** Picks the page for a policy path. Built pages are listed here; the rest are planned. */
@@ -21,6 +22,7 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/staff' && user.role === 'admin') return <StaffManagementPage />;
   if (path === '/customer/book' && user.role === 'customer') return <BookPage />;
   if (path === '/customer/appointments' && user.role === 'customer') return <AppointmentsPage />;
+  if (path === '/customer/invoices' && user.role === 'customer') return <InvoicesPage />;
   if (path === '/customer/profile' && user.role === 'customer') return <ProfilePage />;
   if (path === '/appointments' && (user.role === 'receptionist' || user.role === 'admin')) {
     return <DeskAppointmentsPage />;

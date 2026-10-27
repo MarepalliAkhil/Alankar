@@ -4,9 +4,12 @@ import {
   ensureCsrf,
   getSession,
   login,
+  needsOtp,
+  verifyOtp,
   logout,
   refreshSession,
   type LoginPayload,
+  type OtpPurpose,
   type SessionUser,
 } from '../api/auth';
 import { setSessionExpiredHandler } from '../api/client';
@@ -71,7 +74,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [becomeAnonymous]);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
-    const user = await login(payload);
+    const result = await login(payload);
+    if (!needsOtp(result)) setState({ status: 'authenticated', user: result });
+    return result;
+  }, []);
+
+  const completeOtp = useCallback(async (email: string, code: string, purpose: OtpPurpose) => {
+    const user = await verifyOtp(email, code, purpose);
     setState({ status: 'authenticated', user });
     return user;
   }, []);
@@ -85,8 +94,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [becomeAnonymous]);
 
   const value = useMemo(
-    () => ({ status: state.status, user: state.user, signIn, signOut }),
-    [state, signIn, signOut],
+    () => ({ status: state.status, user: state.user, signIn, completeOtp, signOut }),
+    [state, signIn, completeOtp, signOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

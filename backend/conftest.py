@@ -14,6 +14,9 @@ def _no_real_smtp(settings):
     """Tests never depend on the developer's .env email settings; email tests opt in."""
     settings.SALON_SMTP_CONFIGURED = False
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    # The emailed sign-in code has its own tests (accounts/tests/test_otp.py); everywhere else
+    # customers sign in with a password only.
+    settings.SALON_CUSTOMER_OTP = False
 
 
 @pytest.fixture(autouse=True)

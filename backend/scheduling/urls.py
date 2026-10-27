@@ -1,6 +1,7 @@
 from django.urls import path
 
-from people.views import ProfileView
+from billing.views import MyInvoiceDetailView, MyInvoiceListView
+from people.views import PendingRatingsView, ProfileView, RatingSubmitView
 from scheduling import views
 
 booking_patterns = [
@@ -11,6 +12,10 @@ booking_patterns = [
 
 my_patterns = [
     path("profile/", ProfileView.as_view(), name="my-profile"),
+    path("invoices/", MyInvoiceListView.as_view(), name="my-invoices"),
+    path("invoices/<uuid:pk>/", MyInvoiceDetailView.as_view(), name="my-invoice"),
+    path("ratings/pending/", PendingRatingsView.as_view(), name="my-ratings-pending"),
+    path("ratings/<uuid:pk>/", RatingSubmitView.as_view(), name="my-rating-submit"),
     path("appointments/", views.MyAppointmentListView.as_view(), name="my-appointments"),
     path(
         "appointments/<uuid:pk>/",

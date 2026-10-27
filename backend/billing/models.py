@@ -1,7 +1,8 @@
-"""Payment links, mock payments and refunds (Task 2b). Invoices arrive with checkout (Task 3)."""
+"""Payment links, mock payments, refunds (Task 2b) and customer invoices (Task 2c)."""
 
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -40,6 +41,7 @@ class Payment(models.Model):
 
     class Kind(models.TextChoices):
         PREPAYMENT = "prepayment", "Online prepayment"
+        CHECKOUT = "checkout", "Paid at the salon"
 
     class Status(models.TextChoices):
         SUCCEEDED = "succeeded", "Succeeded"
@@ -86,3 +88,90 @@ class Refund(models.Model):
 
     def __str__(self) -> str:
         return f"Refund {self.amount} ({self.status})"
+
+
+class InvoiceError(Exception):
+    """A paid invoice cannot be changed or deleted; corrections are made with a Refund."""
+
+
+class InvoiceSequence(models.Model):
+    """Last invoice number used in a year, so numbers never repeat or skip."""
+
+    year = models.PositiveSmallIntegerField(primary_key=True)
+    last = models.PositiveIntegerField(default=0)
+
+    def __str__(self) -> str:
+        return f"{self.year}: {self.last}"
+
+
+class Invoice(models.Model):
+    """What the customer paid for one visit. Amounts are in INR and include GST.
+
+    Once an invoice exists it is paid and immutable. Task 3 (checkout) will create richer
+    invoices through the same `billing.checkout` module.
+    """
+
+    class Status(models.TextChoices):
+        PAID = "paid", "Paid"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    number = models.CharField(max_length=20, unique=True)
+    appointment = models.OneToOneField(
+        "scheduling.Appointment", on_delete=models.PROTECT, related_name="invoice"
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="invoices"
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PAID)
+    customer_name = models.CharField(max_length=120)
+    customer_email = models.EmailField()
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    prepaid_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    balance_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    issued_at = models.DateTimeField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["-issued_at"]
+
+    def __str__(self) -> str:
+        return self.number
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise InvoiceError("A paid invoice cannot be deleted.")
+
+
+class InvoiceItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
+    description = models.CharField(max_length=300)
+    quantity = models.PositiveSmallIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return self.description
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")

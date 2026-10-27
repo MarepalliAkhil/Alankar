@@ -22,6 +22,8 @@ export interface BookingOptions {
     gst_percent: number;
   };
   contact: { name: string; email: string; phone: string; allergies: string };
+  /** Visits the customer has not rated yet; new requests are blocked while this is above 0. */
+  pending_ratings: number;
 }
 
 export interface SlotQuery {

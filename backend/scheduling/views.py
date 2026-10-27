@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from billing.models import Payment
+from people import ratings
 from people.models import StylistProfile
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentEvent, Room, Service
@@ -47,6 +48,9 @@ def booking_error(exc: booking.BookingError) -> Response:
         body["slots"] = [slot.isoformat() for slot in exc.slots]
     elif exc.code == "too_soon":
         code = status.HTTP_429_TOO_MANY_REQUESTS
+    elif exc.code == "ratings_pending":
+        code = status.HTTP_403_FORBIDDEN
+        body["code"] = "ratings_pending"
     return Response(body, status=code)
 
 
@@ -103,6 +107,7 @@ class BookingOptionsView(APIView):
                     key: rules[key]
                     for key in ("deposit_percent", "free_cancel_hours", "hold_hours", "gst_percent")
                 },
+                "pending_ratings": ratings.pending_count(request.user),
                 "contact": {
                     "name": request.user.full_name,
                     "email": request.user.email,

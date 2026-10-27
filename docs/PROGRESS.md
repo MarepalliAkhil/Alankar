@@ -1,6 +1,9 @@
 # Progress
 
 ## Status
+- Task 2c (invoices + mandatory rating) and customer email-OTP: IMPLEMENTED in the build sandbox,
+  waiting for the owner's PC run (migrate, pytest, npm test, npm run build, walkthrough below).
+  Sandbox: pytest 210 passed, ruff clean, vitest 111 passed, eslint, typecheck, prettier clean.
 - Task 0 (scaffold and foundation): DONE (verified on the owner's PC, 2026-10-26).
 - Task 2b (booking flow): DONE. Verified on the owner's PC (2026-10-27): booking request, confirm,
   payment-link email, mock payment and receipt emails working. Sandbox: pytest 163 passed, ruff
@@ -178,6 +181,32 @@
    (hold stays) -> Pay. The card becomes Scheduled and a receipt email arrives.
 4. Try Reject (reason required), Resend link, Cancel, I'm here, Reschedule, Profile and
    Change password.
+
+## Task 2c + OTP decisions
+- OTP: customers get an emailed 6-digit code at registration AND on every sign-in. Staff sign-in
+  is unchanged. Code is stored hashed (HMAC), valid 10 min, 5 wrong tries, single use, resend
+  after 60 s, max 5 codes/hour. Wrong/expired answers are one generic message.
+- OTP runs only when it can be delivered (SMTP configured or debug dev mailbox); otherwise it is
+  skipped so nobody is locked out. `SALON_CUSTOMER_OTP=false` in `.env` turns it off.
+- Invoice (INV-YYYY-NNNNN) is created by `billing.checkout.complete_and_invoice` in one atomic
+  transaction, applies the online prepayment, and is immutable afterwards. Task 3's POS reuses it.
+- Until the POS exists, the dev-only command `python manage.py complete_demo_visit` completes a
+  scheduled visit and bills it (refuses unless SALON_DEV_TOOLS).
+- Rating: pending rating created at billing; stars 1-5, comment required for 1-2 stars, tags,
+  immutable once submitted. While any is pending the server refuses new booking requests
+  (403 code `ratings_pending`); the UI shows the "Rate your stylist" card on Home, My
+  Appointments and the booking page (inline card, never a trap). Reminder after 24 h:
+  `python manage.py send_rating_reminders`. Public stylist ratings stay hidden until Task 6.
+
+## Task 2c + OTP: owner browser walkthrough (to verify on the PC)
+1. Register a new customer: a 6-digit code appears in /dev/mailbox (or your inbox). Enter it.
+2. Sign out, sign in again as that customer: code step again. Try a wrong code (generic error).
+3. Staff sign-in (admin/receptionist) still has no code step.
+4. Book, confirm as receptionist, pay (as in 2b). Then in backend (venv active):
+   `python manage.py complete_demo_visit` (add `--appointment <id>` for a specific one).
+5. Customer: Home / My Appointments show "Rate your stylist"; Book is held until rated.
+   Rate (try 2 stars without a comment: it is refused), then booking opens again.
+6. Invoices menu: the invoice with GST and prepaid amount; View and Print.
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

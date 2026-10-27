@@ -65,6 +65,23 @@ class LoginSerializer(serializers.Serializer):
         return normalize_email(value)
 
 
+class OtpVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    code = serializers.RegexField(r"^\d{6}$", error_messages={"invalid": "Enter the 6-digit code."})
+    purpose = serializers.ChoiceField(choices=["register", "login"])
+
+    def validate_email(self, value: str) -> str:
+        return normalize_email(value)
+
+
+class OtpResendSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    purpose = serializers.ChoiceField(choices=["register", "login"])
+
+    def validate_email(self, value: str) -> str:
+        return normalize_email(value)
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
 

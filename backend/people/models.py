@@ -71,3 +71,58 @@ class StylistProfile(models.Model):
 
     def __str__(self) -> str:
         return self.display_name
+
+
+RATING_TAGS = ("Late", "Rushed", "Not as requested", "Hygiene")
+
+
+class Rating(models.Model):
+    """The customer's rating of the stylist for one completed, paid visit.
+
+    A pending rating is created when the visit is billed. It is filled in once by the customer
+    and is immutable afterwards. Nobody else (stylist, receptionist, admin) can edit or delete it.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for the customer"
+        SUBMITTED = "submitted", "Rated"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.OneToOneField(
+        "scheduling.Appointment", on_delete=models.PROTECT, related_name="rating"
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ratings"
+    )
+    stylist = models.ForeignKey(
+        StylistProfile, null=True, on_delete=models.SET_NULL, related_name="ratings"
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    stars = models.PositiveSmallIntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(stars__isnull=True) | models.Q(stars__gte=1, stars__lte=5),
+                name="rating_stars_1_to_5",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Rating {self.status} for {self.appointment_id}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            before = Rating.objects.filter(pk=self.pk).values_list("status", flat=True).first()
+            if before == self.Status.SUBMITTED:
+                raise ValueError("A submitted rating cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Ratings cannot be deleted.")

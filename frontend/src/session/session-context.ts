@@ -1,12 +1,14 @@
 import { createContext, useContext } from 'react';
-import type { LoginPayload, SessionUser } from '../api/auth';
+import type { LoginPayload, LoginResult, OtpPurpose, SessionUser } from '../api/auth';
 
 export type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
 
 export interface SessionValue {
   status: SessionStatus;
   user: SessionUser | null;
-  signIn: (payload: LoginPayload) => Promise<SessionUser>;
+  /** Staff get a user back; customers may get an OtpPending to finish with `completeOtp`. */
+  signIn: (payload: LoginPayload) => Promise<LoginResult>;
+  completeOtp: (email: string, code: string, purpose: OtpPurpose) => Promise<SessionUser>;
   signOut: () => Promise<void>;
 }
 

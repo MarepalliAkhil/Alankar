@@ -161,7 +161,15 @@ SALON_AUTH = {
     "LOCKOUT_MINUTES": 15,
     "INVITE_HOURS": 72,
     "PASSWORD_RESET_MINUTES": 60,
+    "OTP_MINUTES": 10,
+    "OTP_MAX_ATTEMPTS": 5,
+    "OTP_RESEND_SECONDS": 60,
+    "OTP_MAX_PER_HOUR": 5,
 }
+
+# Customers confirm their email with a 6-digit code at registration and on every sign-in.
+# It only applies when the code can actually be delivered (real email, or the dev mailbox).
+SALON_CUSTOMER_OTP = env_bool("SALON_CUSTOMER_OTP", True)
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),

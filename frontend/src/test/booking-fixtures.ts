@@ -13,6 +13,7 @@ export const options: BookingOptions = {
     phone: '9876543210',
     allergies: '',
   },
+  pending_ratings: 0,
 };
 
 export const SLOT_A = '2026-10-28T10:00:00+05:30';

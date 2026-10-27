@@ -15,6 +15,8 @@ class MailOutbox(models.Model):
         NOTICE = "notice", "Notice"
         PAYMENT_LINK = "payment_link", "Payment link"
         BOOKING = "booking", "Booking update"
+        OTP = "otp", "Verification code"
+        INVOICE = "invoice", "Invoice and receipt"
         TEST = "test", "Test email"
 
     class Status(models.TextChoices):

@@ -1,9 +1,10 @@
 import { CircleCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { registerCustomer } from '../../api/auth';
 import { registerErrorMessage } from '../../api/auth-messages';
+import { OtpStep } from '../../components/auth/OtpStep';
 import { serverFieldErrors } from '../../api/client';
 import { PageContainer } from '../../components/layout/PageContainer';
 import {
@@ -17,6 +18,8 @@ import {
 } from '../../components/ui';
 import { brand } from '../../config/brand';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { destinationAfterLogin } from '../../routes/destination';
+import { useSession } from '../../session/session-context';
 import { fieldErrors, normalisePhone } from '../../lib/validation';
 
 const schema = z
@@ -54,6 +57,9 @@ export default function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [otp, setOtp] = useState<{ email: string; detail: string } | null>(null);
+  const navigate = useNavigate();
+  const { completeOtp } = useSession();
   const [params] = useSearchParams();
   const next = params.get('next');
   const loginPath = `/login?role=customer${next ? `&next=${encodeURIComponent(next)}` : ''}`;
@@ -75,7 +81,15 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const { name, email, phone, password } = parsed.data;
-      setDone(await registerCustomer({ full_name: name, email, phone, password, consent: true }));
+      const result = await registerCustomer({
+        full_name: name,
+        email,
+        phone,
+        password,
+        consent: true,
+      });
+      if (result.otpRequired) setOtp({ email, detail: result.detail });
+      else setDone(result.detail);
     } catch (error) {
       const fields = serverFieldErrors(error);
       setErrors({
@@ -90,6 +104,29 @@ export default function RegisterPage() {
       setSubmitting(false);
     }
   };
+
+  if (otp) {
+    return (
+      <PageContainer className="flex justify-center py-xl">
+        <Card variant="dense" padding="lg" className="w-full max-w-md">
+          <h1 className="text-2xl font-bold text-text">Verify your email</h1>
+          <p className="mb-lg mt-1 text-sm text-text-muted">
+            One last step to finish creating your account.
+          </p>
+          <OtpStep
+            email={otp.email}
+            purpose="register"
+            message={otp.detail}
+            onVerify={async (code) => {
+              const verified = await completeOtp(otp.email, code, 'register');
+              navigate(destinationAfterLogin(verified, next, false), { replace: true });
+            }}
+            onBack={() => setOtp(null)}
+          />
+        </Card>
+      </PageContainer>
+    );
+  }
 
   if (done) {
     return (

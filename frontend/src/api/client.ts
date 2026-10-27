@@ -20,6 +20,8 @@ const NO_REFRESH = new Set([
   '/auth/session/',
   '/auth/login/',
   '/auth/register/',
+  '/auth/otp/verify/',
+  '/auth/otp/resend/',
   '/auth/refresh/',
   '/auth/logout/',
   '/auth/password-reset/',

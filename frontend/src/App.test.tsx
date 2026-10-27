@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ensureCsrf, getSession, login, logout, registerCustomer } from './api/auth';
+import { ensureCsrf, getSession, login, logout, registerCustomer, verifyOtp } from './api/auth';
 import { brand, poweredBy } from './config/brand';
 import * as publicApi from './api/public';
 import * as staffApi from './api/staff';
@@ -16,12 +16,24 @@ vi.mock('./api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
   registerCustomer: vi.fn(),
+  verifyOtp: vi.fn(),
+  resendOtp: vi.fn(),
+  needsOtp: (result: object) => 'otp_required' in result,
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   checkInvite: vi.fn(),
   acceptInvite: vi.fn(),
 }));
 
+vi.mock('./api/billing', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./api/billing')>();
+  return {
+    ...real,
+    listMyInvoices: vi.fn(),
+    getPendingRatings: vi.fn().mockResolvedValue({ count: 0, results: [], tags: [] }),
+    submitRating: vi.fn(),
+  };
+});
 vi.mock('./api/staff', () => ({
   listStaff: vi.fn(),
   listInvites: vi.fn(),
@@ -328,6 +340,53 @@ describe('login page', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Staff' })).toBeInTheDocument();
   });
+  it('asks a customer for the emailed code, then opens their home', async () => {
+    loginMock.mockResolvedValue({
+      otp_required: true,
+      email: 'customer@example.com',
+      detail: 'We emailed a 6-digit code.',
+    });
+    vi.mocked(verifyOtp).mockResolvedValue(userFor('customer'));
+    const user = userEvent.setup();
+    renderAt('/login?role=customer');
+    await user.type(await screen.findByLabelText(/Email/), 'customer@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+    expect(await screen.findByText('We emailed a 6-digit code.')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/6-digit code/), '12');
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }));
+    expect(screen.getByText('Enter the 6-digit code from your email.')).toBeInTheDocument();
+    expect(verifyOtp).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText(/6-digit code/), '3456');
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }));
+    expect(verifyOtp).toHaveBeenCalledWith('customer@example.com', '123456', 'login');
+    expect(await screen.findByRole('heading', { name: /Welcome, Test/ })).toBeInTheDocument();
+  });
+
+  it('shows a generic message for a wrong code and lets the customer go back', async () => {
+    loginMock.mockResolvedValue({
+      otp_required: true,
+      email: 'customer@example.com',
+      detail: 'We emailed a 6-digit code.',
+    });
+    vi.mocked(verifyOtp).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { detail: 'That code is incorrect or has expired.' } },
+    });
+    const user = userEvent.setup();
+    renderAt('/login?role=customer');
+    await user.type(await screen.findByLabelText(/Email/), 'customer@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+    await user.type(await screen.findByLabelText(/6-digit code/), '000000');
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }));
+    expect(await screen.findByText('That code is incorrect or has expired.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByLabelText(/^Password/)).toBeInTheDocument();
+  });
 });
 
 describe('route guards and role menus', () => {
@@ -414,7 +473,7 @@ describe('register page', () => {
   });
 
   it('validates, never sends a role, and confirms', async () => {
-    registerMock.mockResolvedValue('Thanks! Please sign in.');
+    registerMock.mockResolvedValue({ detail: 'Thanks! Please sign in.', otpRequired: false });
     const user = userEvent.setup();
     renderAt('/register');
     await user.click(await screen.findByRole('button', { name: 'Create account' }));
@@ -443,6 +502,25 @@ describe('register page', () => {
       'href',
       '/login?role=customer',
     );
+  });
+
+  it('verifies the emailed code and signs the new customer in', async () => {
+    registerMock.mockResolvedValue({ detail: 'We emailed a 6-digit code.', otpRequired: true });
+    vi.mocked(verifyOtp).mockResolvedValue(userFor('customer'));
+    const user = userEvent.setup();
+    renderAt('/register');
+    await user.type(await screen.findByLabelText(/Full name/), 'Ananya Rao');
+    await user.type(screen.getByLabelText(/^Email/), 'ananya@example.com');
+    await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
+    await user.type(screen.getByLabelText(/^Password/), 'a-strong-pass');
+    await user.type(screen.getByLabelText(/Confirm password/), 'a-strong-pass');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByRole('heading', { name: 'Verify your email' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/6-digit code/), '654321');
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }));
+    expect(verifyOtp).toHaveBeenCalledWith('ananya@example.com', '654321', 'register');
+    expect(await screen.findByRole('heading', { name: /Welcome, Test/ })).toBeInTheDocument();
   });
 
   it('shows server-side field errors', async () => {

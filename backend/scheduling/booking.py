@@ -21,6 +21,7 @@ from billing.models import Payment, PaymentLink, Refund
 from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
+from people import ratings
 from people.models import StylistProfile
 from scheduling.models import (
     BLOCKING_STATUSES,
@@ -317,6 +318,10 @@ def create_request(
     allergies: str,
 ) -> Appointment:
     expire_due()
+    if ratings.pending_count(customer):
+        raise BookingError(
+            "Please rate your recent visit before booking again.", code="ratings_pending"
+        )
     q = quote(service, variant_id, addon_ids)
     check_bookable_time(start, q.duration_minutes)
     candidates = list(qualified_stylists(service, public_only=True).values_list("id", flat=True))

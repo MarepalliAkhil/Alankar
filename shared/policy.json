@@ -6,6 +6,8 @@
     "auth.csrf": "Get a CSRF cookie",
     "auth.register": "Create a customer account",
     "auth.login": "Sign in with a role tab",
+    "auth.otp_verify": "Check the emailed 6-digit code and start the customer session",
+    "auth.otp_resend": "Email a new 6-digit code",
     "auth.refresh": "Rotate the session cookies",
     "auth.logout": "Sign out",
     "auth.me": "Read the signed-in account",
@@ -37,6 +39,10 @@
     "my.appointments.update": "Cancel, flag (I'm here, reschedule, cancel request) or resend the payment link for my own appointment",
     "my.payment.read": "Read the payment due for my own appointment",
     "my.payment.pay": "Pay for my own appointment (mock gateway)",
+    "my.invoices.list": "List my own invoices",
+    "my.invoices.read": "Read one of my own invoices",
+    "my.ratings.list": "List my visits that are waiting for a rating",
+    "my.ratings.submit": "Rate my stylist for one of my own paid visits (once)",
     "my.profile.read": "Read my profile",
     "my.profile.update": "Update my profile",
     "desk.appointments.list": "List all booking requests and appointments",
@@ -51,6 +57,8 @@
       "auth.csrf",
       "auth.register",
       "auth.login",
+      "auth.otp_verify",
+      "auth.otp_resend",
       "auth.refresh",
       "auth.logout",
       "auth.session",
@@ -98,6 +106,10 @@
         "my.appointments.update",
         "my.payment.read",
         "my.payment.pay",
+        "my.invoices.list",
+        "my.invoices.read",
+        "my.ratings.list",
+        "my.ratings.submit",
         "my.profile.read",
         "my.profile.update"
       ],
@@ -143,7 +155,7 @@
           "path": "/customer/invoices",
           "description": "Receipts and invoices for your visits.",
           "task": "Task 2c",
-          "status": "planned"
+          "status": "available"
         },
         {
           "id": "profile",

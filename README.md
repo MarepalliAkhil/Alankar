@@ -136,6 +136,14 @@ Customers send booking requests, the receptionist or admin confirms them (Appoin
 and the customer pays with the mock gateway. Unpaid holds expire by themselves whenever
 appointments are read; to also run it on a schedule: `python manage.py expire_payments`.
 
+## Customer email code, invoices and ratings (Task 2c)
+
+Customers confirm registration and every sign-in with a 6-digit emailed code
+(`SALON_CUSTOMER_OTP=true` by default; set `false` to disable; it is skipped automatically when
+no email delivery or dev mailbox exists). Until the POS (Task 3) exists, finish a visit with
+`python manage.py complete_demo_visit` (dev only) to get an invoice and a rating request.
+Optional reminder job: `python manage.py send_rating_reminders`.
+
 ## Checks
 
 ```powershell
