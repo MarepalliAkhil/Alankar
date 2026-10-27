@@ -58,6 +58,8 @@ class Totals:
     payable_now: Decimal = ZERO
     loyalty_earned: int = 0
     max_redeemable: int = 0
+    coupon_amount: Decimal = ZERO
+    coupon_code: str = ""
 
 
 def compute(
@@ -68,12 +70,28 @@ def compute(
     redeem_points: int,
     points_available: int,
     rules: dict,
+    coupon_amount: Decimal = ZERO,
+    coupon_applies=lambda line: True,
 ) -> Totals:
     t = Totals(lines=lines)
     pct = Decimal(discount_percent)
     for line in lines:
         line.discount = money(line.amount * pct / 100)
         line.after = line.amount - line.discount
+    if coupon_amount > 0:
+        # The coupon is shared out over the lines it applies to, in proportion to their price.
+        targets = [ln for ln in lines if coupon_applies(ln)]
+        base = sum((ln.after for ln in targets), ZERO)
+        want = min(coupon_amount, base)
+        given = ZERO
+        for i, line in enumerate(targets):
+            share = want - given if i == len(targets) - 1 else money(want * line.after / base)
+            share = min(share, line.after)
+            line.discount += share
+            line.after -= share
+            given += share
+        t.coupon_amount = given
+    for line in lines:
         if line.kind == "product":
             rate = line.gst_percent or ZERO
             line.gst = money(line.after * rate / (100 + rate))

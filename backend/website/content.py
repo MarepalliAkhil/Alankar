@@ -1,6 +1,15 @@
 from website.models import SiteContent
 
-PUBLIC_KEYS = ("hero", "about", "contact", "hours", "social", "video")
+PUBLIC_KEYS = (
+    "hero",
+    "about",
+    "contact",
+    "hours",
+    "social",
+    "video",
+    "announcements",
+    "zenotians",
+)
 POLICY_PAGES = {
     "privacy": "Privacy notice",
     "terms": "Terms of service",
@@ -9,8 +18,11 @@ POLICY_PAGES = {
 
 
 def content(key: str, default=None):
+    """The PUBLISHED value of a block; an unpublished block reads as missing."""
     row = SiteContent.objects.filter(key=key).first()
-    return row.value if row else default
+    if row is None or not row.is_published:
+        return default
+    return row.value
 
 
 # Booking rules (admin-editable in Settings, Task 5). Stored under SiteContent key "booking";

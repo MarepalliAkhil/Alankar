@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from core import crypto
 from core.fields import EncryptedTextField
@@ -25,10 +26,21 @@ class CustomerProfile(models.Model):
     phone_index = models.CharField(max_length=64, db_index=True)
     allergies = EncryptedTextField(context=ALLERGIES_CONTEXT, blank=True, default="")
     preferences = EncryptedTextField(context=PREFERENCES_CONTEXT, blank=True, default="")
+    # Marketing consent: off unless the customer ticks it; the date records the last change.
+    marketing_opt_in = models.BooleanField(default=False)
+    marketing_opt_changed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return f"Customer profile {self.user_id}"
+
+    def set_marketing(self, value: bool) -> bool:
+        """Record a consent change; returns True when the value actually changed."""
+        if value == self.marketing_opt_in:
+            return False
+        self.marketing_opt_in = value
+        self.marketing_opt_changed_at = timezone.now()
+        return True
 
     def set_phone(self, raw: str) -> None:
         normalized = crypto.normalize_phone(raw)

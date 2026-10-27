@@ -1,9 +1,12 @@
 from django.urls import path
 
 from billing import admin_views as b
+from billing import report_views as r
 from inventory import admin_views as i
+from marketing import views as m
 from people import admin_views as v
 from scheduling import catalogue_admin as c
+from website import content_admin as ca
 from website import settings_admin as w
 
 admin_patterns = [
@@ -31,4 +34,34 @@ admin_patterns = [
         "cash-closes/<uuid:pk>/review/", b.CashCloseReviewView.as_view(), name="admin-cash-review"
     ),
     path("settings/", w.SettingsView.as_view(), name="admin-settings"),
+    path("content/", ca.ContentListView.as_view(), name="admin-content"),
+    path("content/preview/", ca.ContentPreviewView.as_view(), name="admin-content-preview"),
+    path("content/faqs/", ca.FaqListView.as_view(), name="admin-faqs"),
+    path("content/faqs/<int:pk>/", ca.FaqDetailView.as_view(), name="admin-faq"),
+    path("content/achievements/", ca.AchievementListView.as_view(), name="admin-achievements"),
+    path(
+        "content/achievements/<int:pk>/",
+        ca.AchievementDetailView.as_view(),
+        name="admin-achievement",
+    ),
+    path("content/<slug:key>/", ca.ContentDraftView.as_view(), name="admin-content-block"),
+    path(
+        "content/<slug:key>/unpublish/",
+        ca.ContentUnpublishView.as_view(),
+        name="admin-content-unpublish",
+    ),
+    path("marketing/offers/", m.OfferListView.as_view(), name="admin-offers"),
+    path("marketing/offers/<int:pk>/", m.OfferDetailView.as_view(), name="admin-offer"),
+    path("marketing/coupons/", m.CouponListView.as_view(), name="admin-coupons"),
+    path("marketing/coupons/<uuid:pk>/", m.CouponDetailView.as_view(), name="admin-coupon"),
+    path("marketing/loyalty/", m.LoyaltyView.as_view(), name="admin-loyalty"),
+    path("marketing/campaigns/", m.CampaignListView.as_view(), name="admin-campaigns"),
+    path("marketing/campaigns/<uuid:pk>/", m.CampaignDetailView.as_view(), name="admin-campaign"),
+    path(
+        "marketing/campaigns/<uuid:pk>/send/",
+        m.CampaignSendView.as_view(),
+        name="admin-campaign-send",
+    ),
+    path("reports/", r.ReportListView.as_view(), name="admin-reports"),
+    path("reports/<slug:name>/", r.ReportView.as_view(), name="admin-report"),
 ]

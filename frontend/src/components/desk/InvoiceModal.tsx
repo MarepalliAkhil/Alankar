@@ -113,12 +113,23 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
             ))}
           </ul>
           <dl className="grid grid-cols-[1fr_auto] gap-x-md gap-y-1 border-t border-border pt-md">
-            {Number(data.discount_amount) > 0 && (
+            {Number(data.discount_amount) - Number(data.coupon_amount ?? 0) > 0 && (
               <>
                 <dt>
                   Discount {Number(data.discount_percent)}% ({data.discount_reason})
                 </dt>
-                <dd>− {formatINRExact(data.discount_amount)}</dd>
+                <dd>
+                  −{' '}
+                  {formatINRExact(
+                    (Number(data.discount_amount) - Number(data.coupon_amount ?? 0)).toFixed(2),
+                  )}
+                </dd>
+              </>
+            )}
+            {Number(data.coupon_amount ?? 0) > 0 && (
+              <>
+                <dt>Coupon {data.coupon_code}</dt>
+                <dd>− {formatINRExact(data.coupon_amount ?? '0')}</dd>
               </>
             )}
             <dt className="text-text-muted">GST included</dt>

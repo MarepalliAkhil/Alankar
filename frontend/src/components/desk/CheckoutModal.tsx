@@ -49,6 +49,8 @@ export function CheckoutModal({
   const [pick, setPick] = useState('');
   const [discount, setDiscount] = useState('');
   const [reason, setReason] = useState('');
+  const [couponDraft, setCouponDraft] = useState('');
+  const [coupon, setCoupon] = useState('');
   const [points, setPoints] = useState('');
   const [tip, setTip] = useState('');
   const [payments, setPayments] = useState<PayRow[]>([{ method: 'cash', amount: '' }]);
@@ -66,9 +68,10 @@ export function CheckoutModal({
       discount_percent: discount || '0',
       discount_reason: reason,
       redeem_points: Number(points) || 0,
+      coupon,
       tip: tip || '0',
     }),
-    [appointmentId, cart, discount, reason, points, tip],
+    [appointmentId, cart, discount, reason, points, coupon, tip],
   );
 
   const quote = useQuery({
@@ -259,6 +262,36 @@ export function CheckoutModal({
               onChange={(event) => setReason(event.target.value)}
               hint="Needed for any discount."
             />
+            <div className="flex items-end gap-sm">
+              <Input
+                label="Coupon code"
+                value={couponDraft}
+                onChange={(event) => setCouponDraft(event.target.value)}
+                disabled={coupon !== ''}
+                hint="One coupon per bill."
+              />
+              {coupon === '' ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={couponDraft.trim() === ''}
+                  onClick={() => setCoupon(couponDraft.trim())}
+                >
+                  Apply coupon
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setCoupon('');
+                    setCouponDraft('');
+                  }}
+                >
+                  Remove coupon
+                </Button>
+              )}
+            </div>
             <Input
               label="Loyalty points to use"
               type="number"
@@ -286,10 +319,23 @@ export function CheckoutModal({
               <dl className="grid grid-cols-[1fr_auto] gap-x-md gap-y-1">
                 <dt>Items</dt>
                 <dd>{formatINRExact(quote.data.gross)}</dd>
-                {Number(quote.data.discount_amount) > 0 && (
+                {Number(quote.data.discount_amount) - Number(quote.data.coupon_amount ?? 0) > 0 && (
                   <>
                     <dt>Discount</dt>
-                    <dd>− {formatINRExact(quote.data.discount_amount)}</dd>
+                    <dd>
+                      −{' '}
+                      {formatINRExact(
+                        (
+                          Number(quote.data.discount_amount) - Number(quote.data.coupon_amount ?? 0)
+                        ).toFixed(2),
+                      )}
+                    </dd>
+                  </>
+                )}
+                {Number(quote.data.coupon_amount ?? 0) > 0 && (
+                  <>
+                    <dt>Coupon {quote.data.coupon_code}</dt>
+                    <dd>− {formatINRExact(quote.data.coupon_amount ?? '0')}</dd>
                   </>
                 )}
                 <dt className="text-text-muted">of which GST (included)</dt>

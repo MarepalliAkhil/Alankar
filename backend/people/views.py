@@ -8,6 +8,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.audit import audit
+from accounts.models import AuditLog
 from core import crypto
 from people import ratings
 from people.models import RATING_TAGS, CustomerProfile, Rating
@@ -19,6 +21,8 @@ class ProfileSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
     allergies = serializers.CharField(max_length=500, allow_blank=True, required=False)
     preferences = serializers.CharField(max_length=500, allow_blank=True, required=False)
+    marketing_opt_in = serializers.BooleanField(required=False)
+    marketing_opt_changed_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
     def validate_phone(self, value: str) -> str:
         if not crypto.is_valid_indian_mobile(value):
@@ -34,6 +38,12 @@ def profile_data(user) -> dict:
         "phone": profile.phone if profile else "",
         "allergies": profile.allergies if profile else "",
         "preferences": profile.preferences if profile else "",
+        "marketing_opt_in": bool(profile and profile.marketing_opt_in),
+        "marketing_opt_changed_at": (
+            profile.marketing_opt_changed_at.isoformat()
+            if profile and profile.marketing_opt_changed_at
+            else None
+        ),
     }
 
 
@@ -62,7 +72,17 @@ class ProfileView(APIView):
             profile.set_phone(data["phone"])
             profile.allergies = data.get("allergies", "")
             profile.preferences = data.get("preferences", "")
+            consent_changed = profile.set_marketing(bool(data.get("marketing_opt_in", False)))
             profile.save()
+            if consent_changed:
+                audit(
+                    AuditLog.Action.MARKETING_CONSENT,
+                    request=request,
+                    actor=user,
+                    target=user,
+                    opted_in=profile.marketing_opt_in,
+                    where="profile",
+                )
         return Response(profile_data(request.user))
 
 

@@ -109,6 +109,8 @@ def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
         "discount_percent": money_str(invoice.discount_percent),
         "discount_amount": money_str(invoice.discount_amount),
         "discount_reason": invoice.discount_reason,
+        "coupon_code": invoice.coupon_code,
+        "coupon_amount": money_str(invoice.coupon_amount),
         "loyalty_redeemed": invoice.loyalty_redeemed,
         "loyalty_earned": invoice.loyalty_earned,
         "returnable": returnable_data(invoice),
@@ -176,6 +178,8 @@ def totals_data(result: dict) -> dict:
         ],
         "gross": money_str(t.gross),
         "discount_amount": money_str(t.discount_amount),
+        "coupon_code": t.coupon_code,
+        "coupon_amount": money_str(t.coupon_amount),
         "subtotal": money_str(t.subtotal),
         "gst_amount": money_str(t.gst_amount),
         "total": money_str(t.total),
@@ -212,6 +216,7 @@ class BillSerializer(serializers.Serializer):
         max_length=200, required=False, allow_blank=True, default=""
     )
     redeem_points = serializers.IntegerField(required=False, default=0, min_value=0)
+    coupon = serializers.CharField(max_length=24, required=False, allow_blank=True, default="")
     tip = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, default=0, min_value=0
     )

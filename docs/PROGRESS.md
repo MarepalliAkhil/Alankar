@@ -8,9 +8,10 @@
   lint, typecheck, build and the browser walkthroughs passed. Sandbox at hand-off: pytest all
   passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
 - Task 5a (admin: team and catalogue): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5b (operations): IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate,
-  pytest, npm test, walkthrough below). Then 5c (content, marketing, reports), 5d
-  (security and audit). One sub-task at a time; wait for "passed".
+  Task 5b (operations): DONE. Verified on the owner's PC (2026-10-27).
+  Task 5c (content editor, marketing, reports): IMPLEMENTED in the build sandbox, waiting for the
+  owner's PC run (npm install for Recharts, migrate, pytest, npm test, walkthrough below).
+  Next: 5d (security and audit). One sub-task at a time; wait for "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -523,3 +524,77 @@
    after 5 quiet minutes. Change a rating band: Earnings uses it.
 6. Staff page > Recent security activity (and the Django audit table) show each change with old and
    new values.
+
+## Task 5c: decisions
+- Marketing consent: `CustomerProfile.marketing_opt_in` (default false) with the date of the last
+  change. A tick box (unticked) on Register and on the customer Profile page (which shows the date).
+  Existing customers count as not opted in. Every change is audited (MARKETING_CONSENT, with where it
+  happened: registration, profile or unsubscribe link). Saving other profile details never changes it.
+- Website content: hero, about, announcements and the Zenotians page sections are drafts first
+  (`SiteContent.draft`). Admin saves a draft, previews it (live preview next to the form and the
+  `/api/admin/content/preview/` endpoint), then publishes or discards. Announcements and the
+  Zenotians page can also be unpublished (hidden); hero and about cannot be hidden. The public site
+  only ever reads published values; announcements also respect their start and end dates and show
+  in a strip above the navbar. FAQs (the chatbot's knowledge source) and achievements are edited row by
+  row: an unpublished FAQ (`is_active` false) is a draft, hidden from the site and the bot. Image
+  fields accept an https link or a site path only. Shop details, hours and GST stay in Settings.
+  Audited as CONTENT_CHANGED / CONTENT_PUBLISHED.
+- Coupons: code (unique, upper-cased), percent or rupees off, smallest bill, cap in rupees, start and
+  end date, total uses, uses per customer, applies to (whole bill, services, products), "can be
+  combined", on/off. Typed in at the POS with an Apply button. Rules (one place: `marketing/coupons.py`):
+  one coupon per bill; a coupon that is not "can be combined" is refused when the bill has a manual
+  discount; a combinable coupon plus a manual discount together must stay inside the receptionist's
+  discount cap (the admin has no cap); a coupon on its own is the admin's promotion and is not held
+  to the receptionist cap. The coupon is spread over the lines it applies to in proportion to price;
+  GST is worked out on the price after the coupon. The usage limits are checked inside the checkout
+  transaction with the coupon row locked, so two counters cannot both use the last redemption. The
+  invoice records `coupon_code` and `coupon_amount` (the coupon's rupees are inside discount_amount);
+  a `CouponRedemption` row is written once and can never be changed or deleted. Receipt and invoice
+  show the coupon on its own line.
+- Loyalty rules (points per Rs. 100, rupees per point, most of a bill points can pay) are edited on
+  the Marketing page; they use the same stored settings as the POS and apply to the next bill.
+- Offers (shown on the website) are edited on the Marketing page.
+- Campaigns: draft, then send. Simulated email (new outbox kind "marketing") only to active
+  customers who opted in; audiences: all, visited in the last 90 days, not visited in 90 days.
+  Every message has an unsubscribe note and a signed link (`/unsubscribe?token=...`, works without
+  signing in, POST to confirm). Sent campaigns cannot be changed or re-sent; sending to nobody is
+  refused. Audited (CAMPAIGN_SENT stores counts, never message text).
+- Reports (Recharts bar charts, date range, CSV): revenue by day, by service, by stylist, by
+  division; appointments by status; no-shows and cancellations; top customers; product sales.
+  Revenue = invoice subtotal (before GST) with GST, total, discounts, tips next to it; a bill is
+  shared over its lines in proportion to their price, service lines go to the service, its division and
+  its stylist, product lines go to "Retail" (no stylist). So every split adds up to the invoice
+  subtotal exactly (tested). Refunds are shown on the day they were paid, not subtracted. Appointment
+  reports use the visit date. Ranges are at most 366 days. CSV cells that start with = + - @ are
+  prefixed with an apostrophe so a spreadsheet cannot run them. CSV downloads are audited.
+- Policy: new actions content.read/edit/publish, marketing.manage, marketing.send, reports.view (admin
+  only) and public.unsubscribe; route /unsubscribe is public. New admin menu item "Website"
+  (/content); Marketing and Reports are now available. Denial tests for customer, stylist,
+  receptionist and guest cover every new endpoint.
+- Migrations: accounts 0014 and 0015, billing 0007, core 0005, marketing 0001, people 0009,
+  website 0002. New dependency: recharts (package.json; run `npm install`). The sandbox could not
+  reach the npm registry, so the chart itself could not be rendered here: the chart is isolated in
+  one file (`components/charts/BarChartView.tsx`) and the tests replace it with a labelled box.
+- Not built (not on the list): scheduled/automatic campaigns, real SMS/WhatsApp, per-customer
+  coupons, reports by hour or by payment method.
+
+## Task 5c: owner browser walkthrough (to verify on the PC)
+1. Register a new customer with the marketing box ticked, and another with it unticked. Profile shows
+   the box and the date. Untick and save on one: the date changes.
+2. Admin > Website: change the banner headline. The home page does not change until you press Publish.
+   Save draft, look at the preview, Publish: the home page changes. Edit again and Discard draft.
+3. Announcements: add a notice, save, publish: a strip appears on every public page. Hide from site:
+   it disappears. Set an end date in the past: it does not show.
+4. FAQs: add a question (it is a draft), publish it: it shows on the home page FAQ. Hide it again.
+5. Admin > Marketing > Coupons: create SAVE10 (10%, one use per customer). At POS, bill a visit and
+   Apply coupon SAVE10: its own line shows and the total drops. Try a second bill for the same
+   customer: refused. Make a receptionist discount of 5% and apply SAVE10: refused unless the coupon is
+   "can be combined".
+6. Loyalty: change points per Rs. 100 to 2; the next bill shows double points.
+7. Campaigns: New campaign > Save draft > Send. It reaches only opted-in customers (see Dev mailbox, or
+   the Mail outbox); the message has the unsubscribe link. Open the link, press Unsubscribe me: the
+   customer's Profile box is now unticked and a second campaign no longer reaches them.
+8. Admin > Reports: pick each report, change the dates, Download CSV. The Revenue by day total equals
+   the sum of the invoices in POS / Billing for those days.
+9. Receptionist, stylist and customer: none of Website, Marketing or Reports is in their menu, and the
+   URLs /content, /marketing and /reports show the "not allowed" page.

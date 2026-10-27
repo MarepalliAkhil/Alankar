@@ -48,8 +48,10 @@ export interface TeamMember {
 }
 
 export interface SiteData {
-  hero: { headline?: string; subtitle?: string } | null;
-  about: { heading?: string; body?: string } | null;
+  hero: { headline?: string; subtitle?: string; image_url?: string; cta_label?: string } | null;
+  about: { heading?: string; body?: string; image_url?: string } | null;
+  /** Notices that are live today (the server filters by date). */
+  announcements?: { text: string; link: string }[];
   contact: {
     address?: string;
     phone?: string;

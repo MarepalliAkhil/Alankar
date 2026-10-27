@@ -36,6 +36,7 @@ class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)
     consent = serializers.BooleanField()
+    marketing_opt_in = serializers.BooleanField(required=False, default=False)
 
     def validate_email(self, value: str) -> str:
         return normalize_email(value)

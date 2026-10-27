@@ -104,7 +104,14 @@
     "inventory.stock": "Receive, adjust or write off stock and read the stock ledger",
     "cash.close.review": "See the receptionists' cash closes and mark them reviewed",
     "settings.business.read": "Read the business settings",
-    "settings.business.update": "Change the business settings (audited with old and new values)"
+    "settings.business.update": "Change the business settings (audited with old and new values)",
+    "content.read": "Read the public content blocks, drafts, FAQs and achievements",
+    "content.edit": "Edit content drafts, FAQs and achievements",
+    "content.publish": "Publish or unpublish public content",
+    "marketing.manage": "Manage offers, coupons, loyalty rules and campaign drafts",
+    "marketing.send": "Send a campaign to opted-in customers",
+    "reports.view": "View and download reports",
+    "public.unsubscribe": "Unsubscribe from marketing messages with the emailed link"
   },
   "public": {
     "api": [
@@ -127,7 +134,8 @@
       "public.services",
       "public.service",
       "public.team",
-      "public.page"
+      "public.page",
+      "public.unsubscribe"
     ],
     "routes": [
       "/",
@@ -143,7 +151,8 @@
       "/403",
       "/privacy",
       "/terms",
-      "/cancellation-policy"
+      "/cancellation-policy",
+      "/unsubscribe"
     ]
   },
   "roles": {
@@ -455,7 +464,13 @@
         "inventory.stock",
         "cash.close.review",
         "settings.business.read",
-        "settings.business.update"
+        "settings.business.update",
+        "content.read",
+        "content.edit",
+        "content.publish",
+        "marketing.manage",
+        "marketing.send",
+        "reports.view"
       ],
       "routes": [
         "/customers/:id"
@@ -542,20 +557,28 @@
           "status": "available"
         },
         {
+          "id": "content",
+          "label": "Website",
+          "path": "/content",
+          "description": "Edit the public site: banner, about, announcements, FAQs, achievements and the Zenotians page, with a preview before publishing.",
+          "task": "Task 5c",
+          "status": "available"
+        },
+        {
           "id": "marketing",
           "label": "Marketing",
           "path": "/marketing",
-          "description": "Campaigns, coupons and offers.",
-          "task": "Task 5",
-          "status": "planned"
+          "description": "Offers, coupons (rules, dates and limits), loyalty rules, and campaigns to customers who opted in.",
+          "task": "Task 5c",
+          "status": "available"
         },
         {
           "id": "reports",
           "label": "Reports",
           "path": "/reports",
-          "description": "Revenue, service and staff reports with exports.",
-          "task": "Task 5",
-          "status": "planned"
+          "description": "Revenue by day, service, stylist and division, appointments, no-shows, top customers and product sales, with CSV export.",
+          "task": "Task 5c",
+          "status": "available"
         },
         {
           "id": "concierge",

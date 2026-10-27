@@ -172,6 +172,9 @@ class Invoice(models.Model):
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discount_reason = models.CharField(max_length=200, blank=True)
+    # A coupon used on the bill; its rupees are already inside discount_amount.
+    coupon_code = models.CharField(max_length=24, blank=True)
+    coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     # Loyalty points used as part payment (1 point = Rs. 1 by default) and points earned.
     loyalty_redeemed = models.PositiveIntegerField(default=0)
     loyalty_earned = models.PositiveIntegerField(default=0)

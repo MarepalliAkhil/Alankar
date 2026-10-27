@@ -9,6 +9,11 @@ class SiteContent(models.Model):
 
     key = models.SlugField(max_length=40, unique=True)
     value = models.JSONField(default=dict, blank=True)
+    # Edited-but-not-yet-published version (admin only); null when there is nothing waiting.
+    draft = models.JSONField(null=True, blank=True)
+    # Unpublished blocks (announcements, Zenotians page) are hidden from the public site.
+    is_published = models.BooleanField(default=True)
+    published_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

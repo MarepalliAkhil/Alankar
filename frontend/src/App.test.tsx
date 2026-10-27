@@ -524,7 +524,7 @@ describe('register page', () => {
     await user.type(screen.getByLabelText(/Mobile number/), '+91 98765 43210');
     await user.type(screen.getByLabelText(/^Password/), 'a-strong-pass');
     await user.type(screen.getByLabelText(/Confirm password/), 'a-strong-pass');
-    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('checkbox', { name: /I agree to the terms/ }));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(registerMock).toHaveBeenCalledWith({
       full_name: 'Ananya Rao',
@@ -532,11 +532,31 @@ describe('register page', () => {
       phone: '9876543210',
       password: 'a-strong-pass',
       consent: true,
+      marketing_opt_in: false,
     });
     expect(await screen.findByText('Thanks! Please sign in.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
       'href',
       '/login?role=customer',
+    );
+  });
+
+  it('offers an unticked marketing box and sends the choice only when ticked', async () => {
+    registerMock.mockResolvedValue({ detail: 'Thanks!', otpRequired: false });
+    const user = userEvent.setup();
+    renderAt('/register');
+    const box = await screen.findByRole('checkbox', { name: /Send me offers and news/ });
+    expect(box).not.toBeChecked();
+    await user.type(screen.getByLabelText(/Full name/), 'Ananya Rao');
+    await user.type(screen.getByLabelText(/^Email/), 'ananya@example.com');
+    await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
+    await user.type(screen.getByLabelText(/^Password/), 'a-strong-pass');
+    await user.type(screen.getByLabelText(/Confirm password/), 'a-strong-pass');
+    await user.click(screen.getByRole('checkbox', { name: /I agree to the terms/ }));
+    await user.click(box);
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(registerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ consent: true, marketing_opt_in: true }),
     );
   });
 
@@ -550,7 +570,7 @@ describe('register page', () => {
     await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
     await user.type(screen.getByLabelText(/^Password/), 'a-strong-pass');
     await user.type(screen.getByLabelText(/Confirm password/), 'a-strong-pass');
-    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('checkbox', { name: /I agree to the terms/ }));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(await screen.findByRole('heading', { name: 'Verify your email' })).toBeInTheDocument();
     await user.type(screen.getByLabelText(/6-digit code/), '654321');
@@ -571,7 +591,7 @@ describe('register page', () => {
     await user.type(screen.getByLabelText(/Mobile number/), '9876543210');
     await user.type(screen.getByLabelText(/^Password/), 'password123');
     await user.type(screen.getByLabelText(/Confirm password/), 'password123');
-    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('checkbox', { name: /I agree to the terms/ }));
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(await screen.findByText('This password is too common.')).toBeInTheDocument();
   });

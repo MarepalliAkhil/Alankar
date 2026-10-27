@@ -8,6 +8,7 @@ import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
   Card,
+  Checkbox,
   ErrorState,
   Input,
   LoadingState,
@@ -76,6 +77,8 @@ function DetailsForm({
     phone: string;
     allergies: string;
     preferences: string;
+    marketing_opt_in: boolean;
+    marketing_opt_changed_at?: string | null;
   };
 }) {
   const toast = useToast();
@@ -86,6 +89,7 @@ function DetailsForm({
     allergies: initial.allergies,
     preferences: initial.preferences,
   });
+  const [marketing, setMarketing] = useState(initial.marketing_opt_in);
   const [errors, setErrors] = useState<Partial<Record<ProfileField, string>>>({});
 
   useEffect(() => {
@@ -95,6 +99,7 @@ function DetailsForm({
       allergies: initial.allergies,
       preferences: initial.preferences,
     });
+    setMarketing(initial.marketing_opt_in);
   }, [initial]);
 
   const save = useMutation({
@@ -124,7 +129,7 @@ function DetailsForm({
       return;
     }
     setErrors({});
-    save.mutate(parsed.data);
+    save.mutate({ ...parsed.data, marketing_opt_in: marketing });
   };
 
   const update = (key: ProfileField) => (event: { target: { value: string } }) =>
@@ -174,6 +179,18 @@ function DetailsForm({
           onChange={update('preferences')}
           error={errors.preferences}
         />
+        <Checkbox
+          name="marketing"
+          checked={marketing}
+          onChange={(event) => setMarketing(event.target.checked)}
+          label="Send me offers and news by email."
+        />
+        <p className="-mt-sm text-xs text-text-muted">
+          {initial.marketing_opt_changed_at
+            ? `${initial.marketing_opt_in ? 'You agreed' : 'You opted out'} on ${new Date(initial.marketing_opt_changed_at).toLocaleDateString()}. `
+            : 'You have not agreed to marketing messages. '}
+          Every message has an unsubscribe link.
+        </p>
         <div>
           <Button type="submit" loading={save.isPending}>
             Save profile

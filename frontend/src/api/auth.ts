@@ -21,6 +21,8 @@ export interface RegisterPayload {
   phone: string;
   password: string;
   consent: true;
+  /** Ticked by the customer; off by default. */
+  marketing_opt_in?: boolean;
 }
 
 export interface InviteInfo {

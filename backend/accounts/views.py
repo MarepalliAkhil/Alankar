@@ -104,8 +104,19 @@ class RegisterView(AuthThrottleMixin, APIView):
                 user.save()
                 profile = CustomerProfile(user=user)
                 profile.set_phone(data["phone"])
+                if data.get("marketing_opt_in"):
+                    profile.set_marketing(True)
                 profile.save()
             audit(AuditLog.Action.REGISTER, request=request, actor=user, target=user)
+            if data.get("marketing_opt_in"):
+                audit(
+                    AuditLog.Action.MARKETING_CONSENT,
+                    request=request,
+                    actor=user,
+                    target=user,
+                    opted_in=True,
+                    where="registration",
+                )
             if otp.otp_enabled():
                 try:
                     otp.issue(user, OtpChallenge.Purpose.REGISTER, request)

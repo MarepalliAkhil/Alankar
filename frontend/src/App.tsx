@@ -16,6 +16,7 @@ const HomePage = lazy(() => import('./pages/public/HomePage'));
 const DivisionPage = lazy(() => import('./pages/public/DivisionPage'));
 const LoginPage = lazy(() => import('./pages/public/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/public/RegisterPage'));
+const UnsubscribePage = lazy(() => import('./pages/public/UnsubscribePage'));
 const ZenotiansPage = lazy(() => import('./pages/public/ZenotiansPage'));
 const ForbiddenPage = lazy(() => import('./pages/public/ForbiddenPage'));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
@@ -47,6 +48,7 @@ export function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
+        <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/zenotians" element={<ZenotiansPage />} />
         <Route path="/privacy" element={<PolicyPage policy="privacy" />} />
         <Route path="/terms" element={<PolicyPage policy="terms" />} />

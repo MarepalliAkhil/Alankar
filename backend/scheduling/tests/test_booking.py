@@ -626,6 +626,8 @@ def test_profile_read_and_update(catalogue, customer):
         "phone": "9123456789",
         "allergies": "Peanuts",
         "preferences": "",
+        "marketing_opt_in": False,
+        "marketing_opt_changed_at": None,
     }
     with connection.cursor() as cursor:
         cursor.execute("SELECT allergies FROM people_customerprofile WHERE user_id = %s", [user.id])

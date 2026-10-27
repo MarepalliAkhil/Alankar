@@ -29,6 +29,8 @@ from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
 from inventory import stock
 from inventory.models import Product, StockMovement
+from marketing import coupons
+from marketing.models import CouponRedemption
 from people.models import LoyaltyEntry, Rating
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus
@@ -138,7 +140,18 @@ def _products(inputs, *, lock: bool) -> list[tuple[Product, int]]:
     return rows
 
 
-def _build(appt: Appointment, rows, *, discount_percent, redeem_points, actor) -> Totals:
+def _coupon(code, *, customer, discount_percent, lock: bool):
+    """The coupon named on the bill, or None. Raises when it cannot be used."""
+    if not str(code or "").strip():
+        return None
+    coupon = coupons.find(code, lock=lock)
+    coupons.check_usable(coupon, customer, discount_percent)
+    return coupon
+
+
+def _build(
+    appt: Appointment, rows, *, discount_percent, redeem_points, actor, coupon=None
+) -> Totals:
     cap = max_discount_percent(actor)
     if discount_percent < 0 or discount_percent > cap:
         raise CheckoutError(f"Discount cannot be more than {cap:f}%.")
@@ -165,14 +178,32 @@ def _build(appt: Appointment, rows, *, discount_percent, redeem_points, actor) -
                 product=product,
             )
         )
-    return pos.compute(
+    coupon_amount = ZERO
+    if coupon is not None:
+        coupon_amount = coupons.amount_for(coupon, lines, discount_percent)
+        total_percent = (
+            (coupon_amount + sum((ln.amount for ln in lines), ZERO) * discount_percent / 100)
+            / sum((ln.amount for ln in lines), ZERO)
+            * 100
+        )
+        # A coupon on its own is the admin's promotion; stacked on a manual discount, the two
+        # together stay inside the discount cap.
+        if discount_percent > 0 and total_percent > cap:
+            raise CheckoutError(
+                f"The discount and the coupon together cannot be more than {cap:f}% of the bill."
+            )
+    t = pos.compute(
         lines,
         discount_percent=discount_percent,
         prepaid=prepaid_amount(appt),
         redeem_points=redeem_points,
         points_available=points_balance(appt.customer),
         rules=pos_settings(),
+        coupon_amount=coupon_amount,
+        coupon_applies=(lambda ln: coupons.eligible(ln, coupon)) if coupon else (lambda ln: True),
     )
+    t.coupon_code = coupon.code if coupon else ""
+    return t
 
 
 def _options(data: dict):
@@ -199,7 +230,12 @@ def quote(appt_id, data: dict, *, actor) -> dict:
         raise CheckoutError("This visit has already been billed.", code="conflict")
     discount, _, redeem, tip = _options(data)
     rows = _products(data.get("products"), lock=False)
-    totals = _build(appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor)
+    coupon = _coupon(
+        data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=False
+    )
+    totals = _build(
+        appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor, coupon=coupon
+    )
     return {"totals": totals, "tip": tip, "points": points_balance(appt.customer)}
 
 
@@ -234,7 +270,13 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
         if appt.stylist_id is None:
             raise CheckoutError("The visit has no stylist assigned.")
         rows = _products(data.get("products"), lock=True)
-        t = _build(appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor)
+        # The coupon row is locked so two counters cannot both use its last redemption.
+        coupon = _coupon(
+            data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=True
+        )
+        t = _build(
+            appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor, coupon=coupon
+        )
         payments = _validate_payments(data.get("payments"), t.payable_now + tip)
 
         previous = appt.status
@@ -261,6 +303,8 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             discount_percent=discount,
             discount_amount=t.discount_amount,
             discount_reason=reason if discount > 0 else "",
+            coupon_code=t.coupon_code,
+            coupon_amount=t.coupon_amount,
             loyalty_redeemed=t.loyalty_redeemed,
             loyalty_earned=t.loyalty_earned,
             tip_amount=tip,
@@ -286,6 +330,10 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
                     actor=actor,
                     invoice=invoice,
                 )
+        if coupon is not None:
+            CouponRedemption.objects.create(
+                coupon=coupon, invoice=invoice, customer=appt.customer, amount=t.coupon_amount
+            )
         for method, amount in payments:
             Payment.objects.create(
                 appointment=appt,
@@ -346,10 +394,11 @@ def receipt_text(appt: Appointment, invoice: Invoice, t: Totals) -> str:
         lines.append(f"  {line.description}{suffix}: Rs. {line.amount}")
     if invoice.service_changes:
         lines.append(f"  ({invoice.service_changes})")
-    if t.discount_amount > 0:
-        lines.append(
-            f"  Discount ({invoice.discount_percent.normalize()}%): -Rs. {t.discount_amount}"
-        )
+    manual = t.discount_amount - t.coupon_amount
+    if manual > 0:
+        lines.append(f"  Discount ({invoice.discount_percent.normalize()}%): -Rs. {manual}")
+    if t.coupon_amount > 0:
+        lines.append(f"  Coupon {invoice.coupon_code}: -Rs. {t.coupon_amount}")
     lines.append(f"Total: Rs. {t.total} (GST included: Rs. {t.gst_amount})")
     if t.loyalty_redeemed:
         lines.append(f"Paid with loyalty points: Rs. {t.loyalty_value}")

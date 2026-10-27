@@ -81,6 +81,8 @@ export interface InvoiceDetail extends InvoiceRow {
   discount_percent: string;
   discount_amount: string;
   discount_reason: string;
+  coupon_code?: string;
+  coupon_amount?: string;
   loyalty_redeemed: number;
   loyalty_earned: number;
   returnable?: Returnable[];
@@ -122,6 +124,8 @@ export interface BillInput {
   discount_percent: string;
   discount_reason: string;
   redeem_points: number;
+  /** One coupon code per bill (optional). */
+  coupon?: string;
   tip: string;
   payments?: { method: PayMethod; amount: string }[];
 }
@@ -138,6 +142,8 @@ export interface Quote {
   }[];
   gross: string;
   discount_amount: string;
+  coupon_code?: string;
+  coupon_amount?: string;
   subtotal: string;
   gst_amount: string;
   total: string;

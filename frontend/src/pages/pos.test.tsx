@@ -188,6 +188,29 @@ describe('POS / Billing', () => {
     ).toBeInTheDocument();
   });
 
+  it('applies one coupon to the bill and shows it on its own line', async () => {
+    vi.mocked(posApi.getQuote).mockImplementation(async (bill) => ({
+      ...quote,
+      coupon_code: bill.coupon ? 'SAVE50' : undefined,
+      coupon_amount: bill.coupon ? '50.00' : undefined,
+      discount_amount: bill.coupon ? '50.00' : '0.00',
+    }));
+    const user = userEvent.setup();
+    renderAt('/pos');
+    await user.click(await screen.findByRole('button', { name: 'Bill Priya Customer' }));
+    const dialog = await screen.findByRole('dialog', { name: /Bill Priya Customer/ });
+    await within(dialog).findByText('To collect now');
+    const apply = within(dialog).getByRole('button', { name: 'Apply coupon' });
+    expect(apply).toBeDisabled();
+    await user.type(within(dialog).getByLabelText('Coupon code'), 'save50');
+    await user.click(apply);
+    expect(await within(dialog).findByText('Coupon SAVE50')).toBeInTheDocument();
+    expect(vi.mocked(posApi.getQuote).mock.calls.at(-1)?.[0].coupon).toBe('save50');
+    expect(within(dialog).queryByText('Discount')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Remove coupon' }));
+    await waitFor(() => expect(vi.mocked(posApi.getQuote).mock.calls.at(-1)?.[0].coupon).toBe(''));
+  });
+
   it('shows the server message when the bill is refused', async () => {
     vi.mocked(posApi.getQuote).mockRejectedValue({
       isAxiosError: true,

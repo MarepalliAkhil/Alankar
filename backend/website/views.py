@@ -40,6 +40,19 @@ def active_services():
     )
 
 
+def live_announcements(block, today) -> list[dict]:
+    """Published announcements whose start/end dates include today."""
+    items = (block or {}).get("items") or []
+    out = []
+    for item in items:
+        if item.get("starts") and item["starts"] > today.isoformat():
+            continue
+        if item.get("ends") and item["ends"] < today.isoformat():
+            continue
+        out.append({"text": item["text"], "link": item.get("link", "")})
+    return out
+
+
 class PublicView(APIView):
     authentication_classes: list = []
 
@@ -58,6 +71,7 @@ class SiteView(PublicView):
         for row in services.values("category__division").annotate(n=Count("id")):
             division_counts[row["category__division"]] = row["n"]
         body = {key: content(key) for key in PUBLIC_KEYS}
+        body["announcements"] = live_announcements(body.get("announcements"), today)
         body.update(
             {
                 "achievements": AchievementSerializer(

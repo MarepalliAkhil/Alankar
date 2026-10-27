@@ -53,6 +53,7 @@ export default function RegisterPage() {
     confirmPassword: '',
   });
   const [consent, setConsent] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -87,6 +88,7 @@ export default function RegisterPage() {
         phone,
         password,
         consent: true,
+        marketing_opt_in: marketing,
       });
       if (result.otpRequired) setOtp({ email, detail: result.detail });
       else setDone(result.detail);
@@ -208,6 +210,12 @@ export default function RegisterPage() {
             onChange={(event) => setConsent(event.target.checked)}
             label="I agree to the terms, privacy notice and cancellation policy."
             error={errors.consent}
+          />
+          <Checkbox
+            name="marketing"
+            checked={marketing}
+            onChange={(event) => setMarketing(event.target.checked)}
+            label="Send me offers and news by email. I can unsubscribe any time (optional)."
           />
           {formError && (
             <p

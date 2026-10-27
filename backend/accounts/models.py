@@ -86,6 +86,12 @@ class AuditLog(models.Model):
         STAFF_PROFILE_UPDATED = "staff_profile_updated", "Staff details changed by the admin"
         CATALOGUE_CHANGED = "catalogue_changed", "Services, categories or rooms changed"
         DAY_OFF_DECIDED = "day_off_decided", "Days-off request decided"
+        MARKETING_CONSENT = "marketing_consent", "Marketing messages opted in or out"
+        CONTENT_CHANGED = "content_changed", "Website content changed"
+        CONTENT_PUBLISHED = "content_published", "Website content published or unpublished"
+        MARKETING_CHANGED = "marketing_changed", "Offers, coupons or loyalty settings changed"
+        CAMPAIGN_SENT = "campaign_sent", "Campaign sent"
+        REPORT_EXPORTED = "report_exported", "Report downloaded"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

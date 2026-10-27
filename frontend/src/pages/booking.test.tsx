@@ -262,6 +262,39 @@ describe('payment page', () => {
 });
 
 describe('profile', () => {
+  it('shows the marketing choice with its date and saves a change', async () => {
+    vi.mocked(bookingApi.getProfile).mockResolvedValue({
+      full_name: 'Test Customer',
+      email: 'customer@example.com',
+      phone: '9876543210',
+      allergies: '',
+      preferences: '',
+      marketing_opt_in: false,
+      marketing_opt_changed_at: null,
+    });
+    vi.mocked(bookingApi.updateProfile).mockResolvedValue({
+      full_name: 'Test Customer',
+      email: 'customer@example.com',
+      phone: '9876543210',
+      allergies: '',
+      preferences: '',
+      marketing_opt_in: true,
+      marketing_opt_changed_at: '2026-10-27T10:00:00Z',
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/profile');
+    const box = await screen.findByRole('checkbox', { name: /Send me offers and news/ });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText(/You have not agreed to marketing messages/)).toBeInTheDocument();
+    await user.click(box);
+    await user.click(screen.getByRole('button', { name: 'Save profile' }));
+    await waitFor(() =>
+      expect(bookingApi.updateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ marketing_opt_in: true }),
+      ),
+    );
+  });
+
   it('saves details and validates the phone number', async () => {
     vi.mocked(bookingApi.getProfile).mockResolvedValue({
       full_name: 'Test Customer',
@@ -269,6 +302,7 @@ describe('profile', () => {
       phone: '9876543210',
       allergies: '',
       preferences: '',
+      marketing_opt_in: false,
     });
     vi.mocked(bookingApi.updateProfile).mockResolvedValue({
       full_name: 'Test Customer',
@@ -276,6 +310,7 @@ describe('profile', () => {
       phone: '9123456780',
       allergies: 'Latex',
       preferences: '',
+      marketing_opt_in: false,
     });
     const user = userEvent.setup();
     renderAt('/customer/profile');
@@ -296,6 +331,7 @@ describe('profile', () => {
         phone: '+91 91234 56780',
         allergies: 'Latex',
         preferences: '',
+        marketing_opt_in: false,
       }),
     );
   });
@@ -307,6 +343,7 @@ describe('profile', () => {
       phone: '9876543210',
       allergies: '',
       preferences: '',
+      marketing_opt_in: false,
     });
     const user = userEvent.setup();
     renderAt('/customer/profile');

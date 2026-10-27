@@ -177,6 +177,9 @@ export interface Profile {
   phone: string;
   allergies: string;
   preferences: string;
+  marketing_opt_in: boolean;
+  /** When the customer last ticked or unticked the marketing box. */
+  marketing_opt_changed_at?: string | null;
 }
 
 export async function getProfile(): Promise<Profile> {
@@ -184,7 +187,7 @@ export async function getProfile(): Promise<Profile> {
   return data;
 }
 
-export type ProfilePayload = Omit<Profile, 'email'>;
+export type ProfilePayload = Omit<Profile, 'email' | 'marketing_opt_changed_at'>;
 
 export async function updateProfile(payload: ProfilePayload): Promise<Profile> {
   const { data } = await api.patch<Profile>('/my/profile/', payload);

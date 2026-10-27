@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LoadingState } from '../ui/Skeleton';
+import { AnnouncementBar } from './AnnouncementBar';
 import { Footer } from './Footer';
 import { Navbar } from './Navbar';
 import { PageContainer } from './PageContainer';
@@ -16,6 +17,7 @@ export function PublicLayout() {
       >
         Skip to content
       </a>
+      <AnnouncementBar />
       <Navbar />
       <main id="main" className="flex-1">
         <ErrorBoundary resetKey={pathname}>
