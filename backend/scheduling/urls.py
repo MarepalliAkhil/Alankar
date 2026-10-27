@@ -1,5 +1,6 @@
 from django.urls import path
 
+from accounts import work_views
 from billing import desk_views as pos
 from billing.views import MyInvoiceDetailView, MyInvoiceListView
 from people.desk_views import CustomerDetailView, CustomerListView, CustomerNoteView
@@ -37,6 +38,7 @@ my_patterns = [
 ]
 
 desk_patterns = [
+    path("my-hours/", work_views.MyHoursView.as_view(), name="desk-my-hours"),
     path("pos/queue/", pos.PosQueueView.as_view(), name="pos-queue"),
     path("pos/visits/<uuid:pk>/", pos.PosVisitView.as_view(), name="pos-visit"),
     path("pos/quote/", pos.PosQuoteView.as_view(), name="pos-quote"),

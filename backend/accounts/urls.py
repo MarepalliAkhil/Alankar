@@ -1,6 +1,6 @@
 from django.urls import path
 
-from accounts import staff_views, views
+from accounts import staff_views, views, work_views
 
 auth_patterns = [
     path("csrf/", views.CsrfView.as_view(), name="auth-csrf"),
@@ -9,6 +9,7 @@ auth_patterns = [
     path("refresh/", views.RefreshView.as_view(), name="auth-refresh"),
     path("logout/", views.LogoutView.as_view(), name="auth-logout"),
     path("me/", views.MeView.as_view(), name="auth-me"),
+    path("activity/", work_views.ActivityView.as_view(), name="auth-activity"),
     path("session/", views.SessionView.as_view(), name="auth-session"),
     path("password-reset/", views.PasswordResetRequestView.as_view(), name="auth-password-reset"),
     path(
@@ -30,6 +31,12 @@ staff_patterns = [
         "invites/<uuid:pk>/resend/",
         staff_views.InviteResendView.as_view(),
         name="staff-invite-resend",
+    ),
+    path("<uuid:pk>/hours/", work_views.StaffHoursView.as_view(), name="staff-hours"),
+    path(
+        "work-sessions/<uuid:pk>/correct/",
+        work_views.SessionCorrectView.as_view(),
+        name="staff-work-correct",
     ),
     path("<uuid:pk>/pay/", staff_views.StaffPayView.as_view(), name="staff-pay"),
     path(

@@ -72,6 +72,7 @@ class AuditLog(models.Model):
         REFUND_APPROVED = "refund_approved", "Refund approved"
         REFUND_REJECTED = "refund_rejected", "Refund rejected"
         CASH_CLOSE_SIGNED = "cash_close_signed", "Daily cash close signed off"
+        WORK_SESSION_CORRECTED = "work_session_corrected", "Working hours corrected by the admin"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)
@@ -200,3 +201,44 @@ class OtpChallenge(models.Model):
 
     def __str__(self) -> str:
         return f"OTP {self.purpose} for {self.user_id}"
+
+
+class WorkSession(models.Model):
+    """One stretch of work for a receptionist: sign-in to sign-out (or to the last activity before
+    an idle sign-out). Hours and pay are worked out from these rows. Only the admin can correct
+    one, with a reason, and every correction is audited."""
+
+    class EndReason(models.TextChoices):
+        LOGOUT = "logout", "Signed out"
+        IDLE = "idle", "Signed out after 15 minutes idle"
+        REPLACED = "replaced", "Signed in again elsewhere"
+        CORRECTED = "corrected", "Closed by the admin"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="work_sessions"
+    )
+    started_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    end_reason = models.CharField(max_length=12, choices=EndReason.choices, blank=True)
+    corrected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    correction_reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["user", "-started_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"], condition=models.Q(ended_at__isnull=True), name="one_open_session"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} {self.started_at:%Y-%m-%d %H:%M}"

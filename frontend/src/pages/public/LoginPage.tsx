@@ -37,6 +37,7 @@ export default function LoginPage() {
   const roleParam = params.get('role');
   const role: LoginRole = isLoginRole(roleParam) ? roleParam : 'customer';
   const bookingIntent = params.get('intent') === 'book';
+  const signedOutIdle = params.get('reason') === 'idle';
   const roleText = loginRoles.find((item) => item.id === role)?.label ?? 'Customer';
 
   const [email, setEmail] = useState('');
@@ -178,6 +179,14 @@ export default function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   error={errors.password}
                 />
+                {signedOutIdle && !formError && (
+                  <p
+                    role="status"
+                    className="rounded-nested bg-primary-soft px-md py-sm text-sm text-text"
+                  >
+                    You were signed out after 15 minutes without activity. Please sign in again.
+                  </p>
+                )}
                 {formError && (
                   <p
                     role="alert"

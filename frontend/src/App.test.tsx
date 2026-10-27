@@ -464,13 +464,11 @@ describe('route guards and role menus', () => {
       'POS / Billing',
       'Cash Close',
       'Inventory \\(view\\)',
+      'My Hours & Pay',
     ]) {
       expect(
         within(menu).getByRole('link', { name: new RegExp(`^${label}( Task \\d+[a-z]?)?$`) }),
       ).toBeInTheDocument();
-    }
-    for (const label of ['My Hours & Pay']) {
-      expect(within(menu).queryByRole('link', { name: new RegExp(label) })).not.toBeInTheDocument();
     }
     for (const label of ['Staff', 'Payroll', 'Settings', 'Stylist Chat']) {
       expect(

@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts import lockout, otp
+from accounts import lockout, otp, work
 from accounts.audit import audit, client_ip
 from accounts.models import AuditLog, OtpChallenge, PasswordResetToken, StaffInvite, User
 from accounts.serializers import (
@@ -188,6 +188,7 @@ def start_session(request: Request, user: User) -> Response:
     user.last_login = timezone.now()
     user.save(update_fields=["last_login"])
     audit(AuditLog.Action.LOGIN_SUCCESS, request=request, actor=user, target=user)
+    work.start(user)
     rotate_token(request._request)
     response = Response(MeSerializer(user).data)
     set_session_cookies(response, RefreshToken.for_user(user))
@@ -263,6 +264,8 @@ def rotate_refresh(request: Request) -> tuple[User | None, RefreshToken | None, 
         old.blacklist()
     except TokenError:
         return None, None, True
+    if not work.enforce(user):
+        return None, None, True
     return user, RefreshToken.for_user(user), True
 
 
@@ -319,6 +322,7 @@ class LogoutView(APIView):
             except TokenError:
                 pass
         if request.user and request.user.is_authenticated:
+            work.end(request.user)
             audit(AuditLog.Action.LOGOUT, request=request, actor=request.user, target=request.user)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_session_cookies(response)

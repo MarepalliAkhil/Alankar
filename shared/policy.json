@@ -73,7 +73,11 @@
     "pos.refunds.decide": "Approve or reject a refund",
     "cash.close.read": "Read the day's takings and cash-close record",
     "cash.close.sign": "Sign off the daily cash close",
-    "inventory.view": "View products and stock levels"
+    "inventory.view": "View products and stock levels",
+    "work.ping": "Tell the server the receptionist is active (keeps the session from idling out)",
+    "hours.read": "Read my own work sessions, hours and estimated pay",
+    "staff.hours.read": "Read a receptionist's work sessions, hours and estimated pay",
+    "staff.hours.correct": "Correct a receptionist's work session times (reason required)"
   },
   "public": {
     "api": [
@@ -221,7 +225,9 @@
         "pos.refunds.request",
         "cash.close.read",
         "cash.close.sign",
-        "inventory.view"
+        "inventory.view",
+        "work.ping",
+        "hours.read"
       ],
       "routes": [
         "/customers/:id"
@@ -281,6 +287,14 @@
           "path": "/inventory",
           "description": "Products and stock levels, with a low-stock flag.",
           "task": "Task 3c",
+          "status": "available"
+        },
+        {
+          "id": "my-hours",
+          "label": "My Hours & Pay",
+          "path": "/my-hours",
+          "description": "Your worked hours (sign-in to sign-out) and what they earn at your hourly rate.",
+          "task": "Task 3d",
           "status": "available"
         }
       ]
@@ -360,6 +374,8 @@
         "desk.appointments.dismiss",
         "desk.schedule.read",
         "staff.pay.update",
+        "staff.hours.read",
+        "staff.hours.correct",
         "settings.pos.read",
         "settings.pos.update",
         "desk.appointments.check_in",

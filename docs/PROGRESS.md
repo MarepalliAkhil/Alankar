@@ -1,8 +1,11 @@
 # Progress
 
 ## Status
-- Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): IMPLEMENTED in the build
-  sandbox, waiting for the owner's PC run (migrate, seed_demo, pytest, npm test, walkthrough below).
+- Task 3d (work sessions, 15-minute idle sign-out, My Hours & Pay, admin hour corrections API):
+  IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate, pytest, npm test,
+  walkthrough below). Task 3c: DONE (verified on the owner's PC, 2026-10-27).
+- Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
+  owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
   (the production build could not run in the sandbox; please run `npm run build`).
 - Task 3b (check-in, walk-in and phone bookings, customers): IMPLEMENTED in the build sandbox,
@@ -309,6 +312,34 @@
    note; sign off; the day becomes read-only. The admin has no Cash Close.
 10. Customer: the invoice shows in Invoices and a new "Rate your stylist" card appears.
 11. Customer and stylist accounts cannot open /pos, /cash-close or /inventory (403 page).
+
+## Task 3d decisions
+- A WorkSession row is written for receptionists only (admin, stylist and customer have none). It
+  starts at sign-in and ends at sign-out; signing in again elsewhere closes the older one.
+- Idle rule (server-side, 15 minutes, `SALON_IDLE_MINUTES`): only real clicks/keys count. The page
+  pings `/api/auth/activity/` at most once a minute; background refreshes and polling do not count.
+  After 15 idle minutes every request (and token refresh) is refused, the session ends at the LAST
+  ACTIVITY (idle time is not paid) and the receptionist must sign in again. The page warns one
+  minute before ("Stay signed in") and shows a notice on the login page.
+- Pay = worked seconds x hourly rate (set by the admin on the Staff page), rounded to paise. It is
+  an ESTIMATE until payroll (Task 6) approves it. A missing rate shows "Not set yet", hours still count.
+- An open session counts only up to its last activity. Months are by sign-in date (shop time zone).
+- Admin corrections: API only for now (`GET /api/staff/<id>/hours/`, `POST
+  /api/staff/work-sessions/<id>/correct/` with start, end and a reason). They are audited, shown to
+  the receptionist as "Corrected by admin", cannot overlap another session, cannot be in the future
+  or longer than 16 h. The screens for them arrive with Staff Summary / Payroll (Task 6).
+- Receptionists signed in before this update must sign in once more (they have no open session).
+
+## Task 3d: owner browser walkthrough (to verify on the PC)
+1. Backend: `python manage.py migrate`. Admin > Staff: make sure the receptionist has an hourly rate.
+2. Sign in as the receptionist. Menu now has My Hours & Pay: it shows "On the clock" for this session.
+3. Work for a few minutes, sign out, sign in again: two rows; the first says "Signed out".
+4. Idle test without waiting 15 minutes: in backend/.env add `SALON_IDLE_MINUTES=2`, restart the
+   backend, and change nothing on the page for 2 minutes. (The page itself still waits 15 minutes
+   for its own warning; the server will refuse the next click: you are sent to the login page.)
+   Remove the line again afterwards.
+5. Hours and pay: check Today, This month, rate and Estimated pay = hours x rate. Change the month.
+6. Customer, stylist and admin accounts cannot open /my-hours (403 page).
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

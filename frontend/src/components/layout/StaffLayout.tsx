@@ -6,6 +6,7 @@ import { cn } from '../../lib/cn';
 import { menuFor, roleLabel } from '../../policy/policy';
 import { useSession } from '../../session/session-context';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { IdleGuard } from './IdleGuard';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -97,6 +98,7 @@ export function StaffLayout() {
           Logout
         </Button>
       </aside>
+      {user.role === 'receptionist' && <IdleGuard />}
       <main id="main" className="min-w-0 flex-1">
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<LoadingState label="Loading page…" lines={4} className="py-2xl" />}>

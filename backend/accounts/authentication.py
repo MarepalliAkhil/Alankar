@@ -2,6 +2,8 @@ from django.conf import settings
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import AuthenticationFailed, InvalidToken, TokenError
 
+from accounts import work
+
 
 class CookieJWTAuthentication(JWTAuthentication):
     """Reads the access token from an httpOnly cookie (never from localStorage).
@@ -22,6 +24,8 @@ class CookieJWTAuthentication(JWTAuthentication):
             return None
         if not user.is_active:
             return None
+        if not work.enforce(user):
+            return None  # a receptionist who went idle (or signed out) must sign in again
         return user, validated
 
     def authenticate_header(self, request) -> str:

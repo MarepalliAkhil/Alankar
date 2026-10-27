@@ -13,6 +13,7 @@ const InvoicesPage = lazy(() => import('../customer/InvoicesPage'));
 const SchedulePage = lazy(() => import('../desk/SchedulePage'));
 const CustomersPage = lazy(() => import('../desk/CustomersPage'));
 const CustomerProfilePage = lazy(() => import('../desk/CustomerProfilePage'));
+const MyHoursPage = lazy(() => import('../desk/MyHoursPage'));
 const PosPage = lazy(() => import('../desk/PosPage'));
 const CashClosePage = lazy(() => import('../desk/CashClosePage'));
 const InventoryPage = lazy(() => import('../desk/InventoryPage'));
@@ -35,6 +36,7 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/schedule' && (user.role === 'receptionist' || user.role === 'admin')) {
     return <SchedulePage />;
   }
+  if (path === '/my-hours' && user.role === 'receptionist') return <MyHoursPage />;
   if (path === '/pos' && isDesk) return <PosPage />;
   if (path === '/cash-close' && user.role === 'receptionist') return <CashClosePage />;
   if (path === '/inventory' && user.role === 'receptionist') return <InventoryPage />;
