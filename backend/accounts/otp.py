@@ -35,6 +35,20 @@ def otp_enabled() -> bool:
     )
 
 
+def purpose_for(user: User) -> str:
+    """Register code until the email is proven, login code afterwards (decided by the server)."""
+    return (
+        OtpChallenge.Purpose.REGISTER
+        if user.email_verified_at is None
+        else OtpChallenge.Purpose.LOGIN
+    )
+
+
+def email_verified_or_not_required(user: User) -> bool:
+    """False for an unverified customer while email codes are in force."""
+    return user.email_verified_at is not None or not otp_enabled()
+
+
 def _digest(challenge_id, code: str) -> str:
     key = settings.SECRET_KEY.encode("utf-8")
     return hmac.new(key, f"{challenge_id}:{code}".encode(), hashlib.sha256).hexdigest()

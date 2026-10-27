@@ -12,7 +12,7 @@ import {
   sendBookingRequest,
   type BookingOptions,
 } from '../../api/booking';
-import { PENDING_RATINGS_KEY, isRatingsPending } from '../../api/billing';
+import { PENDING_RATINGS_KEY, isEmailUnverified, isRatingsPending } from '../../api/billing';
 import { classifyError, serverFieldErrors } from '../../api/client';
 import { getServices } from '../../api/public';
 import { SlotPicker } from '../../components/booking/SlotPicker';
@@ -268,6 +268,14 @@ function BookingForm({ options }: { options: BookingOptions }) {
           description: nearest.length
             ? 'Pick one of the nearest free times below.'
             : 'Please pick another time.',
+        });
+        return;
+      }
+      if (isEmailUnverified(error)) {
+        toast.show({
+          tone: 'warning',
+          title: 'Verify your email first',
+          description: 'Sign out and sign in again, then enter the code we email you.',
         });
         return;
       }

@@ -48,6 +48,9 @@ def booking_error(exc: booking.BookingError) -> Response:
         body["slots"] = [slot.isoformat() for slot in exc.slots]
     elif exc.code == "too_soon":
         code = status.HTTP_429_TOO_MANY_REQUESTS
+    elif exc.code == "email_unverified":
+        code = status.HTTP_403_FORBIDDEN
+        body["code"] = "email_unverified"
     elif exc.code == "ratings_pending":
         code = status.HTTP_403_FORBIDDEN
         body["code"] = "ratings_pending"

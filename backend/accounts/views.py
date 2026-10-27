@@ -162,14 +162,24 @@ class LoginView(AuthThrottleMixin, APIView):
         lockout.record_success(email, ip)
         if user.role == User.Role.CUSTOMER and otp.otp_enabled():
             # Right password: now ask for the emailed code before any session starts.
+            # An account whose email was never proven gets the registration code instead, so
+            # entering it (not the password alone) is what lets that customer in.
+            purpose = otp.purpose_for(user)
             try:
-                otp.issue(user, OtpChallenge.Purpose.LOGIN, request)
+                otp.issue(user, purpose, request)
             except otp.OtpThrottled:
                 return Response(
                     {"detail": "Too many codes were requested. Please try again in an hour."},
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
-            return Response({"otp_required": True, "email": email, "detail": otp.sent_message()})
+            return Response(
+                {
+                    "otp_required": True,
+                    "email": email,
+                    "purpose": purpose,
+                    "detail": otp.sent_message(),
+                }
+            )
         return start_session(request, user)
 
 
@@ -202,7 +212,10 @@ class OtpVerifyView(AuthThrottleMixin, APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         user = otp_user(data["email"])
-        if not otp.verify(user, data["purpose"], data["code"]):
+        # The purpose must be the one the server expects for this account; anything else
+        # fails exactly like a wrong code (and does not use up a try).
+        purpose_ok = user is not None and data["purpose"] == otp.purpose_for(user)
+        if not purpose_ok or not otp.verify(user, data["purpose"], data["code"]):
             audit(
                 AuditLog.Action.LOGIN_FAILED,
                 request=request,
@@ -227,7 +240,7 @@ class OtpResendView(AuthThrottleMixin, APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         user = otp_user(data["email"])
-        if user is not None and otp.otp_enabled():
+        if user is not None and otp.otp_enabled() and data["purpose"] == otp.purpose_for(user):
             otp.resend(user, data["purpose"], request)
         # Same answer whether or not a code was sent.
         return Response({"detail": f"If a code is due, we sent a new one. {otp.sent_message()}"})

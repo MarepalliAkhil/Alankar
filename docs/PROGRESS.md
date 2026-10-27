@@ -3,7 +3,7 @@
 ## Status
 - Task 2c (invoices + mandatory rating) and customer email-OTP: IMPLEMENTED in the build sandbox,
   waiting for the owner's PC run (migrate, pytest, npm test, npm run build, walkthrough below).
-  Sandbox: pytest 210 passed, ruff clean, vitest 111 passed, eslint, typecheck, prettier clean.
+  Sandbox: pytest 216 passed, ruff clean, vitest 112 passed, eslint, typecheck, prettier clean.
 - Task 0 (scaffold and foundation): DONE (verified on the owner's PC, 2026-10-26).
 - Task 2b (booking flow): DONE. Verified on the owner's PC (2026-10-27): booking request, confirm,
   payment-link email, mock payment and receipt emails working. Sandbox: pytest 163 passed, ruff
@@ -188,6 +188,13 @@
   after 60 s, max 5 codes/hour. Wrong/expired answers are one generic message.
 - OTP runs only when it can be delivered (SMTP configured or debug dev mailbox); otherwise it is
   skipped so nobody is locked out. `SALON_CUSTOMER_OTP=false` in `.env` turns it off.
+- Unverified accounts: `User.email_verified_at` is empty until the registration code is entered.
+  A password alone never starts a customer session while codes are in force; an unverified
+  customer who signs in is sent the REGISTER code (the server picks the purpose and rejects any
+  other, like a wrong code, without using a try), and entering it verifies the email and signs
+  in. Booking requests are also refused (403 `email_unverified`) for an unverified customer when
+  codes are in force (defence in depth for sessions started while codes were off).
+  Older customers from before this change are unverified too and verify once at next sign-in.
 - Invoice (INV-YYYY-NNNNN) is created by `billing.checkout.complete_and_invoice` in one atomic
   transaction, applies the online prepayment, and is immutable afterwards. Task 3's POS reuses it.
 - Until the POS exists, the dev-only command `python manage.py complete_demo_visit` completes a

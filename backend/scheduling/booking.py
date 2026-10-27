@@ -16,6 +16,7 @@ from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
+from accounts import otp
 from accounts.tokens import hash_token, new_link_token
 from billing.models import Payment, PaymentLink, Refund
 from core import brand
@@ -318,6 +319,11 @@ def create_request(
     allergies: str,
 ) -> Appointment:
     expire_due()
+    if not otp.email_verified_or_not_required(customer):
+        raise BookingError(
+            "Please verify your email with the code we sent you before booking.",
+            code="email_unverified",
+        )
     if ratings.pending_count(customer):
         raise BookingError(
             "Please rate your recent visit before booking again.", code="ratings_pending"

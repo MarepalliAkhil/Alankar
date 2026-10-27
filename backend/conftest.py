@@ -3,6 +3,7 @@
 import pytest
 from django.core.cache import cache
 from django.test import Client
+from django.utils import timezone
 
 from accounts.models import User
 
@@ -29,9 +30,18 @@ def _clear_cache():
 
 @pytest.fixture
 def make_user(db):
-    def _make(role="customer", email=None, password=PASSWORD, active=True, full_name="Test User"):
+    def _make(
+        role="customer",
+        email=None,
+        password=PASSWORD,
+        active=True,
+        full_name="Test User",
+        verified=True,
+    ):
         email = email or f"{role}-{User.objects.count() + 1}@example.com"
         user = User(username=email, email=email, role=role, is_active=active, full_name=full_name)
+        if verified:
+            user.email_verified_at = timezone.now()
         user.set_password(password)
         user.save()
         return user

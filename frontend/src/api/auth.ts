@@ -49,6 +49,8 @@ export async function refreshSession(): Promise<void> {
 export interface OtpPending {
   otp_required: true;
   email: string;
+  /** `register` until the email is proven, `login` afterwards (the server decides). */
+  purpose: OtpPurpose;
   detail: string;
 }
 

@@ -344,6 +344,7 @@ describe('login page', () => {
     loginMock.mockResolvedValue({
       otp_required: true,
       email: 'customer@example.com',
+      purpose: 'login',
       detail: 'We emailed a 6-digit code.',
     });
     vi.mocked(verifyOtp).mockResolvedValue(userFor('customer'));
@@ -366,10 +367,29 @@ describe('login page', () => {
     expect(await screen.findByRole('heading', { name: /Welcome, Test/ })).toBeInTheDocument();
   });
 
+  it('uses the registration code when the server says the email is not verified yet', async () => {
+    loginMock.mockResolvedValue({
+      otp_required: true,
+      email: 'customer@example.com',
+      purpose: 'register',
+      detail: 'We emailed a 6-digit code.',
+    });
+    vi.mocked(verifyOtp).mockResolvedValue(userFor('customer'));
+    const user = userEvent.setup();
+    renderAt('/login?role=customer');
+    await user.type(await screen.findByLabelText(/Email/), 'customer@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+    await user.type(await screen.findByLabelText(/6-digit code/), '123456');
+    await user.click(screen.getByRole('button', { name: 'Verify and continue' }));
+    expect(verifyOtp).toHaveBeenCalledWith('customer@example.com', '123456', 'register');
+  });
+
   it('shows a generic message for a wrong code and lets the customer go back', async () => {
     loginMock.mockResolvedValue({
       otp_required: true,
       email: 'customer@example.com',
+      purpose: 'login',
       detail: 'We emailed a 6-digit code.',
     });
     vi.mocked(verifyOtp).mockRejectedValue({

@@ -73,3 +73,10 @@ export function isRatingsPending(error: unknown): boolean {
     ?.response;
   return response?.status === 403 && response.data?.code === 'ratings_pending';
 }
+
+/** True when the server refused a booking because the customer never entered the emailed code. */
+export function isEmailUnverified(error: unknown): boolean {
+  const response = (error as { response?: { status?: number; data?: { code?: string } } })
+    ?.response;
+  return response?.status === 403 && response.data?.code === 'email_unverified';
+}

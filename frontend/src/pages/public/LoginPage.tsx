@@ -2,7 +2,7 @@ import { Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { needsOtp } from '../../api/auth';
+import { needsOtp, type OtpPurpose } from '../../api/auth';
 import { loginErrorMessage } from '../../api/auth-messages';
 import { OtpStep } from '../../components/auth/OtpStep';
 import { PageContainer } from '../../components/layout/PageContainer';
@@ -44,7 +44,9 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [otp, setOtp] = useState<{ email: string; detail: string } | null>(null);
+  const [otp, setOtp] = useState<{ email: string; detail: string; purpose: OtpPurpose } | null>(
+    null,
+  );
 
   useDocumentTitle('Login');
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
     try {
       const result = await signIn({ role, ...parsed.data });
       if (needsOtp(result)) {
-        setOtp({ email: result.email, detail: result.detail });
+        setOtp({ email: result.email, detail: result.detail, purpose: result.purpose });
         setPassword('');
         setSubmitting(false);
         return;
@@ -93,7 +95,7 @@ export default function LoginPage() {
     if (!otp) return;
     setSubmitting(true); // keeps the "already signed in" panel from flashing
     try {
-      const verified = await completeOtp(otp.email, code, 'login');
+      const verified = await completeOtp(otp.email, code, otp.purpose);
       navigate(destinationAfterLogin(verified, params.get('next'), bookingIntent), {
         replace: true,
       });
@@ -138,7 +140,7 @@ export default function LoginPage() {
           <div className="mt-lg">
             <OtpStep
               email={otp.email}
-              purpose="login"
+              purpose={otp.purpose}
               message={otp.detail}
               onVerify={verifyCode}
               onBack={() => setOtp(null)}
