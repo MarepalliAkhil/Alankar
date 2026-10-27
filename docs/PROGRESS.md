@@ -10,8 +10,8 @@
 - Task 5a (admin: team and catalogue): DONE. Verified on the owner's PC (2026-10-27).
   Task 5b (operations): DONE. Verified on the owner's PC (2026-10-27).
   Task 5c (content editor, marketing, reports): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5d (audit log, security, data requests): BUILT, waiting for the owner's "passed".
-  Next after 5d: Task 6. One sub-task at a time; wait for "passed".
+  Task 5d (audit log, security, data requests): DONE. Verified on the owner's PC (2026-10-27).
+  Next: Task 5e (growth features, split 5e-1 to 5e-4; plan awaiting the owner's OK). One sub-task at a time; wait for "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
