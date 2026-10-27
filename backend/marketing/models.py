@@ -32,6 +32,18 @@ class Coupon(models.Model):
     # False: cannot be used on a bill that also has a manual discount.
     stackable = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # A private coupon belongs to one customer: nobody else can use it, and it is never listed with
+    # the shared coupons. PROTECT so a private coupon can never silently become a public one.
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="private_coupons",
+    )
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -77,6 +89,7 @@ class Campaign(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
+        SCHEDULED = "scheduled", "Scheduled"
         SENT = "sent", "Sent"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -86,6 +99,7 @@ class Campaign(models.Model):
     audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.ALL)
     coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    scheduled_for = models.DateTimeField(null=True, blank=True, db_index=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     recipient_count = models.PositiveIntegerField(default=0)
     created_by = models.ForeignKey(

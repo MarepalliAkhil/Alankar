@@ -6,7 +6,10 @@ import {
   deleteCampaign,
   listCampaigns,
   listCoupons,
+  runDueCampaigns,
+  scheduleCampaign,
   sendCampaign,
+  unscheduleCampaign,
   updateCampaign,
   type AudienceKind,
   type CampaignInput,
@@ -35,12 +38,30 @@ export function CampaignsPanel() {
   const list = useQuery({ queryKey: ['mk-campaigns'], queryFn: listCampaigns });
   const [editing, setEditing] = useState<CampaignRow | 'new' | null>(null);
   const [confirming, setConfirming] = useState<CampaignRow | null>(null);
+  const [scheduling, setScheduling] = useState<CampaignRow | null>(null);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['mk-campaigns'] });
   const remove = useMutation({
     mutationFn: (c: CampaignRow) => deleteCampaign(c.id),
     onSuccess: () => {
       refresh();
       toast.show({ tone: 'success', title: 'Draft deleted' });
+    },
+  });
+  const unschedule = useMutation({
+    mutationFn: (c: CampaignRow) => unscheduleCampaign(c.id),
+    onSuccess: () => {
+      refresh();
+      toast.show({ tone: 'success', title: 'Back to a draft' });
+    },
+  });
+  const runDue = useMutation({
+    mutationFn: runDueCampaigns,
+    onSuccess: (r) => {
+      refresh();
+      toast.show({
+        tone: 'success',
+        title: r.sent === 0 ? 'Nothing is due yet' : `${r.sent} campaign(s) sent`,
+      });
     },
   });
   return (
@@ -56,9 +77,19 @@ export function CampaignsPanel() {
               : ''}
           </p>
         </div>
-        <Button type="button" onClick={() => setEditing('new')}>
-          <Plus className="size-4" aria-hidden /> New campaign
-        </Button>
+        <div className="flex flex-wrap gap-sm">
+          <Button
+            type="button"
+            variant="secondary"
+            loading={runDue.isPending}
+            onClick={() => runDue.mutate()}
+          >
+            Send due now
+          </Button>
+          <Button type="button" onClick={() => setEditing('new')}>
+            <Plus className="size-4" aria-hidden /> New campaign
+          </Button>
+        </div>
       </div>
       <div className="mt-md">
         {list.isPending ? (
@@ -79,8 +110,20 @@ export function CampaignsPanel() {
               <li key={c.id} className="rounded-nested border border-border p-md">
                 <div className="flex flex-wrap items-center gap-xs">
                   <p className="font-medium text-text">{c.name}</p>
-                  <Badge tone={c.status === 'sent' ? 'success' : 'warning'}>
-                    {c.status === 'sent' ? 'Sent' : 'Draft'}
+                  <Badge
+                    tone={
+                      c.status === 'sent'
+                        ? 'success'
+                        : c.status === 'scheduled'
+                          ? 'info'
+                          : 'warning'
+                    }
+                  >
+                    {c.status === 'sent'
+                      ? 'Sent'
+                      : c.status === 'scheduled'
+                        ? 'Scheduled'
+                        : 'Draft'}
                   </Badge>
                   {c.coupon && <Badge tone="primary">Coupon {c.coupon}</Badge>}
                 </div>
@@ -89,12 +132,38 @@ export function CampaignsPanel() {
                   {c.audience_label} ·{' '}
                   {c.status === 'sent'
                     ? `sent to ${c.recipients} on ${c.sent_at ? new Date(c.sent_at).toLocaleDateString() : ''}`
-                    : `would reach ${c.would_reach}`}
+                    : c.status === 'scheduled' && c.scheduled_for
+                      ? `goes out ${new Date(c.scheduled_for).toLocaleString()} · would reach ${c.would_reach}`
+                      : `would reach ${c.would_reach}`}
                 </p>
+                {c.status === 'scheduled' && (
+                  <div className="mt-sm flex flex-wrap gap-sm">
+                    <Button type="button" size="sm" onClick={() => setConfirming(c)}>
+                      Send…
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      loading={unschedule.isPending && unschedule.variables?.id === c.id}
+                      onClick={() => unschedule.mutate(c)}
+                    >
+                      Remove schedule
+                    </Button>
+                  </div>
+                )}
                 {c.status === 'draft' && (
                   <div className="mt-sm flex flex-wrap gap-sm">
                     <Button type="button" size="sm" onClick={() => setConfirming(c)}>
                       Send…
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setScheduling(c)}
+                    >
+                      Schedule…
                     </Button>
                     <Button
                       type="button"
@@ -130,6 +199,16 @@ export function CampaignsPanel() {
           }}
         />
       )}
+      {scheduling && (
+        <ScheduleDialog
+          campaign={scheduling}
+          onClose={() => setScheduling(null)}
+          onDone={() => {
+            setScheduling(null);
+            refresh();
+          }}
+        />
+      )}
       {confirming && (
         <SendDialog
           campaign={confirming}
@@ -141,6 +220,70 @@ export function CampaignsPanel() {
         />
       )}
     </Card>
+  );
+}
+
+function ScheduleDialog({
+  campaign,
+  onClose,
+  onDone,
+}: {
+  campaign: CampaignRow;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [when, setWhen] = useState('');
+  const [problem, setProblem] = useState('');
+  const save = useMutation({
+    mutationFn: () => scheduleCampaign(campaign.id, new Date(when).toISOString()),
+    onSuccess: () => {
+      toast.show({ tone: 'success', title: 'Campaign scheduled' });
+      onDone();
+    },
+    onError: (error) =>
+      setProblem(serverFieldErrors(error).send_at ?? errorDetail(error) ?? 'Could not schedule.'),
+  });
+  return (
+    <Modal open onClose={onClose} title="Schedule this campaign" size="sm">
+      <form
+        className="flex flex-col gap-md"
+        noValidate
+        onSubmit={(event: FormEvent) => {
+          event.preventDefault();
+          setProblem('');
+          if (!when) {
+            setProblem('Choose the day and time.');
+            return;
+          }
+          save.mutate();
+        }}
+      >
+        <p className="text-sm text-text">
+          “{campaign.subject}” will be sent to the customers who agreed to marketing at that time.
+          Until then it cannot be edited; you can remove the schedule at any moment.
+        </p>
+        <Input
+          label="Send on"
+          type="datetime-local"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
+        />
+        {problem && (
+          <p role="alert" className="text-sm font-medium text-danger-text">
+            {problem}
+          </p>
+        )}
+        <div className="flex gap-sm">
+          <Button type="submit" loading={save.isPending}>
+            Schedule
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

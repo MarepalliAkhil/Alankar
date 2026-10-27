@@ -360,3 +360,15 @@ export async function listAdminWaitlist(status?: string): Promise<WaitlistRow[]>
 export async function adminCancelWaitlist(id: string, reason: string): Promise<WaitlistRow> {
   return (await api.post<WaitlistRow>(`${A}/waitlist/${id}/cancel/`, { reason })).data;
 }
+
+export interface MyCoupon {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  ends_on: string | null;
+  state: 'ready' | 'used' | 'expired';
+}
+export async function getMyCoupons(): Promise<MyCoupon[]> {
+  return (await api.get<MyCoupon[]>('/my/coupons/')).data;
+}

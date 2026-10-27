@@ -18,7 +18,7 @@ export interface Report {
   rows: ReportRow[];
   totals: ReportRow;
   summary?: Record<string, string>;
-  chart: { kind: 'bar'; x: string; y: string; y2?: string };
+  chart: { kind: 'bar' | 'heatmap'; x: string; y?: string; y2?: string; hours?: string[] };
 }
 
 export interface ReportName {

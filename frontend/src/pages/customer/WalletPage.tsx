@@ -7,6 +7,7 @@ import {
   buyPackage,
   cancelMembership,
   checkMyGiftCard,
+  getMyCoupons,
   getMyWallet,
   joinMembership,
   renewMembership,
@@ -51,9 +52,55 @@ export default function WalletPage() {
           <MembershipSection wallet={wallet.data} />
           <PackagesSection wallet={wallet.data} />
           <GiftCardsSection wallet={wallet.data} />
+          <CouponsSection />
         </>
       )}
     </section>
+  );
+}
+
+/** Private coupons issued to this customer: one use each, shown only to them. */
+function CouponsSection() {
+  const coupons = useQuery({ queryKey: ['my-coupons'], queryFn: getMyCoupons });
+  return (
+    <Card variant="dense" as="section" aria-label="My coupons">
+      <h2 className="text-lg font-semibold text-text">My coupons</h2>
+      <p className="mt-1 text-sm text-text-muted">
+        Show the code at the counter. Each coupon works once, for you only.
+      </p>
+      <div className="mt-md">
+        {coupons.isPending ? (
+          <LoadingState label="Loading your coupons…" />
+        ) : coupons.isError ? (
+          <ErrorState
+            description="We couldn't load your coupons."
+            onRetry={() => void coupons.refetch()}
+          />
+        ) : coupons.data.length === 0 ? (
+          <EmptyState
+            title="No coupons right now"
+            description="Offers made just for you appear here."
+          />
+        ) : (
+          <ul className="flex flex-col gap-sm">
+            {coupons.data.map((c) => (
+              <li key={c.id} className="rounded-nested border border-border p-md">
+                <div className="flex flex-wrap items-center gap-xs">
+                  <p className="font-mono font-medium text-text">{c.code}</p>
+                  <Badge tone={c.state === 'ready' ? 'success' : 'neutral'}>
+                    {c.state === 'ready' ? 'Ready to use' : c.state === 'used' ? 'Used' : 'Expired'}
+                  </Badge>
+                </div>
+                <p className="mt-xs text-sm text-text">
+                  {c.name} · {c.description}
+                </p>
+                {c.ends_on && <p className="text-xs text-text-muted">Valid until {c.ends_on}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
   );
 }
 

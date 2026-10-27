@@ -61,6 +61,9 @@ def amount_for(coupon: Coupon, lines, manual_percent: Decimal) -> Decimal:
 
 def check_usable(coupon: Coupon, customer, manual_percent: Decimal) -> None:
     today = timezone.localdate()
+    if coupon.customer_id is not None and (customer is None or customer.pk != coupon.customer_id):
+        # A private coupon looks exactly like a code that does not exist.
+        raise CheckoutError("That coupon code is not valid.", code="invalid")
     if not coupon.is_active:
         raise CheckoutError(f"{coupon.code} is switched off.")
     if coupon.starts_on and today < coupon.starts_on:

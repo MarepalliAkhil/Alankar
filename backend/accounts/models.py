@@ -118,6 +118,10 @@ class AuditLog(models.Model):
         WAITLIST_ACCEPTED = "waitlist_accepted", "Waitlist offer accepted"
         WAITLIST_DECLINED = "waitlist_declined", "Waitlist offer declined"
         WAITLIST_OFFER_EXPIRED = "waitlist_offer_expired", "Waitlist offer ran out"
+        COUPONS_ISSUED = "coupons_issued", "Private coupons issued"
+        COUPON_REVOKED = "coupon_revoked", "Private coupon withdrawn"
+        CAMPAIGN_SCHEDULED = "campaign_scheduled", "Campaign scheduled"
+        CAMPAIGN_UNSCHEDULED = "campaign_unscheduled", "Campaign schedule removed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

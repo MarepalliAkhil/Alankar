@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { CampaignsPanel } from '../../components/admin/marketing/CampaignsPanel';
 import { CouponsPanel } from '../../components/admin/marketing/CouponsPanel';
 import { LoyaltyPanel } from '../../components/admin/marketing/LoyaltyPanel';
+import { PrivateCouponsPanel } from '../../components/admin/marketing/PrivateCouponsPanel';
 import { OffersPanel } from '../../components/admin/marketing/OffersPanel';
 import { PageHeader } from '../../components/layout/PageContainer';
 import { TabPanel, Tabs, type TabItem } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
-type Tab = 'coupons' | 'offers' | 'loyalty' | 'campaigns';
+type Tab = 'coupons' | 'private' | 'offers' | 'loyalty' | 'campaigns';
 const TABS: readonly TabItem<Tab>[] = [
   { id: 'coupons', label: 'Coupons' },
+  { id: 'private', label: 'Private coupons' },
   { id: 'offers', label: 'Offers' },
   { id: 'loyalty', label: 'Loyalty' },
   { id: 'campaigns', label: 'Campaigns' },
@@ -35,6 +37,7 @@ export default function MarketingPage() {
       />
       <TabPanel idPrefix="marketing" id={tab}>
         {tab === 'coupons' && <CouponsPanel />}
+        {tab === 'private' && <PrivateCouponsPanel />}
         {tab === 'offers' && <OffersPanel />}
         {tab === 'loyalty' && <LoyaltyPanel />}
         {tab === 'campaigns' && <CampaignsPanel />}

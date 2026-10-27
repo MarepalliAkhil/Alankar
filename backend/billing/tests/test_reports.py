@@ -6,6 +6,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.test import Client
 from django.utils import timezone
 
 from accounts.models import AuditLog
@@ -26,6 +27,10 @@ from scheduling.models import Appointment, AppointmentStatus
 
 D = Decimal
 URL = "/api/admin/reports"
+WIDE = {
+    "from": (timezone.localdate() - timedelta(days=5)).isoformat(),
+    "to": (timezone.localdate() + timedelta(days=10)).isoformat(),
+}
 
 
 def get(admin, name, **params):
@@ -125,7 +130,7 @@ def test_the_date_range_is_applied_and_checked(busy, admin):
     ):
         assert get(admin, "revenue-by-day", **params).status_code == 400
     assert call(admin[0], "get", f"{URL}/not-a-report/").status_code == 404
-    assert len(call(admin[0], "get", f"{URL}/").json()) == 8
+    assert len(call(admin[0], "get", f"{URL}/").json()) == 13
 
 
 def test_csv_export_matches_the_screen_and_is_audited(busy, admin):
@@ -145,3 +150,79 @@ def test_csv_cells_cannot_run_as_spreadsheet_formulas(admin):
 
     assert safe_cell("=SUM(A1)") == "'=SUM(A1)" and safe_cell("-12.50") == "-12.50"
     assert safe_cell("@x") == "'@x" and safe_cell("Facial") == "Facial"
+
+
+# --------------------------------------------------------------------------- Task 5e-2
+
+
+def test_revenue_by_hour_adds_up_to_revenue_by_day(busy, admin):
+    by_hour = get(admin, "revenue-by-hour").json()
+    by_day = get(admin, "revenue-by-day").json()
+    assert by_hour["totals"]["revenue"] == by_day["totals"]["revenue"]
+    assert by_hour["totals"]["bills"] == 2
+    assert total(by_hour["rows"], "revenue") == D(by_hour["totals"]["revenue"])
+    assert all(r["hour"].endswith(":00") for r in by_hour["rows"])
+
+
+def test_the_heatmaps_add_up_and_name_the_busiest_slot(busy, admin):
+    visits = get(admin, "peak-hours-visits", **WIDE).json()
+    assert visits["chart"]["kind"] == "heatmap" and len(visits["rows"]) == 7
+    assert visits["totals"]["total"] == 2
+    assert sum(r["total"] for r in visits["rows"]) == 2
+    assert visits["summary"]["busiest"]
+    money = get(admin, "peak-hours-revenue").json()
+    assert D(money["totals"]["total"]) == sum(i.subtotal for i in Invoice.objects.all())
+    assert total(money["rows"], "total") == D(money["totals"]["total"])
+    for row in money["rows"]:
+        assert sum((D(row[h]) for h in money["chart"]["hours"]), D("0")) == D(row["total"])
+
+
+def test_heatmap_without_data_is_empty_but_well_formed(admin):
+    data = get(admin, "peak-hours-visits").json()
+    assert len(data["rows"]) == 7 and data["totals"]["total"] == 0 and data["summary"] == {}
+
+
+def test_payments_by_method_reconcile_with_the_invoices(busy, admin):
+    data = get(admin, "revenue-by-payment-method").json()
+    assert data["summary"]["difference"] == "0.00"
+    assert data["summary"]["bills_collected"] == data["summary"]["checkout_payments"]
+    assert total(data["rows"], "taken") == D(data["totals"]["taken"])
+    assert D(data["totals"]["net"]) == D(data["totals"]["taken"]) - D(data["totals"]["refunded"])
+    assert "Cash" in [r["method"] for r in data["rows"]]
+
+
+def test_wallet_sales_report_matches_the_sales(catalogue, customer, desk, admin):
+    r = desk[0].post(
+        "/api/desk/wallet/sell/",
+        {"kind": "gift_card", "method": "upi", "amount": "1500", "buyer_name": "Walk-in"},
+        content_type="application/json",
+    )
+    assert r.status_code == 201, r.content
+    data = get(admin, "wallet-sales").json()
+    assert data["totals"]["count"] == 1 and data["totals"]["amount"] == "1500.00"
+    assert data["rows"][0]["kind"] == "Gift card" and data["rows"][0]["channel"] == "At the salon"
+    assert data["summary"]["gift_card_balance_outstanding"] == "1500.00"
+    methods = get(admin, "revenue-by-payment-method").json()
+    assert {r["method"]: r["taken"] for r in methods["rows"]}["UPI"] == "1500.00"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "revenue-by-hour",
+        "revenue-by-payment-method",
+        "peak-hours-visits",
+        "peak-hours-revenue",
+        "wallet-sales",
+    ],
+)
+def test_new_reports_export_csv_and_refuse_everyone_but_admin(busy, admin, desk, name):
+    response = get(admin, name, export="csv")
+    assert response.status_code == 200 and response["Content-Type"].startswith("text/csv")
+    rows = list(csv.reader(io.StringIO(response.content.decode())))
+    assert rows[-1][0] == "Total"
+    assert AuditLog.objects.filter(action="report_exported", metadata__report=name).exists()
+    assert desk[0].get(f"{URL}/{name}/").status_code == 403
+    assert Client().get(f"{URL}/{name}/").status_code in (401, 403)
+    client, _ = busy
+    assert client.get(f"{URL}/{name}/").status_code == 403

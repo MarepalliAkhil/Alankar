@@ -52,7 +52,8 @@ export interface CampaignRow {
   audience: AudienceKind;
   audience_label: string;
   coupon: string | null;
-  status: 'draft' | 'sent';
+  status: 'draft' | 'scheduled' | 'sent';
+  scheduled_for: string | null;
   sent_at: string | null;
   recipients: number | null;
   would_reach: number | null;
@@ -113,6 +114,62 @@ export async function deleteCampaign(id: string): Promise<void> {
 }
 export async function sendCampaign(id: string): Promise<CampaignRow> {
   return (await api.post<CampaignRow>(`${M}/campaigns/${id}/send/`)).data;
+}
+
+export async function scheduleCampaign(id: string, sendAt: string): Promise<CampaignRow> {
+  return (await api.post<CampaignRow>(`${M}/campaigns/${id}/schedule/`, { send_at: sendAt })).data;
+}
+export async function unscheduleCampaign(id: string): Promise<CampaignRow> {
+  return (await api.post<CampaignRow>(`${M}/campaigns/${id}/unschedule/`)).data;
+}
+export async function runDueCampaigns(): Promise<{ sent: number }> {
+  return (await api.post<{ sent: number }>(`${M}/campaigns/run-due/`)).data;
+}
+
+export type PrivateState = 'ready' | 'used' | 'expired' | 'withdrawn';
+export interface PrivateCoupon {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  kind: CouponKind;
+  value: string;
+  min_bill: string;
+  max_discount: string | null;
+  applies_to: CouponScope;
+  ends_on: string | null;
+  state: PrivateState;
+  customer_id: string;
+  customer_name: string;
+  customer_email: string;
+  issued_at: string;
+}
+export interface IssueInput {
+  name: string;
+  prefix: string;
+  kind: CouponKind;
+  value: string;
+  min_bill: string;
+  max_discount?: string | null;
+  applies_to: CouponScope;
+  ends_on: string;
+  customers?: string[];
+  segment?: AudienceKind;
+}
+export interface IssueResult {
+  issued: number;
+  emailed: number;
+  coupons: PrivateCoupon[];
+}
+
+export async function listPrivateCoupons(): Promise<PrivateCoupon[]> {
+  return (await api.get<PrivateCoupon[]>(`${M}/private-coupons/`)).data;
+}
+export async function issuePrivateCoupons(body: IssueInput): Promise<IssueResult> {
+  return (await api.post<IssueResult>(`${M}/private-coupons/`, body)).data;
+}
+export async function withdrawPrivateCoupon(id: string): Promise<PrivateCoupon> {
+  return (await api.post<PrivateCoupon>(`${M}/private-coupons/${id}/withdraw/`)).data;
 }
 
 export async function unsubscribe(token: string): Promise<{ detail: string }> {

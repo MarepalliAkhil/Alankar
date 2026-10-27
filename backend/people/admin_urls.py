@@ -4,6 +4,7 @@ from accounts import security_views as sec
 from billing import admin_views as b
 from billing import report_views as r
 from inventory import admin_views as i
+from marketing import private_views as pc
 from marketing import views as m
 from people import admin_views as v
 from people import privacy_views as pv
@@ -80,6 +81,23 @@ admin_patterns = [
         "marketing/campaigns/<uuid:pk>/send/",
         m.CampaignSendView.as_view(),
         name="admin-campaign-send",
+    ),
+    path(
+        "marketing/campaigns/<uuid:pk>/schedule/",
+        m.CampaignScheduleView.as_view(),
+        name="admin-campaign-schedule",
+    ),
+    path(
+        "marketing/campaigns/<uuid:pk>/unschedule/",
+        m.CampaignUnscheduleView.as_view(),
+        name="admin-campaign-unschedule",
+    ),
+    path("marketing/campaigns/run-due/", m.CampaignRunDueView.as_view(), name="admin-campaign-run"),
+    path("marketing/private-coupons/", pc.PrivateCouponListView.as_view(), name="admin-private"),
+    path(
+        "marketing/private-coupons/<uuid:pk>/withdraw/",
+        pc.PrivateCouponWithdrawView.as_view(),
+        name="admin-private-withdraw",
     ),
     path("reports/", r.ReportListView.as_view(), name="admin-reports"),
     path("reports/<slug:name>/", r.ReportView.as_view(), name="admin-report"),

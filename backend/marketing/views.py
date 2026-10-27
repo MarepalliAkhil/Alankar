@@ -2,7 +2,6 @@
 Campaigns are simulated emails to customers who ticked the marketing box; every message carries
 an unsubscribe link. Customers can unsubscribe from the link without signing in."""
 
-from datetime import timedelta
 from decimal import Decimal
 
 from django.core import signing
@@ -18,13 +17,10 @@ from rest_framework.views import APIView
 
 from accounts.audit import audit
 from accounts.models import AuditLog, User
-from core import brand
-from core.mail import frontend_link, queue_mail
-from core.models import MailOutbox
-from marketing import coupons
+from marketing import campaigns, coupons
+from marketing.campaigns import audience, message_body, unsubscribe_token  # noqa: F401
 from marketing.models import Campaign, Coupon, CouponRedemption
 from people.models import CustomerProfile
-from scheduling.models import Appointment, AppointmentStatus
 from website.content import POS_DEFAULTS, pos_settings
 from website.models import Offer, SiteContent
 
@@ -190,7 +186,7 @@ class CouponListView(APIView):
 
     @extend_schema(summary="Coupons", responses={200: None})
     def get(self, request: Request) -> Response:
-        rows = list(Coupon.objects.all())
+        rows = list(Coupon.objects.filter(customer__isnull=True))
         used = coupons.usage(rows)
         return Response([coupon_row(c, used.get(str(c.id), 0)) for c in rows])
 
@@ -215,7 +211,7 @@ class CouponDetailView(APIView):
 
     @extend_schema(summary="Edit or switch a coupon on or off", request=CouponSerializer)
     def patch(self, request: Request, pk) -> Response:
-        coupon = get_object_or_404(Coupon, pk=pk)
+        coupon = get_object_or_404(Coupon, pk=pk, customer__isnull=True)
         before = coupon_row(coupon, 0)
         serializer = CouponSerializer(coupon, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -286,28 +282,6 @@ class LoyaltyView(APIView):
 # --------------------------------------------------------------------------- campaigns
 
 
-def audience(kind: str):
-    """Customers who opted in (and are active), narrowed by recent visits."""
-    base = User.objects.filter(
-        role=User.Role.CUSTOMER,
-        is_active=True,
-        customer_profile__marketing_opt_in=True,
-    )
-    cutoff = timezone.now() - timedelta(days=RECENT_DAYS)
-    visited = Appointment.objects.filter(
-        status=AppointmentStatus.COMPLETED, start__gte=cutoff
-    ).values("customer")
-    if kind == Campaign.Audience.RECENT:
-        base = base.filter(pk__in=visited)
-    elif kind == Campaign.Audience.LAPSED:
-        base = base.exclude(pk__in=visited)
-    return base.order_by("email")
-
-
-def unsubscribe_token(user: User) -> str:
-    return signing.dumps({"u": str(user.pk)}, salt=UNSUB_SALT)
-
-
 def read_token(token: str) -> User:
     try:
         data = signing.loads(token, salt=UNSUB_SALT)
@@ -318,7 +292,10 @@ def read_token(token: str) -> User:
 
 class CampaignSerializer(serializers.ModelSerializer):
     coupon = serializers.SlugRelatedField(
-        slug_field="code", queryset=Coupon.objects.all(), required=False, allow_null=True
+        slug_field="code",
+        queryset=Coupon.objects.filter(customer__isnull=True),
+        required=False,
+        allow_null=True,
     )
 
     class Meta:
@@ -336,9 +313,10 @@ def campaign_row(c: Campaign) -> dict:
         "audience_label": Campaign.Audience(c.audience).label,
         "coupon": c.coupon.code if c.coupon_id else None,
         "status": c.status,
+        "scheduled_for": c.scheduled_for.isoformat() if c.scheduled_for else None,
         "sent_at": c.sent_at.isoformat() if c.sent_at else None,
         "recipients": c.recipient_count if c.status == Campaign.Status.SENT else None,
-        "would_reach": audience(c.audience).count() if c.status == Campaign.Status.DRAFT else None,
+        "would_reach": (audience(c.audience).count() if c.status != Campaign.Status.SENT else None),
         "created_at": c.created_at.isoformat(),
     }
 
@@ -381,7 +359,11 @@ class CampaignDetailView(APIView):
     def draft(self, pk) -> Campaign:
         campaign = get_object_or_404(Campaign.objects.select_for_update(), pk=pk)
         if campaign.status != Campaign.Status.DRAFT:
-            raise ValidationError({"detail": "A sent campaign cannot be changed."})
+            raise ValidationError(
+                {"detail": "Only a draft can be changed. Remove the schedule first."}
+                if campaign.status == Campaign.Status.SCHEDULED
+                else {"detail": "A sent campaign cannot be changed."}
+            )
         return campaign
 
     @extend_schema(summary="Edit a draft", request=CampaignSerializer)
@@ -415,54 +397,60 @@ class CampaignDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def message_body(campaign: Campaign, user: User) -> tuple[str, str]:
-    name = user.full_name.split(" ")[0] if user.full_name else "there"
-    lines = [f"Hello {name},", "", campaign.body.strip()]
-    if campaign.coupon_id:
-        lines += ["", f"Use coupon {campaign.coupon.code} at the counter."]
-    link = frontend_link(f"/unsubscribe?token={unsubscribe_token(user)}")
-    lines += [
-        "",
-        "You are getting this because you agreed to receive offers from "
-        f"{brand.SHOP_NAME}. To stop these messages, unsubscribe here: {link}",
-    ]
-    return "\n".join(lines), link
-
-
 class CampaignSendView(APIView):
     policy_action = "marketing.send"
 
     @extend_schema(summary="Send a draft to opted-in customers (simulated email)")
     def post(self, request: Request, pk) -> Response:
-        with transaction.atomic():
-            campaign = get_object_or_404(Campaign.objects.select_for_update(), pk=pk)
-            if campaign.status != Campaign.Status.DRAFT:
-                raise ValidationError({"detail": "This campaign has already been sent."})
-            recipients = list(audience(campaign.audience))
-            if not recipients:
-                raise ValidationError({"detail": "No opted-in customers match this audience."})
-            for user in recipients:
-                body, link = message_body(campaign, user)
-                queue_mail(
-                    kind=MailOutbox.Kind.MARKETING,
-                    to=user.email,
-                    subject=campaign.subject,
-                    body=body,
-                    link=link,
-                )
-            campaign.status = Campaign.Status.SENT
-            campaign.sent_at = timezone.now()
-            campaign.recipient_count = len(recipients)
-            campaign.save()
-            audit(
-                AuditLog.Action.CAMPAIGN_SENT,
-                request=request,
-                actor=request.user,
-                campaign=campaign.name,
-                recipients=len(recipients),
-                audience=campaign.audience,
-            )
+        get_object_or_404(Campaign, pk=pk)
+        try:
+            campaign = campaigns.send(pk, actor=request.user, request=request)
+        except campaigns.CampaignError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
         return Response(campaign_row(campaign))
+
+
+class ScheduleSerializer(serializers.Serializer):
+    send_at = serializers.DateTimeField()
+
+
+class CampaignScheduleView(APIView):
+    policy_action = "marketing.send"
+
+    @extend_schema(summary="Send a campaign later", request=ScheduleSerializer)
+    def post(self, request: Request, pk) -> Response:
+        get_object_or_404(Campaign, pk=pk)
+        body = ScheduleSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            campaign = campaigns.schedule(
+                pk, body.validated_data["send_at"], actor=request.user, request=request
+            )
+        except campaigns.CampaignError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        return Response(campaign_row(campaign))
+
+
+class CampaignUnscheduleView(APIView):
+    policy_action = "marketing.send"
+
+    @extend_schema(summary="Cancel the scheduled send (back to a draft)", request=None)
+    def post(self, request: Request, pk) -> Response:
+        get_object_or_404(Campaign, pk=pk)
+        try:
+            campaign = campaigns.unschedule(pk, actor=request.user, request=request)
+        except campaigns.CampaignError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        return Response(campaign_row(campaign))
+
+
+class CampaignRunDueView(APIView):
+    policy_action = "marketing.send"
+
+    @extend_schema(summary="Send every scheduled campaign that is due now", request=None)
+    def post(self, request: Request) -> Response:
+        count = campaigns.run_due(actor=request.user, request=request)
+        return Response({"sent": count})
 
 
 # --------------------------------------------------------------------------- unsubscribe

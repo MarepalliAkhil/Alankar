@@ -16,6 +16,7 @@ from accounts.tokens import revoke_all_refresh_tokens
 from billing.models import Invoice, Refund
 from chat.models import Message
 from core.models import MailOutbox
+from marketing.models import Coupon
 from people.models import CustomerNote, CustomerProfile, LoyaltyEntry, Rating
 from scheduling.models import Appointment, AppointmentStatus
 from waitlist.models import WaitlistEntry
@@ -108,6 +109,7 @@ def export_data(user: User) -> dict:
             for e in LoyaltyEntry.objects.filter(customer=user)
         ],
         "wallet": wallet_export(user),
+        "coupons": coupon_export(user),
         "ratings": [
             {"stars": r.stars, "comment": r.comment, "at": r.submitted_at.isoformat()}
             for r in Rating.objects.filter(customer=user, status=Rating.Status.SUBMITTED)
@@ -139,6 +141,8 @@ def anonymize(user: User) -> None:
     )
     CustomerNote.objects.filter(customer=user).delete()
     WaitlistEntry.objects.filter(customer=user).delete()
+    # A private coupon belongs to the person, so it stops working when they leave.
+    Coupon.objects.filter(customer=user).update(is_active=False)
     # Sales are records, so only the personal fields are replaced.
     Sale.objects.filter(customer=user).update(buyer_name=DELETED_NAME, buyer_email="")
     GiftCard.objects.filter(buyer=user).update(buyer_name=DELETED_NAME)
@@ -221,3 +225,17 @@ def wallet_export(user: User) -> dict:
             for e in WaitlistEntry.objects.filter(customer=user).select_related("service")
         ],
     }
+
+
+def coupon_export(user: User) -> list[dict]:
+    """The private coupons issued to this customer."""
+    return [
+        {
+            "code": c.code,
+            "name": c.name,
+            "valid_until": c.ends_on.isoformat() if c.ends_on else None,
+            "active": c.is_active,
+            "used": c.redemptions.exists(),
+        }
+        for c in Coupon.objects.filter(customer=user)
+    ]

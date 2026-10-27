@@ -12,9 +12,9 @@
   Task 5c (content editor, marketing, reports): DONE. Verified on the owner's PC (2026-10-27).
   Task 5d (audit log, security, data requests): DONE. Verified on the owner's PC (2026-10-27).
   Task 5e (growth features) is split 5e-1..5e-4 (owner-approved). One sub-task at a time; wait for "passed".
-  Task 5e-1 (packages, memberships, gift cards, waitlist): IMPLEMENTED in the build sandbox, waiting for the
-  owner's PC run (migrate, pytest, npm test, walkthrough below). Next: 5e-2 (per-customer coupons, scheduled
-  campaigns, reports by hour and payment method with the peak-hours heatmap and CSV).
+  Task 5e-1 (packages, memberships, gift cards, waitlist): DONE. Verified on the owner's PC (2026-10-27).
+  Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): IMPLEMENTED, waiting for the
+  owner's "passed". Next after it: 5e-3 (purchase orders, optional admin 2FA), 5e-4 (policy sweep).
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -728,3 +728,36 @@
    Admin > Waitlist shows everyone; Remove needs a reason. Settings > Booking rules > Waitlist offer hold changes
    the minutes.
 10. Receptionist/stylist: no Packages, Gift Cards or Waitlist menus; /packages shows the "not allowed" page.
+
+## Task 5e-2: decisions
+- Private coupons: the admin issues a unique code (prefix + 8 random characters) to chosen customers or to a group
+  (all / recent / lapsed, only customers who agreed to marketing). Each works for that customer only, once, until
+  the last day. Another customer, or a made-up code, gets the same plain "not valid" message. Admin can withdraw an
+  unused coupon. Private coupons never appear in the shared coupon list or in campaign coupon choices.
+- A private coupon is emailed (simulated mailbox) only to customers who agreed to marketing; every customer can see
+  their own in My Wallet > My coupons (`/api/my/coupons/`).
+- Deleting an account switches its private coupons off; the data export lists them.
+- Campaigns can be scheduled for a date and time (must be at least a minute ahead). A scheduled campaign cannot be
+  edited; "Remove schedule" returns it to a draft. Sending is row-locked, so a click and the runner can never both send.
+  Run `python manage.py run_campaigns` (for example every minute from Windows Task Scheduler), or press
+  "Send due now" on the Campaigns tab. A scheduled campaign with nobody to reach closes with 0 recipients.
+- New reports (13 in all, each with CSV): revenue by hour, payments by method (with a reconciliation line:
+  bills collected against checkout payments, difference 0.00), busiest hours for visits and for revenue (weekday by
+  hour heatmap; every cell shows its number too), packages/memberships/gift cards sold (with gift-card balance still
+  owed). Hours are in the shop's local time and use the visit's start time.
+- Bug found and fixed by the new tests: locking a campaign that has a coupon failed on the database join.
+
+## Task 5e-2: owner browser walkthrough (to verify on the PC)
+1. Admin > Marketing > Private coupons > Issue coupons: name "Thank you", 100 rupees off, last day next month, pick one
+   customer by searching their name, Issue. It appears with the code and "Ready to use". Try "All customers who agreed
+   to marketing": Admin > Mailbox shows one email per opted-in customer only.
+2. Customer (the one chosen) > My Wallet > My coupons shows the code and nothing for others. At POS, type the code on
+   that customer's bill: discount applies. Try the same code on another customer's bill: "not valid".
+3. After checkout the coupon shows "Used"; Withdraw is not offered. Issue another and Withdraw it: using it fails.
+4. Marketing > Campaigns > New campaign, Save. Schedule... pick a time two minutes ahead. It shows "Scheduled" and
+   cannot be edited. Remove schedule, then schedule again and wait; press "Send due now" (or run
+   `python manage.py run_campaigns`). It becomes Sent and the mailbox has the emails; pressing again sends nothing.
+5. Admin > Reports: choose "Revenue by hour of day", "Payments by method" (the line under the title says the
+   difference is 0.00), "Busiest hours: visits" and "Busiest hours: revenue" (grid; darker is busier), and
+   "Packages, memberships and gift cards". Download CSV for each.
+6. Receptionist, stylist: no private-coupon, schedule or report access (direct URLs show "not allowed").

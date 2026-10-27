@@ -57,6 +57,7 @@ vi.mock('../api/pos', () => ({
 }));
 vi.mock('../api/wallet', () => ({
   getMyWallet: vi.fn(),
+  getMyCoupons: vi.fn(),
   buyPackage: vi.fn(),
   joinMembership: vi.fn(),
   renewMembership: vi.fn(),
@@ -177,6 +178,7 @@ beforeEach(() => {
   vi.mocked(publicApi.getServices).mockResolvedValue([haircut]);
   vi.mocked(walletApi.getMyWallet).mockResolvedValue(wallet);
   vi.mocked(walletApi.listMyWaitlist).mockResolvedValue([]);
+  vi.mocked(walletApi.getMyCoupons).mockResolvedValue([]);
   vi.mocked(walletApi.getDeskCatalogue).mockResolvedValue(wallet.catalogue);
 });
 
@@ -262,6 +264,27 @@ describe('customer wallet', () => {
     await user.type(await screen.findByLabelText('Check a gift card balance'), 'WRONG');
     await user.click(screen.getByRole('button', { name: 'Check balance' }));
     expect(await screen.findByText('That gift card code is not valid.')).toBeInTheDocument();
+  });
+
+  it('shows only my private coupons, or a calm empty message', async () => {
+    renderAt('/customer/wallet');
+    expect(await screen.findByText('No coupons right now')).toBeInTheDocument();
+  });
+
+  it('lists a private coupon with its code and state', async () => {
+    vi.mocked(walletApi.getMyCoupons).mockResolvedValue([
+      {
+        id: 'p1',
+        code: 'VIP-AB12CD34',
+        name: 'Thank you',
+        description: 'Rs. 100 off.',
+        ends_on: '2026-12-31',
+        state: 'ready',
+      },
+    ]);
+    renderAt('/customer/wallet');
+    expect(await screen.findByText('VIP-AB12CD34')).toBeInTheDocument();
+    expect(screen.getByText('Ready to use')).toBeInTheDocument();
   });
 
   it('shows an error state with retry', async () => {

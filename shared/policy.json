@@ -146,7 +146,8 @@
     "my.waitlist.list": "See my waitlist entries",
     "my.waitlist.create": "Join the waitlist",
     "my.waitlist.cancel": "Leave the waitlist",
-    "my.waitlist.respond": "Accept or decline a freed slot"
+    "my.waitlist.respond": "Accept or decline a freed slot",
+    "my.coupons.read": "See my private coupons"
   },
   "public": {
     "api": [
@@ -231,7 +232,8 @@
         "my.waitlist.list",
         "my.waitlist.create",
         "my.waitlist.cancel",
-        "my.waitlist.respond"
+        "my.waitlist.respond",
+        "my.coupons.read"
       ],
       "routes": [
         "/customer/pay/:id",

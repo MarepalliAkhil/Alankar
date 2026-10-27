@@ -27,6 +27,7 @@ import { formatINR } from '../../lib/format';
 import { defaultRange, PRESETS, rangeProblem, type DateRange } from '../../lib/reportDates';
 
 const BarChartView = lazy(() => import('../../components/charts/BarChartView'));
+const HeatmapView = lazy(() => import('../../components/charts/HeatmapView'));
 
 const cell = (report: Report, key: string, row: ReportRow): string => {
   const value = row[key];
@@ -35,7 +36,7 @@ const cell = (report: Report, key: string, row: ReportRow): string => {
   return kind === 'money' ? formatINR(value) : String(value);
 };
 
-/** Admin: eight reports with a date range, a chart and a CSV download. */
+/** Admin: thirteen reports with a date range, a chart and a CSV download. */
 export default function ReportsPage() {
   useDocumentTitle('Reports');
   const toast = useToast();
@@ -163,9 +164,20 @@ export default function ReportsPage() {
               {data.summary?.lost_rate
                 ? ` · ${data.summary.lost_rate}% of appointments were no-shows or cancelled`
                 : ''}
+              {data.summary?.busiest ? ` · busiest: ${data.summary.busiest}` : ''}
+              {data.summary?.difference !== undefined
+                ? ` · bills ${formatINR(data.summary.bills_collected)} against payments ${formatINR(data.summary.checkout_payments)} (difference ${formatINR(data.summary.difference)})`
+                : ''}
+              {data.summary?.gift_card_balance_outstanding !== undefined
+                ? ` · gift-card balance still to honour: ${formatINR(data.summary.gift_card_balance_outstanding)}`
+                : ''}
             </p>
             {data.rows.length === 0 ? (
               <EmptyState title="Nothing in this range" description="Try a wider range of dates." />
+            ) : data.chart.kind === 'heatmap' ? (
+              <Suspense fallback={<LoadingState label="Drawing the chart…" lines={3} />}>
+                <HeatmapView report={data} />
+              </Suspense>
             ) : (
               <Suspense fallback={<LoadingState label="Drawing the chart…" lines={3} />}>
                 <BarChartView
@@ -178,7 +190,7 @@ export default function ReportsPage() {
                   }
                   data={data.rows.map((r) => ({
                     label: String(r[data.chart.x]),
-                    value: Number(r[data.chart.y]),
+                    value: Number(r[data.chart.y ?? '']),
                     value2: data.chart.y2 ? Number(r[data.chart.y2]) : undefined,
                   }))}
                 />

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureCsrf, getSession } from '../api/auth';
 import * as contentApi from '../api/content';
+import * as customersApi from '../api/customers';
 import * as marketingApi from '../api/marketing';
 import * as publicApi from '../api/public';
 import * as reportsApi from '../api/reports';
@@ -65,8 +66,15 @@ vi.mock('../api/marketing', () => ({
   updateCampaign: vi.fn(),
   deleteCampaign: vi.fn(),
   sendCampaign: vi.fn(),
+  scheduleCampaign: vi.fn(),
+  unscheduleCampaign: vi.fn(),
+  runDueCampaigns: vi.fn(),
+  listPrivateCoupons: vi.fn(),
+  issuePrivateCoupons: vi.fn(),
+  withdrawPrivateCoupon: vi.fn(),
   unsubscribe: vi.fn(),
 }));
+vi.mock('../api/customers', () => ({ searchCustomers: vi.fn() }));
 vi.mock('../api/reports', () => ({
   listReports: vi.fn(),
   getReport: vi.fn(),
@@ -141,6 +149,7 @@ const campaign: marketingApi.CampaignRow = {
   audience_label: 'All opted-in customers',
   coupon: null,
   status: 'draft',
+  scheduled_for: null,
   sent_at: null,
   recipients: null,
   would_reach: 4,
@@ -188,6 +197,7 @@ function setup(role: 'admin' | 'customer' | 'stylist' | 'receptionist' = 'admin'
   vi.mocked(contentApi.listAchievements).mockResolvedValue([]);
   vi.mocked(marketingApi.listCoupons).mockResolvedValue([coupon]);
   vi.mocked(marketingApi.listOffers).mockResolvedValue([]);
+  vi.mocked(marketingApi.listPrivateCoupons).mockResolvedValue([]);
   vi.mocked(marketingApi.getLoyalty).mockResolvedValue({
     loyalty_points_per_100: 1,
     loyalty_point_value: 1,
@@ -526,5 +536,187 @@ describe('public site: announcements and unsubscribe', () => {
   it('explains a link with no token', async () => {
     renderAt('/unsubscribe');
     expect(await screen.findByText(/This link is not complete/)).toBeInTheDocument();
+  });
+});
+
+const priv: marketingApi.PrivateCoupon = {
+  id: 'p1',
+  code: 'VIP-AB12CD34',
+  name: 'Thank you',
+  description: 'Rs. 100 off.',
+  kind: 'flat',
+  value: '100.00',
+  min_bill: '0.00',
+  max_discount: null,
+  applies_to: 'all',
+  ends_on: '2026-12-31',
+  state: 'ready',
+  customer_id: 'c1',
+  customer_name: 'Priya Nair',
+  customer_email: 'priya@example.com',
+  issued_at: '2026-10-27T10:00:00Z',
+};
+
+describe('private coupons', () => {
+  beforeEach(() => setup());
+
+  it('lists them with their owner and withdraws one', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.listPrivateCoupons).mockResolvedValue([priv]);
+    vi.mocked(marketingApi.withdrawPrivateCoupon).mockResolvedValue({
+      ...priv,
+      state: 'withdrawn',
+    });
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Private coupons' }));
+    expect(await screen.findByText('VIP-AB12CD34')).toBeInTheDocument();
+    expect(screen.getByText(/Priya Nair \(priya@example.com\)/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Withdraw' }));
+    await waitFor(() => expect(marketingApi.withdrawPrivateCoupon).toHaveBeenCalledWith('p1'));
+  });
+
+  it('issues a coupon to a customer found by search', async () => {
+    const user = userEvent.setup();
+    vi.mocked(customersApi.searchCustomers).mockResolvedValue({
+      count: 1,
+      results: [
+        {
+          id: 'c1',
+          full_name: 'Priya Nair',
+          email: 'priya@example.com',
+          phone: '',
+          has_allergies: false,
+          email_verified: true,
+          visits: 2,
+        },
+      ],
+    });
+    vi.mocked(marketingApi.issuePrivateCoupons).mockResolvedValue({
+      issued: 1,
+      emailed: 1,
+      coupons: [priv],
+    });
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Private coupons' }));
+    await user.click(await screen.findByRole('button', { name: 'Issue coupons' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Issue private coupons' });
+    await user.type(within(dialog).getByLabelText('Coupon name'), 'Thank you');
+    await user.type(within(dialog).getByLabelText('Amount off (₹)'), '100');
+    await user.type(within(dialog).getByLabelText('Last day'), '2026-12-31');
+    await user.type(within(dialog).getByLabelText('Find a customer'), 'priya');
+    await user.click(within(dialog).getByRole('button', { name: 'Search' }));
+    await user.click(await within(dialog).findByRole('button', { name: 'Add' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Issue coupons' }));
+    await waitFor(() =>
+      expect(marketingApi.issuePrivateCoupons).toHaveBeenCalledWith(
+        expect.objectContaining({ customers: ['c1'], value: '100', ends_on: '2026-12-31' }),
+      ),
+    );
+  });
+
+  it('shows the server message when issuing is refused', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.issuePrivateCoupons).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { detail: 'Choose customers, or one group, not both.' } },
+    });
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Private coupons' }));
+    await user.click(await screen.findByRole('button', { name: 'Issue coupons' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Issue private coupons' });
+    await user.click(within(dialog).getByRole('button', { name: 'Issue coupons' }));
+    expect(
+      await within(dialog).findByText('Choose customers, or one group, not both.'),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('scheduled campaigns', () => {
+  beforeEach(() => setup());
+
+  it('schedules a draft for a chosen time', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.scheduleCampaign).mockResolvedValue({
+      ...campaign,
+      status: 'scheduled',
+    });
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Campaigns' }));
+    await user.click(await screen.findByRole('button', { name: 'Schedule…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Schedule this campaign' });
+    await user.click(within(dialog).getByRole('button', { name: 'Schedule' }));
+    expect(await within(dialog).findByText('Choose the day and time.')).toBeInTheDocument();
+    expect(marketingApi.scheduleCampaign).not.toHaveBeenCalled();
+    await user.type(within(dialog).getByLabelText('Send on'), '2030-01-01T10:30');
+    await user.click(within(dialog).getByRole('button', { name: 'Schedule' }));
+    await waitFor(() =>
+      expect(marketingApi.scheduleCampaign).toHaveBeenCalledWith('k1', expect.any(String)),
+    );
+  });
+
+  it('shows a scheduled campaign and takes the schedule off', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.listCampaigns).mockResolvedValue({
+      opted_in: 4,
+      audiences: [{ value: 'all', label: 'All opted-in customers' }],
+      results: [{ ...campaign, status: 'scheduled', scheduled_for: '2030-01-01T05:00:00Z' }],
+    });
+    vi.mocked(marketingApi.unscheduleCampaign).mockResolvedValue(campaign);
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Campaigns' }));
+    expect(await screen.findByText('Scheduled')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove schedule' }));
+    await waitFor(() => expect(marketingApi.unscheduleCampaign).toHaveBeenCalledWith('k1'));
+  });
+
+  it('sends whatever is due with one button', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.runDueCampaigns).mockResolvedValue({ sent: 2 });
+    renderAt('/marketing');
+    await user.click(await screen.findByRole('tab', { name: 'Campaigns' }));
+    await user.click(await screen.findByRole('button', { name: 'Send due now' }));
+    await waitFor(() => expect(marketingApi.runDueCampaigns).toHaveBeenCalled());
+    expect(await screen.findByText('2 campaign(s) sent')).toBeInTheDocument();
+  });
+});
+
+describe('heatmap report', () => {
+  beforeEach(() => setup());
+
+  it('draws weekday by hour with the numbers in the cells', async () => {
+    const user = userEvent.setup();
+    const heat: reportsApi.Report = {
+      key: 'peak-hours-visits',
+      label: 'Busiest hours: visits',
+      from: '2026-10-01',
+      to: '2026-10-02',
+      columns: [
+        { key: 'weekday', label: 'Day', kind: 'text' },
+        { key: 'h10', label: '10:00', kind: 'number' },
+        { key: 'total', label: 'Total', kind: 'number' },
+      ],
+      rows: [
+        { weekday: 'Monday', h10: 3, total: 3 },
+        { weekday: 'Tuesday', h10: 0, total: 0 },
+      ],
+      totals: { weekday: 'Total', h10: 3, total: 3 },
+      chart: { kind: 'heatmap', x: 'weekday', hours: ['h10'] },
+      summary: { busiest: 'Monday 10:00' },
+    };
+    vi.mocked(reportsApi.listReports).mockResolvedValue([
+      { key: 'revenue-by-day', label: 'Revenue by day' },
+      { key: 'peak-hours-visits', label: 'Busiest hours: visits' },
+    ]);
+    vi.mocked(reportsApi.getReport).mockImplementation(async (name) =>
+      name === 'peak-hours-visits' ? heat : revenue,
+    );
+    renderAt('/reports');
+    await screen.findByRole('option', { name: 'Busiest hours: visits' });
+    await user.selectOptions(screen.getByLabelText('Report'), 'peak-hours-visits');
+    const grid = await screen.findByRole('table', { name: /busiest days and hours/ });
+    expect(within(grid).getByRole('rowheader', { name: 'Monday' })).toBeInTheDocument();
+    expect(within(grid).getByText('3')).toBeInTheDocument();
+    expect(screen.getByText(/busiest: Monday 10:00/)).toBeInTheDocument();
   });
 });

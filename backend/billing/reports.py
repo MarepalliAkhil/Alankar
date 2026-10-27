@@ -17,8 +17,9 @@ from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from billing.models import Invoice, InvoiceItem, Refund
+from billing.models import Invoice, InvoiceItem, Payment, Refund
 from scheduling.models import Appointment, AppointmentStatus
+from wallet.models import GiftCardEntry, Sale, SaleRefund
 
 ZERO = Decimal("0")
 PAISA = Decimal("0.01")
@@ -335,6 +336,243 @@ def product_sales(start: date, end: date) -> dict:
     return _finish(grouped, "Product", "Units sold")
 
 
+# --------------------------------------------------------------------------- hours and tender
+
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+BUSY = (
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CHECKED_IN,
+    AppointmentStatus.IN_PROGRESS,
+    AppointmentStatus.COMPLETED,
+)
+METHOD_NAMES = {"cash": "Cash", "card": "Card", "upi": "UPI", "online": "Online", "mock": "Online"}
+
+
+def method_name(method: str) -> str:
+    return METHOD_NAMES.get(method, method.title() if method else "Other")
+
+
+def _when(invoice: Invoice) -> datetime:
+    """The time a bill belongs to: the visit's start, or the bill time for a counter sale."""
+    appt = invoice.appointment
+    return timezone.localtime(appt.start if appt is not None and appt.start else invoice.issued_at)
+
+
+def _hour_label(hour: int) -> str:
+    return f"{hour:02d}:00"
+
+
+def revenue_by_hour(start: date, end: date) -> dict:
+    per: dict[int, dict] = {}
+    for inv in invoices(start, end).select_related("appointment"):
+        row = per.setdefault(_when(inv).hour, {"bills": 0, "revenue": ZERO, "total": ZERO})
+        row["bills"] += 1
+        row["revenue"] += inv.subtotal
+        row["total"] += inv.total
+    rows = [
+        {
+            "hour": _hour_label(h),
+            "bills": r["bills"],
+            "revenue": money_row(r["revenue"]),
+            "total": money_row(r["total"]),
+        }
+        for h, r in sorted(per.items())
+    ]
+    totals = {
+        "hour": "Total",
+        "bills": sum(r["bills"] for r in rows),
+        "revenue": money_row(sum((Decimal(r["revenue"]) for r in rows), ZERO)),
+        "total": money_row(sum((Decimal(r["total"]) for r in rows), ZERO)),
+    }
+    return {
+        "columns": [
+            col("hour", "Hour of day"),
+            col("bills", "Bills", "number"),
+            col("revenue", "Revenue (before GST)", "money"),
+            col("total", "Total billed", "money"),
+        ],
+        "rows": rows,
+        "totals": totals,
+        "chart": {"kind": "bar", "x": "hour", "y": "revenue"},
+    }
+
+
+def _heatmap(cells: dict, *, money: bool) -> dict:
+    hours = sorted({h for (_, h) in cells}) or []
+    rows = []
+    for number, name in enumerate(WEEKDAYS):
+        row = {"weekday": name}
+        total = ZERO
+        for h in hours:
+            value = cells.get((number, h), ZERO)
+            total += value
+            row[f"h{h:02d}"] = money_row(value) if money else int(value)
+        row["total"] = money_row(total) if money else int(total)
+        rows.append(row)
+    kind = "money" if money else "number"
+    columns = [col("weekday", "Day")]
+    columns += [col(f"h{h:02d}", _hour_label(h), kind) for h in hours]
+    columns.append(col("total", "Total", kind))
+    grand = sum(cells.values(), ZERO)
+    totals = {"weekday": "Total", "total": money_row(grand) if money else int(grand)}
+    for h in hours:
+        column_sum = sum((v for (_, hh), v in cells.items() if hh == h), ZERO)
+        totals[f"h{h:02d}"] = money_row(column_sum) if money else int(column_sum)
+    peak = max(cells.items(), key=lambda kv: kv[1], default=None)
+    summary = {}
+    if peak is not None and peak[1] > 0:
+        (number, h), value = peak
+        summary["busiest"] = f"{WEEKDAYS[number]} {_hour_label(h)}"
+    return {
+        "columns": columns,
+        "rows": rows,
+        "totals": totals,
+        "chart": {"kind": "heatmap", "x": "weekday", "hours": [f"h{h:02d}" for h in hours]},
+        "summary": summary,
+    }
+
+
+def peak_hours_visits(start: date, end: date) -> dict:
+    lo, hi = bounds(start, end)
+    cells: dict = defaultdict(lambda: ZERO)
+    for when in Appointment.objects.filter(
+        status__in=BUSY, start__gte=lo, start__lt=hi
+    ).values_list("start", flat=True):
+        local = timezone.localtime(when)
+        cells[(local.weekday(), local.hour)] += 1
+    return _heatmap(dict(cells), money=False)
+
+
+def peak_hours_revenue(start: date, end: date) -> dict:
+    cells: dict = defaultdict(lambda: ZERO)
+    for inv in invoices(start, end).select_related("appointment"):
+        when = _when(inv)
+        cells[(when.weekday(), when.hour)] += inv.subtotal
+    return _heatmap(dict(cells), money=True)
+
+
+def revenue_by_payment_method(start: date, end: date) -> dict:
+    lo, hi = bounds(start, end)
+    per: dict[str, dict] = {}
+
+    def line(method: str) -> dict:
+        return per.setdefault(method_name(method), {"taken": ZERO, "refunded": ZERO, "count": 0})
+
+    ok = Payment.Status.SUCCEEDED
+    for pay in Payment.objects.filter(status=ok, created_at__gte=lo, created_at__lt=hi):
+        row = line(pay.method)
+        row["taken"] += pay.amount
+        row["count"] += 1
+    for sale in Sale.objects.filter(created_at__gte=lo, created_at__lt=hi):
+        row = line(sale.method)
+        row["taken"] += sale.amount
+        row["count"] += 1
+    for refund in Refund.objects.filter(
+        status=Refund.Status.PROCESSED, processed_at__gte=lo, processed_at__lt=hi
+    ).select_related("payment"):
+        line(refund.method or refund.payment.method)["refunded"] += refund.amount
+    for back in SaleRefund.objects.filter(created_at__gte=lo, created_at__lt=hi):
+        line(back.method)["refunded"] += back.amount
+    rows = [
+        {
+            "method": name,
+            "payments": r["count"],
+            "taken": money_row(r["taken"]),
+            "refunded": money_row(r["refunded"]),
+            "net": money_row(r["taken"] - r["refunded"]),
+        }
+        for name, r in sorted(per.items())
+    ]
+    totals = {
+        "method": "Total",
+        "payments": sum(r["payments"] for r in rows),
+        **{
+            k: money_row(sum((Decimal(r[k]) for r in rows), ZERO))
+            for k in ("taken", "refunded", "net")
+        },
+    }
+    # Every bill in range was paid by checkout payments (balance plus tip) plus things that are
+    # not money in the till: prepayment, wallet credit and loyalty. The first part must match.
+    billed = invoices(start, end)
+    due = billed.aggregate(
+        v=Coalesce(Sum("balance_paid"), ZERO) + Coalesce(Sum("tip_amount"), ZERO)
+    )["v"]
+    paid = Payment.objects.filter(
+        status=ok, kind=Payment.Kind.CHECKOUT, invoice__in=billed
+    ).aggregate(v=Coalesce(Sum("amount"), ZERO))["v"]
+    summary = {
+        "bills_collected": money_row(due),
+        "checkout_payments": money_row(paid),
+        "difference": money_row(due - paid),
+    }
+    return {
+        "columns": [
+            col("method", "Payment method"),
+            col("payments", "Payments", "number"),
+            col("taken", "Taken", "money"),
+            col("refunded", "Refunded", "money"),
+            col("net", "Net", "money"),
+        ],
+        "rows": rows,
+        "totals": totals,
+        "chart": {"kind": "bar", "x": "method", "y": "net"},
+        "summary": summary,
+    }
+
+
+def wallet_sales(start: date, end: date) -> dict:
+    lo, hi = bounds(start, end)
+    per: dict[tuple[str, str], dict] = {}
+    labels = dict(Sale.Kind.choices)
+    channels = dict(Sale.Channel.choices)
+    for sale in Sale.objects.filter(created_at__gte=lo, created_at__lt=hi).prefetch_related(
+        "refunds"
+    ):
+        row = per.setdefault(
+            (sale.kind, sale.channel), {"count": 0, "amount": ZERO, "refunded": ZERO}
+        )
+        row["count"] += 1
+        row["amount"] += sale.amount
+        row["refunded"] += sum((r.amount for r in sale.refunds.all()), ZERO)
+    rows = [
+        {
+            "kind": labels[kind],
+            "channel": channels[channel],
+            "count": r["count"],
+            "amount": money_row(r["amount"]),
+            "refunded": money_row(r["refunded"]),
+            "net": money_row(r["amount"] - r["refunded"]),
+        }
+        for (kind, channel), r in sorted(per.items())
+    ]
+    totals = {
+        "kind": "Total",
+        "channel": "",
+        "count": sum(r["count"] for r in rows),
+        **{
+            k: money_row(sum((Decimal(r[k]) for r in rows), ZERO))
+            for k in ("amount", "refunded", "net")
+        },
+    }
+    outstanding = GiftCardEntry.objects.filter(card__status="active").aggregate(
+        v=Coalesce(Sum("delta"), ZERO)
+    )["v"]
+    return {
+        "columns": [
+            col("kind", "Sold"),
+            col("channel", "Where"),
+            col("count", "Sales", "number"),
+            col("amount", "Amount", "money"),
+            col("refunded", "Refunded", "money"),
+            col("net", "Net", "money"),
+        ],
+        "rows": rows,
+        "totals": totals,
+        "chart": {"kind": "bar", "x": "kind", "y": "net"},
+        "summary": {"gift_card_balance_outstanding": money_row(outstanding)},
+    }
+
+
 REPORTS = {
     "revenue-by-day": ("Revenue by day", revenue_by_day),
     "revenue-by-service": ("Revenue by service", revenue_by_service),
@@ -344,4 +582,9 @@ REPORTS = {
     "no-shows-cancellations": ("No-shows and cancellations", no_shows_and_cancellations),
     "top-customers": ("Top customers", top_customers),
     "product-sales": ("Product sales", product_sales),
+    "revenue-by-hour": ("Revenue by hour of day", revenue_by_hour),
+    "revenue-by-payment-method": ("Payments by method", revenue_by_payment_method),
+    "peak-hours-visits": ("Busiest hours: visits", peak_hours_visits),
+    "peak-hours-revenue": ("Busiest hours: revenue", peak_hours_revenue),
+    "wallet-sales": ("Packages, memberships and gift cards", wallet_sales),
 }
