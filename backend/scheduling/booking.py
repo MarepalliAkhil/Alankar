@@ -23,7 +23,7 @@ from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
 from people import ratings
-from people.models import StylistProfile
+from people.models import DayOffRequest, StylistProfile
 from scheduling.models import (
     BLOCKING_STATUSES,
     Appointment,
@@ -87,7 +87,8 @@ def quote(service: Service, variant_id=None, addon_ids=None) -> Quote:
     minutes = (variant.duration_minutes if variant else service.duration_minutes) + sum(
         a.duration_minutes for a in addons
     )
-    gst_rate = Decimal(str(rules["gst_percent"]))
+    own_rate = service.gst_percent if service.gst_percent is not None else rules["gst_percent"]
+    gst_rate = Decimal(str(own_rate))
     gst = (price * gst_rate / (Decimal("100") + gst_rate)).quantize(PAISA, ROUND_HALF_UP)
     payable = (price * Decimal(str(rules["deposit_percent"])) / Decimal("100")).quantize(
         PAISA, ROUND_HALF_UP
@@ -124,6 +125,46 @@ def opening_hours(day: date) -> tuple[datetime, datetime] | None:
         datetime.combine(day, open_at, tzinfo=tz),
         datetime.combine(day, close_at, tzinfo=tz),
     )
+
+
+def stylist_windows(day: date, stylist_ids) -> dict:
+    """Each stylist's working window on `day`: (open, close), or None when they are off.
+
+    The window is the stylist's own weekly hours (empty means the salon's hours) cut down to the
+    salon's opening hours, and None on a day covered by an approved days-off request.
+    """
+    shop = opening_hours(day)
+    ids = list(stylist_ids)
+    if not ids:
+        return {}
+    key = WEEKDAYS[day.weekday()]
+    tz = timezone.get_current_timezone()
+    off = set(
+        DayOffRequest.objects.filter(
+            stylist_id__in=ids,
+            status=DayOffRequest.Status.APPROVED,
+            start_date__lte=day,
+            end_date__gte=day,
+        ).values_list("stylist_id", flat=True)
+    )
+    rows = dict(StylistProfile.objects.filter(pk__in=ids).values_list("id", "weekly_hours"))
+    windows: dict = {}
+    for sid in ids:
+        own = rows.get(sid) or {}
+        if shop is None or sid in off:
+            windows[sid] = None
+        elif key in own:
+            hours = own[key]
+            if not hours:
+                windows[sid] = None
+                continue
+            start = datetime.combine(day, time.fromisoformat(hours[0]), tzinfo=tz)
+            end = datetime.combine(day, time.fromisoformat(hours[1]), tzinfo=tz)
+            start, end = max(start, shop[0]), min(end, shop[1])
+            windows[sid] = (start, end) if start < end else None
+        else:
+            windows[sid] = shop
+    return windows
 
 
 def earliest_start() -> datetime:
@@ -196,6 +237,7 @@ def free_starts(
         day_to=close_at,
         exclude=exclude,
     )
+    windows = stylist_windows(day, stylist_ids)
     result = []
     for start in starts:
         end = start + timedelta(minutes=minutes)
@@ -204,7 +246,14 @@ def free_starts(
         if not stylist_ids:
             result.append((start, []))
             continue
-        free = [sid for sid in stylist_ids if _free(busy, start, end, stylist=sid)]
+        free = [
+            sid
+            for sid in stylist_ids
+            if windows.get(sid) is not None
+            and windows[sid][0] <= start
+            and end <= windows[sid][1]
+            and _free(busy, start, end, stylist=sid)
+        ]
         if free:
             result.append((start, free))
     return result
@@ -455,6 +504,9 @@ def _place(
     if start not in grid_starts(local(start).date(), appt.duration_minutes, staff=True):
         raise BookingError("Choose one of the available times.")
     end = start + timedelta(minutes=appt.duration_minutes)
+    window = stylist_windows(local(start).date(), [stylist.id]).get(stylist.id)
+    if window is None or not (window[0] <= start and end <= window[1]):
+        raise BookingError(f"{stylist.display_name} is not working at that time.")
     busy = busy_ranges(
         stylist_ids=[stylist.id],
         room_ids=[room.id] if room else [],

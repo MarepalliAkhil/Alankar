@@ -78,6 +78,9 @@ class AuditLog(models.Model):
         DAY_OFF_REQUESTED = "day_off_requested", "Days off requested"
         DAY_OFF_WITHDRAWN = "day_off_withdrawn", "Days off request withdrawn"
         WORK_SESSION_CORRECTED = "work_session_corrected", "Working hours corrected by the admin"
+        STAFF_PROFILE_UPDATED = "staff_profile_updated", "Staff details changed by the admin"
+        CATALOGUE_CHANGED = "catalogue_changed", "Services, categories or rooms changed"
+        DAY_OFF_DECIDED = "day_off_decided", "Days-off request decided"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

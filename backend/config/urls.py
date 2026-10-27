@@ -5,6 +5,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from accounts.staff_views import AuditLogListView, PosSettingsView
 from accounts.urls import auth_patterns, staff_patterns
+from people.admin_urls import admin_patterns
 from people.stylist_urls import stylist_patterns
 from scheduling.urls import booking_patterns, desk_patterns, my_patterns
 
@@ -20,6 +21,7 @@ urlpatterns = [
     path("api/desk/", include(desk_patterns)),
     path("api/stylist/", include(stylist_patterns)),
     path("api/chat/", include("chat.urls")),
+    path("api/admin/", include(admin_patterns)),
 ]
 
 if settings.SALON_API_DOCS:

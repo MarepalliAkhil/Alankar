@@ -153,7 +153,9 @@ class TeamView(PublicView):
         responses=TeamMemberSerializer(many=True),
     )
     def get(self, request: Request) -> Response:
-        team = StylistProfile.objects.filter(is_public=True)
+        team = StylistProfile.objects.filter(is_public=True).filter(
+            Q(user__isnull=True) | Q(user__is_active=True)
+        )
         division = request.query_params.get("division")
         if division:
             team = [member for member in team if division in (member.divisions or [])]

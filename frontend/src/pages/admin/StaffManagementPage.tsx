@@ -20,6 +20,8 @@ import {
   type StaffMember,
   type StaffRole,
 } from '../../api/staff';
+import { DaysOffPanel } from '../../components/admin/DaysOffPanel';
+import { StaffDetailsDrawer } from '../../components/admin/StaffDetailsDrawer';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Badge,
@@ -74,6 +76,7 @@ export default function StaffManagementPage() {
   const [form, setForm] = useState({ full_name: '', email: '', role: '' });
   const [errors, setErrors] = useState<Partial<Record<InviteField, string>>>({});
   const [confirming, setConfirming] = useState<StaffMember | null>(null);
+  const [editing, setEditing] = useState<StaffMember | null>(null);
   const [failedLink, setFailedLink] = useState<{ email: string; link: string } | null>(null);
 
   const copyLink = async (link: string) => {
@@ -226,23 +229,31 @@ export default function StaffManagementPage() {
       key: 'actions',
       header: 'Actions',
       className: 'text-right',
-      render: (row) =>
-        row.status === 'invited' ? (
-          <span className="text-xs text-text-muted">Waiting for the invite</span>
-        ) : row.status === 'active' ? (
-          <Button size="sm" variant="danger" onClick={() => setConfirming(row)}>
-            Deactivate
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={toggle.isPending && toggle.variables?.id === row.id}
-            onClick={() => toggle.mutate(row)}
-          >
-            Reactivate
-          </Button>
-        ),
+      render: (row) => (
+        <div className="flex flex-wrap justify-end gap-sm">
+          {row.role === 'stylist' && row.status !== 'invited' && (
+            <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
+              Edit details<span className="sr-only"> for {row.full_name || row.email}</span>
+            </Button>
+          )}
+          {row.status === 'invited' ? (
+            <span className="text-xs text-text-muted">Waiting for the invite</span>
+          ) : row.status === 'active' ? (
+            <Button size="sm" variant="danger" onClick={() => setConfirming(row)}>
+              Deactivate
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={toggle.isPending && toggle.variables?.id === row.id}
+              onClick={() => toggle.mutate(row)}
+            >
+              Reactivate
+            </Button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -251,7 +262,7 @@ export default function StaffManagementPage() {
       <PageHeader
         eyebrow="Admin"
         title="Staff"
-        description="Invite stylists and receptionists, and deactivate accounts. Staff profiles, skills and working hours arrive in Task 5."
+        description="Invite stylists and receptionists, edit their skills and working hours, decide days off, and deactivate accounts."
         actions={
           import.meta.env.DEV ? (
             <Link
@@ -378,6 +389,8 @@ export default function StaffManagementPage() {
         )}
       </section>
 
+      <DaysOffPanel />
+
       <BillingSettings />
 
       <section aria-labelledby="invites-title" className="flex flex-col gap-md">
@@ -474,6 +487,8 @@ export default function StaffManagementPage() {
           />
         )}
       </section>
+
+      <StaffDetailsDrawer member={editing} onClose={() => setEditing(null)} />
 
       <Modal
         open={confirming !== null}

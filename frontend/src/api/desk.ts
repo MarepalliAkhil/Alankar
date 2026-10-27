@@ -171,6 +171,8 @@ export interface ScheduleDay {
   close: string | null;
   step_minutes: number;
   stylists: StylistCard[];
+  /** Stylists who are not working this day (approved day off, or outside their weekly hours). */
+  off?: { stylist: string; name: string; reason: string }[];
   rooms: { id: string; name: string; division: string }[];
   appointments: ScheduleItem[];
 }

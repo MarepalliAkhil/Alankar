@@ -92,7 +92,14 @@
     "chat.messages.send": "Send a message in one of my conversations (REST fallback)",
     "chat.messages.read": "Mark one of my conversations as read",
     "chat.ws.connect": "Open the live Zen Chat connection for one of my conversations",
-    "chat.ws.send": "Send messages, typing and read signals over the live connection"
+    "chat.ws.send": "Send messages, typing and read signals over the live connection",
+    "staff.details.read": "Read a staff member's role-specific details (profile, services, hours)",
+    "staff.details.update": "Edit a stylist's profile, services, working hours and public visibility",
+    "staff.details.link": "Link a stylist account to a team profile",
+    "staff.daysoff.list": "List stylists' days-off requests",
+    "staff.daysoff.decide": "Approve or decline a days-off request",
+    "catalogue.read": "Read all categories, services and rooms (also hidden ones)",
+    "catalogue.write": "Create, edit and delete categories, services and rooms"
   },
   "public": {
     "api": [
@@ -431,7 +438,14 @@
         "pos.refunds.request",
         "pos.refunds.list",
         "pos.refunds.decide",
-        "inventory.view"
+        "inventory.view",
+        "staff.details.read",
+        "staff.details.update",
+        "staff.details.link",
+        "staff.daysoff.list",
+        "staff.daysoff.decide",
+        "catalogue.read",
+        "catalogue.write"
       ],
       "routes": [
         "/customers/:id"
@@ -473,8 +487,8 @@
           "id": "staff",
           "label": "Staff",
           "path": "/staff",
-          "description": "Invite stylists and receptionists, deactivate or reactivate accounts.",
-          "task": "Task 1",
+          "description": "Team cards: invite, deactivate, edit stylist profile, services and hours, receptionist rate, and decide days-off requests.",
+          "task": "Task 5a",
           "status": "available"
         },
         {
@@ -497,9 +511,9 @@
           "id": "services",
           "label": "Services",
           "path": "/services",
-          "description": "Service catalogue, variants, prices and photos.",
-          "task": "Task 5",
-          "status": "planned"
+          "description": "Services, options and add-ons, categories, rooms: prices, durations, GST, payouts. Changes show on the public site at once.",
+          "task": "Task 5a",
+          "status": "available"
         },
         {
           "id": "pos",

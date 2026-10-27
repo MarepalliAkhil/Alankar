@@ -11,8 +11,7 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 "billing/tests/*" = ["F401", "F811"]
 "people/tests/*" = ["F401", "F811"]
 "chat/tests/*" = ["F401", "F811"]
-"scheduling/tests/test_desk.py" = ["F401", "F811"]
-"scheduling/tests/test_desk_customers.py" = ["F401", "F811"]
+"scheduling/tests/*" = ["F401", "F811"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

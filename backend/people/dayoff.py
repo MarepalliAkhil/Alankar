@@ -86,3 +86,52 @@ def withdraw(profile: StylistProfile, request_id) -> DayOffRequest:
         row.status = DayOffRequest.Status.CANCELLED
         row.save(update_fields=["status"])
         return row
+
+
+def decide(
+    request_id,
+    *,
+    admin,
+    decision: str,
+    reason: str = "",
+    acknowledge_conflicts: bool = False,
+) -> tuple[DayOffRequest, list[Appointment]]:
+    """The admin approves or declines a waiting request.
+
+    Declining needs a reason. Approving while scheduled visits still sit on those days is allowed
+    only after the admin confirms they know (the visits stay; reception moves them). Once approved,
+    the stylist cannot be booked on those days.
+    """
+    reason = (reason or "").strip()
+    if decision not in ("approve", "decline"):
+        raise DayOffError("Choose approve or decline.")
+    if decision == "decline" and len(reason) < 3:
+        raise DayOffError("Give a reason so the stylist knows why.")
+    with transaction.atomic():
+        row = (
+            DayOffRequest.objects.select_for_update()
+            .select_related("stylist")
+            .filter(pk=request_id)
+            .first()
+        )
+        if row is None:
+            raise DayOffError("Request not found.", code="not_found")
+        if row.status != DayOffRequest.Status.PENDING:
+            raise DayOffError("This request was already decided.", code="conflict")
+        conflicting = clashes(row.stylist, row.start_date, row.end_date)
+        if decision == "approve" and conflicting and not acknowledge_conflicts:
+            raise DayOffError(
+                "Visits are still scheduled on those days. Move them, or approve anyway.",
+                code="visits",
+                visits=conflicting,
+            )
+        row.status = (
+            DayOffRequest.Status.APPROVED
+            if decision == "approve"
+            else DayOffRequest.Status.DECLINED
+        )
+        row.decided_by = admin
+        row.decided_at = timezone.now()
+        row.decision_note = reason[:200]
+        row.save(update_fields=["status", "decided_by", "decided_at", "decision_note"])
+    return row, conflicting

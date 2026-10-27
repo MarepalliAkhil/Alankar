@@ -50,6 +50,8 @@ class Service(models.Model):
     audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.UNISEX)
     duration_minutes = models.PositiveSmallIntegerField(default=30)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0"))
+    # GST rate in percent for this service. Empty means the salon-wide rate from the settings.
+    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     image_url = models.URLField(blank=True)
     # Flat pay for the stylist per completed task (admin sets it, Task 5/6). Empty means the
     # commission percentage from the pay rules is used instead.

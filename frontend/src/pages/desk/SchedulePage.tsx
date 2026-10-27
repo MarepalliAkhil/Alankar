@@ -190,6 +190,12 @@ export default function SchedulePage() {
               No visits on this day yet. Confirmed bookings appear here.
             </p>
           )}
+          {(schedule.data.off ?? []).length > 0 && (
+            <p className="text-sm text-text-muted" data-testid="stylists-off">
+              Not working this day:{' '}
+              {(schedule.data.off ?? []).map((o) => `${o.name} (${o.reason})`).join(', ')}
+            </p>
+          )}
           <ScheduleBoard
             day={schedule.data}
             mode={mode}

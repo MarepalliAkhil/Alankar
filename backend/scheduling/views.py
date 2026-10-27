@@ -21,7 +21,7 @@ from accounts.models import AuditLog
 from billing.models import Payment
 from people import desk as customer_desk
 from people import ratings
-from people.models import CustomerProfile, StylistProfile
+from people.models import CustomerProfile, DayOffRequest, StylistProfile
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentEvent, Room, Service
 from scheduling.serializers import (
@@ -736,6 +736,15 @@ class DeskDismissView(APIView):
         return desk_done(request, pk, AuditLog.Action.APPOINTMENT_FLAG_DECLINED, flag=data["flag"])
 
 
+def _on_day_off(stylist_id, day) -> bool:
+    return DayOffRequest.objects.filter(
+        stylist_id=stylist_id,
+        status=DayOffRequest.Status.APPROVED,
+        start_date__lte=day,
+        end_date__gte=day,
+    ).exists()
+
+
 class DeskScheduleView(APIView):
     """One day for the schedule board: stylists, rooms and the visits that hold their time."""
 
@@ -760,9 +769,20 @@ class DeskScheduleView(APIView):
                     status__in=SCHEDULE_STATUSES, start__gte=hours[0], start__lt=hours[1]
                 )
             )
+        windows = booking.stylist_windows(day, [s.id for s in stylists]) if hours else {}
+        off = [
+            {
+                "stylist": str(s.id),
+                "name": s.display_name,
+                "reason": "Day off" if _on_day_off(s.id, day) else "Not working today",
+            }
+            for s in stylists
+            if hours is not None and windows.get(s.id) is None
+        ]
         return Response(
             {
                 "date": day.isoformat(),
+                "off": off,
                 "closed": hours is None,
                 "open": hours[0].isoformat() if hours else None,
                 "close": hours[1].isoformat() if hours else None,

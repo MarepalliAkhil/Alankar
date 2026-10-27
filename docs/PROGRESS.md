@@ -7,7 +7,9 @@
 - Task 4 (stylist slice 4a, Zen Chat 4b): DONE. Verified on the owner's PC (2026-10-27): tests,
   lint, typecheck, build and the browser walkthroughs passed. Sandbox at hand-off: pytest all
   passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
-- Next: Task 5 (admin slice 5a to 5d). Plan awaiting the owner's OK.
+- Task 5a (admin: team and catalogue): IMPLEMENTED in the build sandbox, waiting for the owner's PC
+  run (migrate, pytest, npm test, walkthrough below). Then 5b (operations), 5c (content, marketing,
+  reports), 5d (security and audit). One sub-task at a time; wait for "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -431,3 +433,40 @@
 - "For Zenotians" page content is pending from the owner (the one allowed placeholder; the
   page shows a "content on its way" notice and is marked `data-content-pending`).
 - `npm audit` reports 12 advisories in dev-only tooling; review separately.
+
+## Task 5a: decisions
+- Admin Staff page: "Edit details" drawer per stylist (display name, title, bio, photo link,
+  divisions, services they can do, weekly working hours, show/hide on the public Team page). A
+  stylist with no team profile can be linked to an unlinked one. Receptionist hourly rate stays
+  inline in the table. Every change is audited (STAFF_PROFILE_UPDATED) with old and new values.
+- Weekly hours and approved days off are now enforced by the booking engine: the slot list, online
+  confirm, reschedule and desk bookings all refuse times when the stylist is not working. A day not
+  set by the admin follows the salon's hours; "Day off" blocks that weekday.
+- Days off: the admin approves or declines (a reason is needed to decline). Approving over booked
+  visits shows them and needs "Approve anyway"; the visits stay booked and the desk moves them.
+  The desk schedule lists stylists who are off. The stylist gets a simulated email.
+- Deactivating a stylist locks them out at once and removes them from the public Team page.
+- New admin page Services (/services): tabs Services, Categories, Rooms. Divisions (Salon, Spa,
+  Beauty parlor) are fixed and not editable. Services carry price, minutes, audience, a GST rate of
+  their own (empty = the salon rate), the stylist payout per service, options and add-ons.
+- Services with visits and rooms in use cannot be deleted, only hidden; categories with services
+  cannot be deleted. Changes show on the public site at once. Audited as CATALOGUE_CHANGED.
+- Policy: new actions staff.details.read/update/link, staff.daysoff.list/decide, catalogue.read/write,
+  admin only. Denial tests for customer, stylist, receptionist and guest on every endpoint.
+- Admin menu items not on the 5a to 5d list and not in Task 6: Concierge (Task 8), Users & Roles
+  (a Settings sub-page) and live numbers on the admin Dashboard. Owner to decide where they go.
+- Migrations: scheduling 0004 (Service.gst_percent), accounts 0011 (audit actions).
+
+## Task 5a: owner browser walkthrough (to verify on the PC)
+1. Sign in as admin. Menu > Services is now live. Edit a service price, open the public Services
+   page in another tab: the new price shows at once. Hide a service: it leaves the public page.
+2. Services > Add a service with an option and an add-on; leave GST empty, then set 5 and check a
+   booking quote uses it. Try to delete a service that has visits: it is refused (hide instead).
+3. Categories and Rooms tabs: add, rename, hide. A category with services cannot be deleted.
+4. Staff > Edit details on a stylist: tick services, set Monday to Day off and Tuesday to own hours
+   12:00 to 18:00, save. On the booking page that stylist no longer offers Monday or before 12:00 on
+   Tuesday. Untick "Show on the public Team page": they leave the Team page.
+5. As that stylist, request days off (My Schedule). As admin, Staff > Days off: approve, or decline
+   (a reason is required). Book a visit on a requested day first to see the "Approve anyway" warning.
+6. Deactivate the stylist: their open session stops at once and they leave the Team page.
+7. Audit: Staff page > Recent security activity shows the changes.
