@@ -8,6 +8,7 @@ export interface InvoiceItem {
 }
 
 export interface Invoice {
+  service_changes?: string;
   id: string;
   number: string;
   status: string;

@@ -158,6 +158,26 @@ export function CheckoutModal({
         />
       ) : (
         <div className="flex flex-col gap-lg">
+          {visit?.completion && (
+            <section
+              aria-label="Service completed by the stylist"
+              className="flex flex-col gap-xs rounded-input bg-surface p-md text-sm"
+            >
+              <p className="font-semibold text-text">Completed by the stylist</p>
+              <p className="text-text-muted">Done: {visit.completion.done.join(', ')}</p>
+              {visit.completion.removed.length > 0 && (
+                <p className="text-warning-text">
+                  Not done (not billed):{' '}
+                  {visit.completion.removed
+                    .map((r) => `${r.label} (${formatINRExact(r.price)})`)
+                    .join(', ')}
+                </p>
+              )}
+              {visit.completion.note && (
+                <p className="text-text-muted">Stylist note: {visit.completion.note}</p>
+              )}
+            </section>
+          )}
           {visit?.allergies && (
             <p className="rounded-input bg-warning-soft p-md text-sm text-warning-text">
               Allergies on file: {visit.allergies}

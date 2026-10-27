@@ -40,6 +40,7 @@ from core import brand
 from core.devtools import require_links_enabled
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
+from people.linking import link_new_profile
 from people.models import CustomerProfile
 
 REGISTER_MESSAGE = "Thanks! If the details are valid, your account is ready. Please sign in."
@@ -477,6 +478,8 @@ class InviteAcceptView(AuthThrottleMixin, APIView):
             user.save(update_fields=["password", "is_active"])
             invite.accepted_at = timezone.now()
             invite.save(update_fields=["accepted_at"])
+            if user.role == User.Role.STYLIST:
+                link_new_profile(user)
         audit(AuditLog.Action.INVITE_ACCEPTED, request=request, actor=user, target=user)
         return Response({"detail": "Your password is set. You can now sign in.", "role": user.role})
 

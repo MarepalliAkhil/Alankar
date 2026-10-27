@@ -60,3 +60,25 @@ POS_DEFAULTS = {
 def pos_settings() -> dict:
     stored = content("pos", {}) or {}
     return {**POS_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}
+
+
+# Stylist pay rules (admin-editable in Task 5/6). Stored under SiteContent key "pay_rules".
+# Bands are [lowest average, multiplier], highest first (docs/MASTER_NOTES.md section 21).
+PAY_DEFAULTS = {
+    "min_ratings": 5,
+    "rating_bands": [
+        ["4.5", "1.20"],
+        ["4.0", "1.10"],
+        ["3.5", "1.00"],
+        ["3.0", "0.90"],
+        ["0", "0.80"],
+    ],
+    "flag_below": "3.0",
+    # Used when a service has no flat task payout.
+    "commission_percent": 30,
+}
+
+
+def pay_rules() -> dict:
+    stored = content("pay_rules", {}) or {}
+    return {**PAY_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}

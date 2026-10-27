@@ -46,7 +46,12 @@ def summary(day: date) -> dict:
         back = refunded.filter(method=method).aggregate(t=Coalesce(Sum("amount"), ZERO))["t"]
         by_method[method] = {"taken": taken, "refunded": back, "expected": taken - back}
     waiting = Appointment.objects.filter(
-        status__in=(AppointmentStatus.CHECKED_IN, AppointmentStatus.IN_PROGRESS),
+        status__in=(
+            AppointmentStatus.CHECKED_IN,
+            AppointmentStatus.IN_PROGRESS,
+            AppointmentStatus.COMPLETED,
+        ),
+        invoice__isnull=True,
         start__gte=start,
         start__lt=end,
     ).count()

@@ -164,7 +164,7 @@ def test_a_visit_is_billed_only_once(visit, desk):
     _, _, appt_id = visit
     assert pay_in_full(desk[0], appt_id).status_code == 201
     again = checkout_call(desk[0], appt_id, payments=[])
-    assert again.status_code == 400
+    assert again.status_code == 409
     assert Invoice.objects.count() == 1
 
 

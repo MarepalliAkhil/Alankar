@@ -320,7 +320,6 @@ describe('login page', () => {
   it.each([
     ['admin', 'Staff'],
     ['receptionist', 'Schedule'],
-    ['stylist', 'Earnings'],
   ] as const)('signs a %s in and opens their own dashboard', async (role, menuItem) => {
     loginMock.mockResolvedValue(userFor(role));
     const user = userEvent.setup();
@@ -478,10 +477,10 @@ describe('route guards and role menus', () => {
   });
 
   it('explains planned pages with their purpose and the task they arrive in', async () => {
-    meMock.mockResolvedValue(userFor('stylist'));
-    renderAt('/earnings');
-    expect(await screen.findByText('Earnings arrives in Task 6')).toBeInTheDocument();
-    expect(screen.getByText('Task pay, rating trend, tips and payslips.')).toBeInTheDocument();
+    meMock.mockResolvedValue(userFor('admin'));
+    renderAt('/payroll');
+    expect(await screen.findByText('Payroll arrives in Task 6')).toBeInTheDocument();
+    expect(screen.getByText('Generate, adjust, approve and pay payroll.')).toBeInTheDocument();
   });
 
   it('gives a signed-in customer the account menu instead of Login/Register', async () => {

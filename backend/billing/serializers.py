@@ -35,6 +35,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "total",
             "prepaid_amount",
             "balance_paid",
+            "service_changes",
             "items",
         ]
 

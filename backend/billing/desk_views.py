@@ -42,8 +42,25 @@ def money_str(value) -> str:
 # --------------------------------------------------------------------------- serializers
 
 
+def completion_data(appt: Appointment) -> dict | None:
+    """What the stylist did, for the receptionist at checkout (including the stylist's note)."""
+    completion = getattr(appt, "completion", None)
+    if completion is None:
+        return None
+    return {
+        "done": [line["label"] for line in completion.done_lines],
+        "removed": [
+            {"label": line["label"], "price": money_str(line["price"])}
+            for line in completion.removed_lines
+        ],
+        "billed_amount": money_str(completion.done_price),
+        "note": completion.note,
+    }
+
+
 def visit_card(appt: Appointment) -> dict:
     return {
+        "completion": completion_data(appt),
         "id": str(appt.id),
         "status": appt.status,
         "status_label": appt.get_status_display(),
@@ -71,6 +88,7 @@ def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
         "total": money_str(invoice.total),
         "tip_amount": money_str(invoice.tip_amount),
         "refundable": money_str(refunds.refundable(invoice)),
+        "service_changes": invoice.service_changes,
     }
     if not detail:
         return data

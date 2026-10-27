@@ -66,6 +66,9 @@ class StylistProfile(models.Model):
     )
     is_public = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # Weekday (mon..sun) -> [start, end] or null for a day off. Empty means the salon's hours.
+    # Admin edits it in Task 5/6; the booking engine uses it from then on.
+    weekly_hours = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["sort_order", "display_name"]
@@ -190,3 +193,37 @@ class LoyaltyEntry(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("A loyalty entry cannot be deleted.")
+
+
+class DayOffRequest(models.Model):
+    """A stylist asks for days off. The admin decides in Task 6."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for the admin"
+        APPROVED = "approved", "Approved"
+        DECLINED = "declined", "Declined"
+        CANCELLED = "cancelled", "Withdrawn"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    stylist = models.ForeignKey(StylistProfile, on_delete=models.CASCADE, related_name="days_off")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=200)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end_date__gte=models.F("start_date")), name="dayoff_dates_order"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.stylist_id} {self.start_date}..{self.end_date} ({self.status})"

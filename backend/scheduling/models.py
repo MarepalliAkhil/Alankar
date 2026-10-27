@@ -51,6 +51,9 @@ class Service(models.Model):
     duration_minutes = models.PositiveSmallIntegerField(default=30)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0"))
     image_url = models.URLField(blank=True)
+    # Flat pay for the stylist per completed task (admin sets it, Task 5/6). Empty means the
+    # commission percentage from the pay rules is used instead.
+    task_payout = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     tags = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
@@ -154,6 +157,7 @@ BLOCKING_STATUSES = (
 )
 
 NOTES_CONTEXT = "scheduling.appointment.notes"
+COMPLETION_NOTE_CONTEXT = "scheduling.completion.note"
 ALLERGIES_CONTEXT = "scheduling.appointment.allergies"
 CONTACT_PHONE_CONTEXT = "scheduling.appointment.contact_phone"
 
@@ -277,3 +281,33 @@ class AppointmentEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.action}: {self.from_status} -> {self.to_status}"
+
+
+class VisitCompletion(models.Model):
+    """What the stylist actually did when completing a visit. It decides what is billed and what
+    counts towards the stylist's pay. Written once, never changed."""
+
+    appointment = models.OneToOneField(
+        Appointment, on_delete=models.PROTECT, related_name="completion"
+    )
+    # [{"key": "service" | add-on id, "label": str, "price": "300.00"}]
+    done_lines = models.JSONField(default=list)
+    removed_lines = models.JSONField(default=list, blank=True)
+    booked_price = models.DecimalField(max_digits=10, decimal_places=2)
+    done_price = models.DecimalField(max_digits=10, decimal_places=2)
+    note = EncryptedTextField(context=COMPLETION_NOTE_CONTEXT, blank=True, default="")
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    completed_at = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f"Completion of {self.appointment_id}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("A completed visit record cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("A completed visit record cannot be deleted.")

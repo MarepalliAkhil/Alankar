@@ -1,9 +1,15 @@
 # Progress
 
 ## Status
-- Task 3d (work sessions, 15-minute idle sign-out, My Hours & Pay, admin hour corrections API):
-  IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate, pytest, npm test,
-  walkthrough below). Task 3c: DONE (verified on the owner's PC, 2026-10-27).
+- Task 3 (receptionist slice: 3a requests/schedule, 3b check-in/walk-ins/customers, 3c POS/stock/
+  refunds/cash close/inventory view, 3d work sessions/idle sign-out/My Hours & Pay): DONE. Verified
+  on the owner's PC (2026-10-27): tests, lint, typecheck, build and the browser walkthroughs passed.
+- Task 4a (stylist day, appointments, schedule, earnings): IMPLEMENTED in the build sandbox,
+  waiting for the owner's PC run (migrate, seed_demo, pytest, npm test, walkthrough below).
+  Sandbox: pytest all passed (45 new stylist tests), ruff clean, vitest 171 passed, eslint,
+  typecheck, prettier clean (the production build could not run in the sandbox: run
+  `npm run build`).
+- Next: Task 4b (Zen Chat) only after the owner says 4a "passed".
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -340,6 +346,38 @@
    Remove the line again afterwards.
 5. Hours and pay: check Today, This month, rate and Estimated pay = hours x rate. Change the month.
 6. Customer, stylist and admin accounts cannot open /my-hours (403 page).
+
+## Task 4a: decisions
+- A stylist profile links to one account and an account to one profile (tested). Accepting a
+  stylist invite creates a hidden (non-public) profile; `python manage.py link_stylist --email X
+  --profile Rahul` links an existing team profile instead (audited).
+- Stylists see only their own scheduled, checked-in, in-progress and completed visits. Requested,
+  unpaid, cancelled and no-show visits are hidden. Visit cards show the guest's first name only;
+  no phone, email, price or payment ever appears in a stylist response (tested).
+- Start (checked in -> in progress) and Complete (services really done + optional note). Only done
+  services are billed and counted for pay. A removed service shows on the POS card, the checkout
+  and the invoice ("Service change"), and the front desk sees the note. If the online prepayment
+  is more than the new total, the existing admin-approved refund is created for the excess.
+- Pay: task payout is a flat amount per service (`seed_demo` sets 30% of the price) scaled by the
+  share done. Rating multiplier is 1.00 below 5 ratings; bands 4.5=1.20, 4.0=1.10, 3.5=1.00,
+  3.0=0.90, below=0.80. Earnings are labelled Estimated until payroll approval (Task 6).
+- Days off cannot overlap scheduled, checked-in or in-progress visits; the stylist sees the
+  visits and is told to ask the front desk to reschedule first. Approval is in Task 6.
+- Not yet wired: per-stylist `weekly_hours` in the booking engine (admin edits it in Task 5/6).
+- The stylist "Zen Chat" menu item is hidden until Task 4b.
+
+## Task 4a: owner browser walkthrough (to verify on the PC)
+1. Backend: `python manage.py migrate`, then `python manage.py seed_demo` (fills task payouts).
+2. Admin > Staff: invite a stylist and accept the link, or run `link_stylist` for Rahul.
+3. As the receptionist: confirm a booking for that stylist with an add-on, pay it, check the guest in.
+4. As the stylist: My Day shows the visit (first name only). Start it, then Complete it with the
+   add-on unticked and a note.
+5. As the receptionist: POS shows "Ready for checkout", "Not done" and the note; bill it; the
+   invoice shows "Service change".
+6. As the stylist: Earnings shows Estimated, the per-task row and "Not enough ratings yet (n of 5)".
+7. My Schedule: ask for days off over a day with a visit: you see the visit and are told to ask
+   reception to reschedule first. Pick a free day: the request is sent; Withdraw works.
+8. Customer, receptionist and admin cannot open /my-day (403 page).
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

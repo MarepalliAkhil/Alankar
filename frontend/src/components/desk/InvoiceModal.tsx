@@ -87,6 +87,11 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
         />
       ) : (
         <div className="flex flex-col gap-lg text-sm">
+          {data.service_changes && (
+            <p className="rounded-input bg-warning-soft p-md text-warning-text">
+              Service change: {data.service_changes}
+            </p>
+          )}
           <ul className="flex flex-col gap-xs">
             {data.items.map((item, index) => (
               <li key={index} className="flex justify-between gap-md">

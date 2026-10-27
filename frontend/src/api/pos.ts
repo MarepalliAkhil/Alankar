@@ -16,6 +16,13 @@ export interface VisitCard {
   price_total: string;
   allergies: string;
   source: string;
+  /** Set once the stylist has completed the visit: what was done and what was removed. */
+  completion?: {
+    done: string[];
+    removed: { label: string; price: string }[];
+    billed_amount: string;
+    note: string;
+  } | null;
 }
 
 export interface InvoiceRow {
@@ -28,6 +35,7 @@ export interface InvoiceRow {
   total: string;
   tip_amount: string;
   refundable: string;
+  service_changes?: string;
 }
 
 export interface RefundRow {

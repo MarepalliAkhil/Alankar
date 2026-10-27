@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
@@ -68,6 +70,11 @@ class Command(BaseCommand):
                             duration_minutes=a_minutes,
                             sort_order=a_order,
                         )
+        # Flat pay per completed task: 30% of the cheapest price, rounded to whole rupees. The
+        # admin edits these later (Task 5/6). Only services without a payout are filled in.
+        for service in Service.objects.filter(task_payout__isnull=True):
+            service.task_payout = (service.from_price * Decimal("0.30")).quantize(Decimal("1"))
+            service.save(update_fields=["task_payout"])
         for order, (name, title, specialization, divisions) in enumerate(TEAM):
             profile, made = StylistProfile.objects.get_or_create(
                 display_name=name,

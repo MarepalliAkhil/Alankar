@@ -162,6 +162,8 @@ class Invoice(models.Model):
     loyalty_earned = models.PositiveIntegerField(default=0)
     # Goes 100% to the stylist. Not part of `total` and not taxed.
     tip_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Booked services the stylist did not do (shown on the invoice), e.g. "Beard trim (Rs. 150.00)".
+    service_changes = models.CharField(max_length=300, blank=True)
     issued_at = models.DateTimeField()
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

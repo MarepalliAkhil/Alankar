@@ -113,7 +113,9 @@ function Counter({
                 <Card padding="md" className="flex h-full flex-col gap-sm">
                   <div className="flex items-start justify-between gap-sm">
                     <h3 className="font-semibold text-text">{visit.customer_name}</h3>
-                    <Badge tone="primary">{visit.status_label}</Badge>
+                    <Badge tone={visit.status === 'completed' ? 'success' : 'primary'}>
+                      {visit.status === 'completed' ? 'Ready for checkout' : visit.status_label}
+                    </Badge>
                   </div>
                   <p className="text-sm text-text-muted">
                     {visit.service_name}
@@ -123,6 +125,11 @@ function Counter({
                   <p className="text-sm text-text-muted">
                     {visit.start && formatDateTime(visit.start)}
                   </p>
+                  {visit.completion && visit.completion.removed.length > 0 && (
+                    <p className="text-sm text-warning-text">
+                      Not done: {visit.completion.removed.map((r) => r.label).join(', ')}
+                    </p>
+                  )}
                   <Button className="mt-auto" onClick={() => onBill(visit.id)}>
                     Bill {visit.customer_name}
                   </Button>

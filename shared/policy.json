@@ -77,7 +77,16 @@
     "work.ping": "Tell the server the receptionist is active (keeps the session from idling out)",
     "hours.read": "Read my own work sessions, hours and estimated pay",
     "staff.hours.read": "Read a receptionist's work sessions, hours and estimated pay",
-    "staff.hours.correct": "Correct a receptionist's work session times (reason required)"
+    "staff.hours.correct": "Correct a receptionist's work session times (reason required)",
+    "stylist.appointments.list": "List my own visits (today, upcoming, past)",
+    "stylist.appointments.read": "Read one of my own visits: first name, services, allergy and preference notes, history with me",
+    "stylist.appointments.start": "Start the service on my own checked-in visit",
+    "stylist.appointments.complete": "Complete my own in-progress visit with the services really done and a note",
+    "stylist.ratings.read": "Read my own ratings and comments (no customer names)",
+    "stylist.earnings.read": "Read my own estimated pay for a month",
+    "stylist.schedule.read": "Read my working hours and days-off requests",
+    "stylist.daysoff.create": "Ask for days off",
+    "stylist.daysoff.withdraw": "Withdraw a days-off request that is still waiting"
   },
   "public": {
     "api": [
@@ -304,49 +313,52 @@
       "home": "/my-day",
       "api": [
         "auth.me",
-        "auth.password_change"
+        "auth.password_change",
+        "stylist.appointments.list",
+        "stylist.appointments.read",
+        "stylist.appointments.start",
+        "stylist.appointments.complete",
+        "stylist.ratings.read",
+        "stylist.earnings.read",
+        "stylist.schedule.read",
+        "stylist.daysoff.create",
+        "stylist.daysoff.withdraw"
       ],
-      "routes": [],
+      "routes": [
+        "/my-appointments/:id"
+      ],
       "menu": [
         {
           "id": "my-day",
           "label": "My Day",
           "path": "/my-day",
-          "description": "Your overview. Today's appointments arrive in Task 4.",
-          "task": "Task 4",
+          "description": "Today's visits as cards: start and complete your own services.",
+          "task": "Task 4a",
           "status": "available"
         },
         {
           "id": "my-appointments",
           "label": "My Appointments",
           "path": "/my-appointments",
-          "description": "Your assigned appointments: start and complete services.",
-          "task": "Task 4",
-          "status": "planned"
+          "description": "Your upcoming and past visits with what you need to know about each guest.",
+          "task": "Task 4a",
+          "status": "available"
         },
         {
           "id": "my-schedule",
           "label": "My Schedule",
           "path": "/my-schedule",
-          "description": "Your working hours, breaks and leave.",
-          "task": "Task 4",
-          "status": "planned"
-        },
-        {
-          "id": "chat",
-          "label": "Stylist Chat",
-          "path": "/chat",
-          "description": "Chat with customers of your paid appointments.",
-          "task": "Task 4",
-          "status": "planned"
+          "description": "Your working hours, and days-off requests.",
+          "task": "Task 4a",
+          "status": "available"
         },
         {
           "id": "earnings",
           "label": "Earnings",
           "path": "/earnings",
-          "description": "Task pay, rating trend, tips and payslips.",
-          "task": "Task 6",
-          "status": "planned"
+          "description": "Your ratings, per-task earnings and estimated pay (view only).",
+          "task": "Task 4a",
+          "status": "available"
         }
       ]
     },

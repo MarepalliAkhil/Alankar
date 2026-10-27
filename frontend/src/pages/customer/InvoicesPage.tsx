@@ -85,6 +85,9 @@ function InvoiceBody({ invoice }: { invoice: Invoice }) {
         {invoice.service_name}
         {invoice.stylist_name ? ` · ${invoice.stylist_name}` : ''}
       </p>
+      {invoice.service_changes && (
+        <p className="text-sm text-warning-text">Service change: {invoice.service_changes}</p>
+      )}
       <ul className="divide-y divide-border">
         {invoice.items.map((item, index) => (
           <li key={index} className="flex justify-between gap-md py-sm">

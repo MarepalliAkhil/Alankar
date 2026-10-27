@@ -13,7 +13,7 @@ Until the stylist slice (Task 4) exists, a checked-in visit is walked through "s
 from __future__ import annotations
 
 import secrets
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 from django.db.models import Sum
@@ -35,7 +35,8 @@ from scheduling.models import Appointment, AppointmentStatus
 from website.content import pos_settings
 
 S = AppointmentStatus
-BILLABLE = (S.CHECKED_IN, S.IN_PROGRESS)
+# A stylist can complete the service first; the visit then waits for the desk to bill it.
+BILLABLE = (S.CHECKED_IN, S.IN_PROGRESS, S.COMPLETED)
 ZERO = Decimal("0")
 MAX_QUANTITY = 20
 
@@ -59,12 +60,29 @@ def item_description(appt: Appointment) -> str:
 
 
 def ready_visits():
-    """Visits waiting at the counter: guests who are checked in or being served."""
+    """Visits waiting at the counter: guests who are checked in or being served, and visits the
+    stylist has completed that have not been billed yet."""
     return (
         Appointment.objects.filter(status__in=BILLABLE)
+        .filter(invoice__isnull=True)
         .select_related("stylist", "room", "customer")
         .order_by("start")
     )
+
+
+def service_line(appt: Appointment) -> tuple[str, Decimal, Decimal, str]:
+    """(description, amount, GST inside the amount, what was not done). When the stylist did
+    only part of what was booked, only that part is billed."""
+    completion = getattr(appt, "completion", None)
+    if completion is None or not completion.removed_lines:
+        return item_description(appt), appt.price_total, appt.gst_amount, ""
+    share = completion.done_price / completion.booked_price if completion.booked_price else ZERO
+    gst = (appt.gst_amount * share).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    done = ", ".join(line["label"] for line in completion.done_lines)
+    changes = "; ".join(
+        f"{line['label']} (Rs. {Decimal(line['price']):.2f})" for line in completion.removed_lines
+    )
+    return done[:300], completion.done_price, gst, f"Not done: {changes}"[:300]
 
 
 def max_discount_percent(actor) -> Decimal:
@@ -124,14 +142,15 @@ def _build(appt: Appointment, rows, *, discount_percent, redeem_points, actor) -
     cap = max_discount_percent(actor)
     if discount_percent < 0 or discount_percent > cap:
         raise CheckoutError(f"Discount cannot be more than {cap:f}%.")
+    description, amount, gst_included, _ = service_line(appt)
     lines = [
         Line(
             kind="service",
-            description=item_description(appt),
+            description=description,
             quantity=1,
-            unit_price=appt.price_total,
-            amount=appt.price_total,
-            gst_included=appt.gst_amount,
+            unit_price=amount,
+            amount=amount,
+            gst_included=gst_included,
         )
     ]
     for product, qty in rows:
@@ -175,7 +194,9 @@ def quote(appt_id, data: dict, *, actor) -> dict:
     """What the bill would be. Writes nothing."""
     appt = Appointment.objects.select_related("customer", "stylist").get(pk=appt_id)
     if appt.status not in BILLABLE:
-        raise CheckoutError("Only a checked-in or in-progress visit can be billed.")
+        raise CheckoutError("Only a checked-in, in-progress or completed visit can be billed.")
+    if Invoice.objects.filter(appointment=appt).exists():
+        raise CheckoutError("This visit has already been billed.", code="conflict")
     discount, _, redeem, tip = _options(data)
     rows = _products(data.get("products"), lock=False)
     totals = _build(appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor)
@@ -207,7 +228,9 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             .get(pk=appt_id)
         )
         if appt.status not in BILLABLE:
-            raise CheckoutError("Only a checked-in or in-progress visit can be billed.")
+            raise CheckoutError("Only a checked-in, in-progress or completed visit can be billed.")
+        if Invoice.objects.filter(appointment=appt).exists():
+            raise CheckoutError("This visit has already been billed.", code="conflict")
         if appt.stylist_id is None:
             raise CheckoutError("The visit has no stylist assigned.")
         rows = _products(data.get("products"), lock=True)
@@ -219,9 +242,10 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             appt.status = S.IN_PROGRESS
             booking.record(appt, "started", actor=actor, from_status=previous)
             previous = appt.status
-        appt.status = S.COMPLETED
-        appt.save(update_fields=["status", "updated_at"])
-        booking.record(appt, "completed", actor=actor, from_status=previous)
+        if previous != S.COMPLETED:  # the stylist may already have completed it
+            appt.status = S.COMPLETED
+            appt.save(update_fields=["status", "updated_at"])
+            booking.record(appt, "completed", actor=actor, from_status=previous)
 
         invoice = Invoice.objects.create(
             number=next_invoice_number(now),
@@ -240,6 +264,7 @@ def checkout(appt_id, data: dict, *, actor) -> Invoice:
             loyalty_redeemed=t.loyalty_redeemed,
             loyalty_earned=t.loyalty_earned,
             tip_amount=tip,
+            service_changes=service_line(appt)[3],
             issued_at=now,
             created_by=actor if getattr(actor, "is_authenticated", False) else None,
         )
@@ -319,6 +344,8 @@ def receipt_text(appt: Appointment, invoice: Invoice, t: Totals) -> str:
     for line in t.lines:
         suffix = f" x {line.quantity}" if line.quantity > 1 else ""
         lines.append(f"  {line.description}{suffix}: Rs. {line.amount}")
+    if invoice.service_changes:
+        lines.append(f"  ({invoice.service_changes})")
     if t.discount_amount > 0:
         lines.append(
             f"  Discount ({invoice.discount_percent.normalize()}%): -Rs. {t.discount_amount}"

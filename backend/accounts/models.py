@@ -72,6 +72,11 @@ class AuditLog(models.Model):
         REFUND_APPROVED = "refund_approved", "Refund approved"
         REFUND_REJECTED = "refund_rejected", "Refund rejected"
         CASH_CLOSE_SIGNED = "cash_close_signed", "Daily cash close signed off"
+        APPOINTMENT_STARTED = "appointment_started", "Service started by the stylist"
+        APPOINTMENT_COMPLETED = "appointment_completed", "Service completed by the stylist"
+        STYLIST_LINKED = "stylist_linked", "Stylist account linked to a team profile"
+        DAY_OFF_REQUESTED = "day_off_requested", "Days off requested"
+        DAY_OFF_WITHDRAWN = "day_off_withdrawn", "Days off request withdrawn"
         WORK_SESSION_CORRECTED = "work_session_corrected", "Working hours corrected by the admin"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
