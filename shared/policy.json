@@ -86,7 +86,13 @@
     "stylist.earnings.read": "Read my own estimated pay for a month",
     "stylist.schedule.read": "Read my working hours and days-off requests",
     "stylist.daysoff.create": "Ask for days off",
-    "stylist.daysoff.withdraw": "Withdraw a days-off request that is still waiting"
+    "stylist.daysoff.withdraw": "Withdraw a days-off request that is still waiting",
+    "chat.threads.list": "List my Zen Chat conversations (person cards with unread counts)",
+    "chat.messages.list": "Read the messages of one of my conversations",
+    "chat.messages.send": "Send a message in one of my conversations (REST fallback)",
+    "chat.messages.read": "Mark one of my conversations as read",
+    "chat.ws.connect": "Open the live Zen Chat connection for one of my conversations",
+    "chat.ws.send": "Send messages, typing and read signals over the live connection"
   },
   "public": {
     "api": [
@@ -148,10 +154,17 @@
         "my.ratings.list",
         "my.ratings.submit",
         "my.profile.read",
-        "my.profile.update"
+        "my.profile.update",
+        "chat.threads.list",
+        "chat.messages.list",
+        "chat.messages.send",
+        "chat.messages.read",
+        "chat.ws.connect",
+        "chat.ws.send"
       ],
       "routes": [
-        "/customer/pay/:id"
+        "/customer/pay/:id",
+        "/customer/chat/:id"
       ],
       "menu": [
         {
@@ -182,9 +195,9 @@
           "id": "chat",
           "label": "Stylist Chat",
           "path": "/customer/chat",
-          "description": "Chat with the stylist assigned to your paid appointment.",
-          "task": "Task 4",
-          "status": "planned"
+          "description": "Chat with your stylist once a visit with them is scheduled: person cards, live messages, read receipts.",
+          "task": "Task 4b",
+          "status": "available"
         },
         {
           "id": "invoices",
@@ -322,10 +335,17 @@
         "stylist.earnings.read",
         "stylist.schedule.read",
         "stylist.daysoff.create",
-        "stylist.daysoff.withdraw"
+        "stylist.daysoff.withdraw",
+        "chat.threads.list",
+        "chat.messages.list",
+        "chat.messages.send",
+        "chat.messages.read",
+        "chat.ws.connect",
+        "chat.ws.send"
       ],
       "routes": [
-        "/my-appointments/:id"
+        "/my-appointments/:id",
+        "/chat/:id"
       ],
       "menu": [
         {
@@ -350,6 +370,14 @@
           "path": "/my-schedule",
           "description": "Your working hours, and days-off requests.",
           "task": "Task 4a",
+          "status": "available"
+        },
+        {
+          "id": "chat",
+          "label": "Zen Chat",
+          "path": "/chat",
+          "description": "Chat with the guests you have visits with. Phone numbers and emails are never shown.",
+          "task": "Task 4b",
           "status": "available"
         },
         {
@@ -523,5 +551,13 @@
         }
       ]
     }
-  }
+  },
+  "websocket": [
+    {
+      "path": "/api/ws/chat/:id/",
+      "connect": "chat.ws.connect",
+      "send": "chat.ws.send",
+      "description": "Zen Chat live connection for one conversation"
+    }
+  ]
 }

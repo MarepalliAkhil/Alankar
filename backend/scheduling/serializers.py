@@ -153,6 +153,7 @@ class CustomerAppointmentSerializer(_AppointmentBase):
     actions = serializers.SerializerMethodField()
     free_cancel_until = serializers.SerializerMethodField()
     amount_paid = serializers.SerializerMethodField()
+    chat_thread_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
@@ -163,7 +164,20 @@ class CustomerAppointmentSerializer(_AppointmentBase):
             "actions",
             "free_cancel_until",
             "amount_paid",
+            "chat_thread_id",
         ]
+
+    def get_chat_thread_id(self, obj: Appointment) -> str | None:
+        """The Zen Chat thread with this visit's stylist (only once the visit is scheduled)."""
+        from chat.models import Thread
+        from chat.service import ELIGIBLE
+
+        if not obj.stylist_id or obj.status not in ELIGIBLE:
+            return None
+        thread, _ = Thread.objects.get_or_create(
+            customer_id=obj.customer_id, stylist_id=obj.stylist_id
+        )
+        return str(thread.id)
 
     def get_actions(self, obj: Appointment) -> list[str]:
         return booking.customer_actions(obj)

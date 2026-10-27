@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/my/", include(my_patterns)),
     path("api/desk/", include(desk_patterns)),
     path("api/stylist/", include(stylist_patterns)),
+    path("api/chat/", include("chat.urls")),
 ]
 
 if settings.SALON_API_DOCS:

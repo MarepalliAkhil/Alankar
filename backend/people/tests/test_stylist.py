@@ -679,7 +679,7 @@ def test_a_deactivated_stylist_profile_is_not_bookable_but_history_stays(
     assert Appointment.objects.get(pk=appt_id).stylist == catalogue["asha"]
 
 
-def test_the_stylist_menu_has_the_four_pages_and_no_chat_yet():
+def test_the_stylist_menu_lists_the_day_pages_chat_and_earnings():
     import json
     from pathlib import Path
 
@@ -687,5 +687,11 @@ def test_the_stylist_menu_has_the_four_pages_and_no_chat_yet():
         (Path(__file__).resolve().parents[3] / "shared" / "policy.json").read_text()
     )
     menu = policy["roles"]["stylist"]["menu"]
-    assert [m["label"] for m in menu] == ["My Day", "My Appointments", "My Schedule", "Earnings"]
+    assert [m["label"] for m in menu] == [
+        "My Day",
+        "My Appointments",
+        "My Schedule",
+        "Zen Chat",
+        "Earnings",
+    ]
     assert all(m["status"] == "available" for m in menu)

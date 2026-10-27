@@ -51,8 +51,9 @@ describe('role policy (shared with the backend)', () => {
   });
 
   it('only customers and stylists have a chat menu; admins and receptionists never do', () => {
-    // The stylist's chat item is hidden until Zen Chat (Task 4b) is built.
-    expect(rolesForPath('/chat')).toEqual([]);
+    expect(rolesForPath('/chat')).toEqual(['stylist']);
+    expect(rolesForPath('/chat/abc')).toEqual(['stylist']);
+    expect(rolesForPath('/customer/chat/abc')).toEqual(['customer']);
     expect(rolesForPath('/customer/chat')).toEqual(['customer']);
   });
 

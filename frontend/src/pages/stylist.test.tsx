@@ -142,15 +142,14 @@ describe('stylist pages', () => {
     await waitFor(() => expect(start).toHaveBeenCalledWith('v1', expect.anything()));
   });
 
-  it('shows the stylist menu: four built items and no chat yet', async () => {
+  it('shows the stylist menu: day, appointments, schedule, chat and earnings', async () => {
     renderAt('/my-day');
     const menu = await screen.findByRole('navigation', { name: 'Stylist menu' });
-    for (const label of ['My Day', 'My Appointments', 'My Schedule', 'Earnings']) {
+    for (const label of ['My Day', 'My Appointments', 'My Schedule', 'Zen Chat', 'Earnings']) {
       expect(
         within(menu).getByRole('link', { name: new RegExp(`^${label}( Task \\d+[a-z]?)?$`) }),
       ).toBeInTheDocument();
     }
-    expect(within(menu).queryByRole('link', { name: /Chat/ })).not.toBeInTheDocument();
   });
 
   it('completes a visit with an unticked service and a note', async () => {

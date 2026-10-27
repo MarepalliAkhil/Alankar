@@ -64,6 +64,7 @@ export function AppRoutes() {
           }
         >
           <Route path="/customer/pay/:id" element={<PayPage />} />
+          <Route path="/customer/chat/:id" element={<RolePage path="/customer/chat/:id" />} />
           {paths.customer
             .filter((path) => !path.includes(':'))
             .map((path) => (

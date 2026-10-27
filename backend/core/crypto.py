@@ -40,7 +40,7 @@ def _master_key() -> bytes:
     return key
 
 
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=256)
 def _derive(master: bytes, purpose: bytes) -> bytes:
     return HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=purpose).derive(master)
 
@@ -87,3 +87,28 @@ def normalize_phone(value: str) -> str:
 
 def is_valid_indian_mobile(value: str) -> bool:
     return bool(re.fullmatch(r"[6-9]\d{9}", normalize_phone(value)))
+
+
+def thread_key(thread_id: str) -> bytes:
+    """A key for one chat thread: HKDF over the master key with the thread id as context, so a
+    message copied to another thread (or any other column) does not decrypt."""
+    return _derive(_master_key(), b"salon-chat-thread-v1:" + str(thread_id).encode())
+
+
+def encrypt_for_thread(thread_id: str, plaintext: str) -> str:
+    nonce = os.urandom(12)
+    aad = f"chat.message:{thread_id}".encode()
+    sealed = AESGCM(thread_key(thread_id)).encrypt(nonce, plaintext.encode("utf-8"), aad)
+    return PREFIX + base64.urlsafe_b64encode(nonce + sealed).decode("ascii")
+
+
+def decrypt_for_thread(thread_id: str, token: str) -> str:
+    if not token.startswith(PREFIX):
+        raise DecryptionError("Unknown ciphertext format")
+    try:
+        blob = base64.urlsafe_b64decode(token[len(PREFIX) :])
+        aad = f"chat.message:{thread_id}".encode()
+        plain = AESGCM(thread_key(thread_id)).decrypt(blob[:12], blob[12:], aad)
+    except (InvalidTag, ValueError) as exc:
+        raise DecryptionError("Ciphertext could not be decrypted") from exc
+    return plain.decode("utf-8")

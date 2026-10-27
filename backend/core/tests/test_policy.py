@@ -60,6 +60,10 @@ def test_every_policy_action_is_used_by_a_view():
         for method in ("GET", "POST", "PUT", "PATCH", "DELETE"):
             if hasattr(cls, method.lower()):
                 used.add(view_action(cls, method))
+    # Actions used only by WebSocket consumers (checked in chat/tests/test_chat.py).
+    used |= {
+        w[key] for w in policy.load_policy().get("websocket", []) for key in ("connect", "send")
+    }
     assert policy.known_actions() == used
 
 

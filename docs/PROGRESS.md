@@ -9,7 +9,12 @@
   Sandbox: pytest all passed (45 new stylist tests), ruff clean, vitest 171 passed, eslint,
   typecheck, prettier clean (the production build could not run in the sandbox: run
   `npm run build`).
-- Next: Task 4b (Zen Chat) only after the owner says 4a "passed".
+- Task 4a: DONE. Verified on the owner's PC (2026-10-27).
+- Task 4b (Zen Chat): IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate,
+  pytest, npm test, walkthrough below). Sandbox: pytest all passed (25 new chat tests incl.
+  WebSockets), ruff clean, vitest 192 passed, eslint, typecheck, prettier clean (the production
+  build could not run in the sandbox: please run `npm run build`).
+- Next: Task 5 (admin slice).
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -378,6 +383,48 @@
 7. My Schedule: ask for days off over a day with a visit: you see the visit and are told to ask
    reception to reschedule first. Pick a free day: the request is sent; Withdraw works.
 8. Customer, receptionist and admin cannot open /my-day (403 page).
+
+## Task 4b: decisions
+- One thread per customer-stylist pair (history kept; each message is tagged with the visit it was
+  sent about). A thread appears once a visit between them is scheduled or later (paid), stays open
+  while a visit is scheduled / checked in / in progress, and turns read-only 7 days after the last
+  completed visit. A new scheduled visit reopens the same thread. Cancelled, rejected, unpaid or
+  expired visits never open a thread.
+- Receptionist and admin have no chat access anywhere: policy denies every chat API action, and the
+  WebSocket refuses their connection (tested). A thread that is not yours is a plain 404.
+- Live: Django Channels (Daphne). The socket is `/api/ws/chat/<thread id>/` (under /api/ so the
+  httpOnly sign-in cookie is sent; no token in the URL). The browser Origin must match
+  ALLOWED_HOSTS. Membership, the thread state and the account's active flag are re-checked on
+  connect AND on every message, typing signal and read receipt. Refused sockets close with 4403.
+- Sent / delivered / read ticks, typing indicator, automatic reconnect with backoff (missed messages
+  are re-fetched), and a REST fallback for sending while the socket is down.
+- Messages are AES-256-GCM encrypted at rest with a key derived per thread (HKDF over the master
+  key with the thread id), bound to the thread by the GCM associated data. Message text is never
+  logged (tested). Plain text only: control characters removed, max 1000 characters, 20 messages
+  per minute per account; the screen shows text escaped (no markup is ever interpreted).
+- Policy: new actions chat.threads.list / messages.list / messages.send / messages.read and
+  chat.ws.connect / chat.ws.send, granted to customer and stylist only; a new `websocket` section
+  in shared/policy.json lists the WebSocket route (a test checks it against config/asgi.py).
+- UI: person cards (avatar, first name for guests, appointment chip, last message, unread badge)
+  under stylist menu "Zen Chat" (/chat) and customer "Stylist Chat" (/customer/chat), plus a
+  "Message <stylist>" link on My Appointments cards.
+- Single-process dev uses the in-memory channel layer. For deployment (Task 9) switch
+  CHANNEL_LAYERS to Redis so several workers share messages.
+- Open question left as agreed: true end-to-end encryption (server cannot read) is a later add-on.
+
+## Task 4b: owner browser walkthrough (to verify on the PC)
+1. Backend: `python manage.py migrate`, restart `python manage.py runserver` (it serves WebSockets
+   through Daphne). Frontend: `npm run dev`.
+2. Have a paid, scheduled visit between a customer and your linked stylist (as in the 4a walkthrough).
+3. Customer (browser 1): My Appointments shows "Message <stylist>". Open it, send a message.
+4. Stylist (browser 2, another profile or private window): Zen Chat shows a card with an unread
+   badge, the visit chip and the last message. Open it: message appears, customer sees the double tick
+   turn blue (read). Type: the other side sees "is typing…".
+5. Stop the backend for a few seconds: the badge says Reconnecting…; start it again: it goes back
+   to Live and missed messages appear.
+6. Receptionist and admin: no chat menu item, and /chat and /customer/chat show the 403 page.
+7. Closing: in the Django shell or admin, a completed visit older than 7 days makes the thread
+   read-only ("This conversation is read-only now").
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it

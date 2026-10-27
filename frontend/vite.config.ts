@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       // The role policy lives in ../shared (one file for backend and frontend).
       fs: { allow: ['.', '../shared'] },
       proxy: {
-        '/api': { target: apiTarget, changeOrigin: false },
+        '/api': { target: apiTarget, changeOrigin: false, ws: true },
       },
     },
     test: {

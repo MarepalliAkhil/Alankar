@@ -59,6 +59,7 @@ export const appointment: CustomerAppointment = {
   actions: ['cancel'],
   free_cancel_until: null,
   amount_paid: '0.00',
+  chat_thread_id: null,
 };
 
 export const awaiting: CustomerAppointment = {

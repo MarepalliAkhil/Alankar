@@ -294,6 +294,15 @@ function AppointmentCard({
         </div>
       </dl>
 
+      {appt.chat_thread_id && (
+        <Link
+          to={`/customer/chat/${appt.chat_thread_id}`}
+          className="w-fit text-sm font-semibold text-primary-hover underline"
+        >
+          Message {appt.stylist_name ?? 'your stylist'}
+        </Link>
+      )}
+
       {appt.status === 'requested' && (
         <p className="rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
           Waiting for the salon to confirm. You will get an email with a payment link.

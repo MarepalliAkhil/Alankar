@@ -94,6 +94,8 @@ export interface CustomerAppointment extends AppointmentBase {
   actions: CustomerAction[];
   free_cancel_until: string | null;
   amount_paid: string;
+  /** Zen Chat thread with this visit's stylist, once the visit is scheduled. */
+  chat_thread_id: string | null;
 }
 
 export interface PaymentState {
