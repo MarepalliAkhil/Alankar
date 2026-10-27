@@ -4,17 +4,10 @@
 - Task 3 (receptionist slice: 3a requests/schedule, 3b check-in/walk-ins/customers, 3c POS/stock/
   refunds/cash close/inventory view, 3d work sessions/idle sign-out/My Hours & Pay): DONE. Verified
   on the owner's PC (2026-10-27): tests, lint, typecheck, build and the browser walkthroughs passed.
-- Task 4a (stylist day, appointments, schedule, earnings): IMPLEMENTED in the build sandbox,
-  waiting for the owner's PC run (migrate, seed_demo, pytest, npm test, walkthrough below).
-  Sandbox: pytest all passed (45 new stylist tests), ruff clean, vitest 171 passed, eslint,
-  typecheck, prettier clean (the production build could not run in the sandbox: run
-  `npm run build`).
-- Task 4a: DONE. Verified on the owner's PC (2026-10-27).
-- Task 4b (Zen Chat): IMPLEMENTED in the build sandbox, waiting for the owner's PC run (migrate,
-  pytest, npm test, walkthrough below). Sandbox: pytest all passed (25 new chat tests incl.
-  WebSockets), ruff clean, vitest 192 passed, eslint, typecheck, prettier clean (the production
-  build could not run in the sandbox: please run `npm run build`).
-- Next: Task 5 (admin slice).
+- Task 4 (stylist slice 4a, Zen Chat 4b): DONE. Verified on the owner's PC (2026-10-27): tests,
+  lint, typecheck, build and the browser walkthroughs passed. Sandbox at hand-off: pytest all
+  passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
+- Next: Task 5 (admin slice 5a to 5d). Plan awaiting the owner's OK.
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
