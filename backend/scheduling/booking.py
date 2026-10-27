@@ -134,14 +134,18 @@ def latest_day() -> date:
     return local(timezone.now()).date() + timedelta(days=booking_settings()["max_days_ahead"])
 
 
-def grid_starts(day: date, minutes: int) -> list[datetime]:
-    """Every start on the slot grid that fits inside opening hours and is far enough ahead."""
+def grid_starts(day: date, minutes: int, *, staff: bool = False) -> list[datetime]:
+    """Every start on the slot grid that fits inside opening hours and is far enough ahead.
+
+    Staff (receptionist, admin) may book right now and beyond the customer booking window:
+    only times in the past are excluded for them.
+    """
     hours = opening_hours(day)
-    if hours is None or day > latest_day():
+    if hours is None or (not staff and day > latest_day()):
         return []
     step = timedelta(minutes=booking_settings()["slot_step_minutes"])
     open_at, close_at = hours
-    first = earliest_start()
+    first = timezone.now() if staff else earliest_start()
     starts, cursor = [], open_at
     while cursor + timedelta(minutes=minutes) <= close_at:
         if cursor >= first:
@@ -178,10 +182,10 @@ def _free(busy: list[Appointment], start: datetime, end: datetime, *, stylist=No
 
 
 def free_starts(
-    day: date, minutes: int, stylist_ids: list, *, room_id=None, exclude=None
+    day: date, minutes: int, stylist_ids: list, *, room_id=None, exclude=None, staff: bool = False
 ) -> list[tuple[datetime, list]]:
     """Grid starts on `day` with the stylists free at each. With no stylists, hours only."""
-    starts = grid_starts(day, minutes)
+    starts = grid_starts(day, minutes, staff=staff)
     if not starts:
         return []
     open_at, close_at = opening_hours(day)
@@ -207,14 +211,23 @@ def free_starts(
 
 
 def nearest_slots(
-    around: datetime, minutes: int, stylist_ids: list, *, room_id=None, exclude=None, count=3
+    around: datetime,
+    minutes: int,
+    stylist_ids: list,
+    *,
+    room_id=None,
+    exclude=None,
+    count=3,
+    staff: bool = False,
 ) -> list[datetime]:
     """The `count` free starts closest to `around`, looking up to 7 days ahead."""
     found: list[datetime] = []
     first_day = max(local(around).date(), local(timezone.now()).date())
     for offset in range(8):
         day = first_day + timedelta(days=offset)
-        for start, _ in free_starts(day, minutes, stylist_ids, room_id=room_id, exclude=exclude):
+        for start, _ in free_starts(
+            day, minutes, stylist_ids, room_id=room_id, exclude=exclude, staff=staff
+        ):
             found.append(start)
         if len(found) >= count * 3:
             break
@@ -421,6 +434,53 @@ def send_payment_email(appt: Appointment, token: str) -> None:
     )
 
 
+def _place(
+    appt: Appointment, *, stylist: StylistProfile, start: datetime, room: Room | None
+) -> datetime:
+    """Checks that `appt` can sit with this stylist, room and start; returns the end time.
+
+    The caller holds the appointment row lock. The stylist (and room) rows are locked here so
+    two staff members can never place overlapping visits at the same moment. A clash raises a
+    `conflict` error carrying the three nearest free times.
+    """
+    if stylist.id not in set(qualified_stylists(appt.service).values_list("id", flat=True)):
+        raise BookingError("That stylist does not offer this service.")
+    if room is not None and not room.is_active:
+        raise BookingError("That room is not available.")
+    StylistProfile.objects.select_for_update().filter(pk=stylist.pk).first()
+    if room is not None:
+        Room.objects.select_for_update().filter(pk=room.pk).first()
+    if start <= timezone.now():
+        raise BookingError("Choose a time in the future.")
+    if start not in grid_starts(local(start).date(), appt.duration_minutes, staff=True):
+        raise BookingError("Choose one of the available times.")
+    end = start + timedelta(minutes=appt.duration_minutes)
+    busy = busy_ranges(
+        stylist_ids=[stylist.id],
+        room_ids=[room.id] if room else [],
+        day_from=start,
+        day_to=end,
+        exclude=appt,
+    )
+    if busy:
+        clash_room = room is not None and any(b.room_id == room.id for b in busy)
+        raise BookingError(
+            "That room is already booked at this time."
+            if clash_room and not any(b.stylist_id == stylist.id for b in busy)
+            else "This stylist is already booked at this time.",
+            code="conflict",
+            slots=nearest_slots(
+                start,
+                appt.duration_minutes,
+                [stylist.id],
+                room_id=room.id if room else None,
+                exclude=appt,
+                staff=True,
+            ),
+        )
+    return end
+
+
 def confirm(
     appt_id, *, actor, stylist: StylistProfile, start: datetime, room: Room | None
 ) -> Appointment:
@@ -429,40 +489,7 @@ def confirm(
         appt = Appointment.objects.select_for_update().select_related("service").get(pk=appt_id)
         if appt.status not in (S.REQUESTED, S.PAYMENT_EXPIRED):
             raise BookingError("Only new requests or expired holds can be confirmed.")
-        if stylist.id not in set(qualified_stylists(appt.service).values_list("id", flat=True)):
-            raise BookingError("That stylist does not offer this service.")
-        if room is not None and not room.is_active:
-            raise BookingError("That room is not available.")
-        # Lock the stylist (and room) rows so two confirmations cannot interleave.
-        StylistProfile.objects.select_for_update().filter(pk=stylist.pk).first()
-        if room is not None:
-            Room.objects.select_for_update().filter(pk=room.pk).first()
-        if start <= timezone.now():
-            raise BookingError("Choose a time in the future.")
-        check_bookable_time(start, appt.duration_minutes)
-        end = start + timedelta(minutes=appt.duration_minutes)
-        busy = busy_ranges(
-            stylist_ids=[stylist.id],
-            room_ids=[room.id] if room else [],
-            day_from=start,
-            day_to=end,
-            exclude=appt,
-        )
-        if busy:
-            clash_room = room is not None and any(b.room_id == room.id for b in busy)
-            raise BookingError(
-                "That room is already booked at this time."
-                if clash_room and not any(b.stylist_id == stylist.id for b in busy)
-                else "This stylist is already booked at this time.",
-                code="conflict",
-                slots=nearest_slots(
-                    start,
-                    appt.duration_minutes,
-                    [stylist.id],
-                    room_id=room.id if room else None,
-                    exclude=appt,
-                ),
-            )
+        end = _place(appt, stylist=stylist, start=start, room=room)
         previous = appt.status
         appt.stylist, appt.room, appt.start, appt.end = stylist, room, start, end
         appt.confirmed_by = actor
@@ -479,6 +506,165 @@ def confirm(
         appt.save()
         record(appt, "confirmed", actor=actor, from_status=previous)
         issue_payment_link(appt)
+    return appt
+
+
+# --------------------------------------------------------------------------- desk changes
+
+MOVABLE = (S.AWAITING_PAYMENT, S.SCHEDULED)
+CANCELLABLE = (S.AWAITING_PAYMENT, S.SCHEDULED, S.CHECKED_IN)
+
+
+def reschedule(
+    appt_id, *, actor, stylist: StylistProfile, start: datetime, room: Room | None
+) -> Appointment:
+    """Moves a held or scheduled visit to another stylist, room and/or time (same checks as
+    confirming). A held visit gets a fresh payment link for the new time."""
+    expire_due()
+    with transaction.atomic():
+        appt = Appointment.objects.select_for_update().select_related("service").get(pk=appt_id)
+        if appt.status not in MOVABLE:
+            raise BookingError("Only held or scheduled bookings can be moved.")
+        old_start = appt.start
+        if (
+            old_start == start
+            and appt.stylist_id == stylist.id
+            and appt.room_id == (room.id if room else None)
+        ):
+            raise BookingError("That is already the booking time, stylist and room.")
+        end = _place(appt, stylist=stylist, start=start, room=room)
+        appt.stylist, appt.room, appt.start, appt.end = stylist, room, start, end
+        appt.reschedule_requested = False
+        appt.reschedule_preferred = None
+        appt.reschedule_note = ""
+        note = f"{when_text(old_start)} to {when_text(start)}" if old_start else ""
+        if appt.status == S.AWAITING_PAYMENT:
+            appt.awaiting_payment_until = hold_deadline(start)
+            appt.save()
+            record(appt, "rescheduled", actor=actor, from_status=appt.status, note=note)
+            issue_payment_link(appt)
+        else:
+            appt.save()
+            record(appt, "rescheduled", actor=actor, from_status=appt.status, note=note)
+            email_customer(
+                appt, "your booking was moved", "Your booking has been moved to a new time."
+            )
+    return appt
+
+
+def _request_refunds(appt: Appointment, reason: str) -> Decimal:
+    """Asks the admin to approve refunds for online payments not yet refunded."""
+    total = Decimal("0")
+    for payment in appt.payments.filter(status=Payment.Status.SUCCEEDED):
+        if payment.refunds.exists():
+            continue
+        Refund.objects.create(
+            payment=payment,
+            amount=payment.amount,
+            status=Refund.Status.PENDING_APPROVAL,
+            reason=reason[:300],
+        )
+        total += payment.amount
+    return total
+
+
+def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
+    """The salon cancels a held or scheduled visit. Money already paid online is not returned
+    automatically: a refund request waits for the admin."""
+    expire_due()
+    with transaction.atomic():
+        appt = Appointment.objects.select_for_update().get(pk=appt_id)
+        if appt.status not in CANCELLABLE:
+            raise BookingError("Only held, scheduled or checked-in bookings can be cancelled.")
+        previous = appt.status
+        appt.status = S.CANCELLED
+        appt.cancel_reason = reason
+        appt.cancel_requested = False
+        appt.reschedule_requested = False
+        appt.reschedule_preferred = None
+        appt.reschedule_note = ""
+        appt.awaiting_payment_until = None
+        appt.save()
+        appt.payment_links.filter(status=PaymentLink.Status.ACTIVE).update(
+            status=PaymentLink.Status.CANCELLED
+        )
+        pending = _request_refunds(appt, f"Cancelled by the salon: {reason}")
+        record(appt, "cancelled_by_salon", actor=actor, from_status=previous, note=reason)
+        intro = f"We are sorry: your booking was cancelled by the salon.\nReason: {reason}"
+        if pending:
+            intro += f"\nYour online payment of Rs. {pending} will be refunded once approved."
+        email_customer(appt, "booking cancelled", intro)
+    return appt
+
+
+def mark_no_show(appt_id, *, actor) -> Appointment:
+    """A scheduled customer who never arrived. Only after the start time has passed."""
+    with transaction.atomic():
+        appt = Appointment.objects.select_for_update().get(pk=appt_id)
+        if appt.status != S.SCHEDULED:
+            raise BookingError("Only scheduled bookings can be marked as a no-show.")
+        if appt.start is None or appt.start > timezone.now():
+            raise BookingError("A booking can be marked as a no-show only after its start time.")
+        appt.status = S.NO_SHOW
+        appt.cancel_requested = False
+        appt.reschedule_requested = False
+        appt.save()
+        pending = _request_refunds(appt, "No-show: admin to decide on the online payment")
+        record(appt, "no_show", actor=actor, from_status=S.SCHEDULED)
+        intro = "We missed you at your appointment, so it was marked as a no-show."
+        if pending:
+            intro += " Please contact the salon about your online payment."
+        email_customer(appt, "we missed you", intro)
+    return appt
+
+
+def desk_actions(appt: Appointment, now: datetime | None = None) -> list[str]:
+    """Buttons the receptionist or admin may use on this appointment right now."""
+    now = now or timezone.now()
+    actions: list[str] = []
+    status = appt.status
+    if status in (S.REQUESTED, S.PAYMENT_EXPIRED):
+        actions += ["confirm", "reject"]
+    if status == S.AWAITING_PAYMENT:
+        actions.append("resend_link")
+    if status in MOVABLE:
+        actions.append("move")
+    if status in CANCELLABLE:
+        actions.append("cancel")
+    if status == S.SCHEDULED and appt.start and appt.start <= now:
+        actions.append("no_show")
+    if appt.reschedule_requested and status in MOVABLE:
+        actions.append("decline_reschedule")
+    if appt.cancel_requested and status in CANCELLABLE:
+        actions.append("decline_cancel")
+    return actions
+
+
+DISMISSABLE = {"reschedule": "reschedule_requested", "cancel": "cancel_requested"}
+
+
+def dismiss_flag(appt_id, *, actor, flag: str, note: str = "") -> Appointment:
+    """Declines a customer's reschedule or cancel request; the booking stays as it is."""
+    field = DISMISSABLE.get(flag)
+    if field is None:
+        raise BookingError("Unknown request.")
+    with transaction.atomic():
+        appt = Appointment.objects.select_for_update().get(pk=appt_id)
+        if not getattr(appt, field):
+            raise BookingError("The customer has no such request on this booking.")
+        setattr(appt, field, False)
+        if flag == "reschedule":
+            appt.reschedule_preferred = None
+            appt.reschedule_note = ""
+        appt.save()
+        record(appt, f"{flag}_declined", actor=actor, from_status=appt.status, note=note)
+        what = "reschedule" if flag == "reschedule" else "cancellation"
+        reason = f"\nNote: {note}" if note else ""
+        email_customer(
+            appt,
+            f"about your {what} request",
+            f"We could not accept your {what} request, so your booking stays as it is.{reason}",
+        )
     return appt
 
 

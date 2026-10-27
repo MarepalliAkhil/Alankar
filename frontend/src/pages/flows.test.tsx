@@ -10,7 +10,13 @@ import {
   requestPasswordReset,
 } from '../api/auth';
 import { listMailbox } from '../api/dev';
-import { createInvite, deactivateStaff, listInvites, listStaff } from '../api/staff';
+import {
+  createInvite,
+  deactivateStaff,
+  getPosSettings,
+  listInvites,
+  listStaff,
+} from '../api/staff';
 import * as publicApi from '../api/public';
 import { resendInvite } from '../api/staff';
 import { site } from '../test/fixtures';
@@ -49,6 +55,9 @@ vi.mock('../api/staff', () => ({
   deactivateStaff: vi.fn(),
   reactivateStaff: vi.fn(),
   resendInvite: vi.fn(),
+  getPosSettings: vi.fn(),
+  setPosSettings: vi.fn(),
+  setHourlyRate: vi.fn(),
 }));
 
 vi.mock('../api/public', () => ({
@@ -69,6 +78,7 @@ beforeEach(async () => {
   vi.mocked(staff.listAudit).mockResolvedValue([]);
   vi.mocked(listInvites).mockResolvedValue([]);
   vi.mocked(listStaff).mockResolvedValue([]);
+  vi.mocked(getPosSettings).mockResolvedValue({ discount_cap_percent: 20 });
   vi.mocked(publicApi.getSite).mockResolvedValue(site);
   vi.mocked(publicApi.getTeam).mockResolvedValue([]);
 });
@@ -247,6 +257,7 @@ describe('admin staff page', () => {
       is_active: true,
       status: 'active' as const,
       date_joined: '2026-10-01T10:00:00Z',
+      hourly_rate: null,
     };
     vi.mocked(listStaff).mockResolvedValue([member]);
     vi.mocked(deactivateStaff).mockResolvedValue({

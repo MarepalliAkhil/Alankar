@@ -11,6 +11,8 @@ export interface StaffMember {
   is_active: boolean;
   status: 'active' | 'invited' | 'deactivated';
   date_joined: string;
+  /** INR per hour; set for receptionists only. */
+  hourly_rate: string | null;
 }
 
 export interface StaffInvite {
@@ -81,5 +83,24 @@ export async function reactivateStaff(id: string): Promise<StaffMember> {
 
 export async function listAudit(): Promise<AuditEntry[]> {
   const { data } = await api.get<AuditEntry[]>('/audit/');
+  return data;
+}
+
+export async function setHourlyRate(id: string, hourlyRate: string | null): Promise<StaffMember> {
+  const { data } = await api.patch<StaffMember>(`/staff/${id}/pay/`, { hourly_rate: hourlyRate });
+  return data;
+}
+
+export interface PosSettings {
+  discount_cap_percent: number;
+}
+
+export async function getPosSettings(): Promise<PosSettings> {
+  const { data } = await api.get<PosSettings>('/settings/pos/');
+  return data;
+}
+
+export async function setPosSettings(settings: PosSettings): Promise<PosSettings> {
+  const { data } = await api.patch<PosSettings>('/settings/pos/', settings);
   return data;
 }

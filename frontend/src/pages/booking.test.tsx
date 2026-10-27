@@ -320,7 +320,14 @@ describe('profile', () => {
 });
 
 describe('desk appointments (receptionist and admin)', () => {
-  const counts = { requested: 1, awaiting_payment: 0, payment_expired: 0, scheduled: 0, closed: 0 };
+  const counts = {
+    requested: 1,
+    awaiting_payment: 0,
+    payment_expired: 0,
+    scheduled: 0,
+    flags: 0,
+    closed: 0,
+  };
 
   beforeEach(() => {
     vi.mocked(getSession).mockResolvedValue(userFor('receptionist'));

@@ -44,3 +44,12 @@ def booking_settings() -> dict:
         **(stored.get("weekly_hours") or {}),
     }
     return merged
+
+
+# Billing rules for the POS (admin-editable). Stored under SiteContent key "pos".
+POS_DEFAULTS = {"discount_cap_percent": 20}
+
+
+def pos_settings() -> dict:
+    stored = content("pos", {}) or {}
+    return {**POS_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}

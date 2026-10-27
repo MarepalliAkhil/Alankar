@@ -49,7 +49,15 @@
     "desk.appointments.read": "Read one appointment with confirm options",
     "desk.appointments.confirm": "Confirm a request (stylist, time, room) and send a payment link",
     "desk.appointments.reject": "Reject a request with a reason",
-    "desk.appointments.resend_link": "Send a fresh payment link"
+    "desk.appointments.resend_link": "Send a fresh payment link",
+    "desk.appointments.move": "Move a held or scheduled booking to another stylist, room or time",
+    "desk.appointments.cancel": "Cancel a held, scheduled or checked-in booking (reason required)",
+    "desk.appointments.no_show": "Mark a scheduled booking as a no-show after its start time",
+    "desk.appointments.dismiss": "Decline a customer's reschedule or cancel request",
+    "desk.schedule.read": "Read one day of the schedule by stylist and room",
+    "staff.pay.update": "Set a receptionist's hourly rate",
+    "settings.pos.read": "Read billing settings (discount cap)",
+    "settings.pos.update": "Change billing settings (discount cap)"
   },
   "public": {
     "api": [
@@ -177,7 +185,13 @@
         "desk.appointments.read",
         "desk.appointments.confirm",
         "desk.appointments.reject",
-        "desk.appointments.resend_link"
+        "desk.appointments.resend_link",
+        "desk.appointments.move",
+        "desk.appointments.cancel",
+        "desk.appointments.no_show",
+        "desk.appointments.dismiss",
+        "desk.schedule.read",
+        "settings.pos.read"
       ],
       "routes": [],
       "menu": [
@@ -185,65 +199,25 @@
           "id": "dashboard",
           "label": "Dashboard",
           "path": "/dashboard",
-          "description": "Your overview. Live request and check-in numbers arrive in Task 3.",
-          "task": "Task 3",
+          "description": "Today at the desk: new requests, held slots and customer requests that need you.",
+          "task": "Task 3a",
           "status": "available"
         },
         {
           "id": "appointments",
           "label": "Appointments",
           "path": "/appointments",
-          "description": "Booking requests: confirm with stylist, time and room, or reject. Full cards and schedule arrive in Task 3.",
-          "task": "Task 2b",
+          "description": "Booking requests as cards: confirm with stylist, time and room, reject, move, cancel, or mark a no-show.",
+          "task": "Task 3a",
           "status": "available"
         },
         {
           "id": "schedule",
           "label": "Schedule",
           "path": "/schedule",
-          "description": "Drag-and-drop day schedule by stylist and room.",
-          "task": "Task 3",
-          "status": "planned"
-        },
-        {
-          "id": "customers",
-          "label": "Customers",
-          "path": "/customers",
-          "description": "Search, register and edit customer records.",
-          "task": "Task 3",
-          "status": "planned"
-        },
-        {
-          "id": "pos",
-          "label": "POS / Billing",
-          "path": "/pos",
-          "description": "Checkout: invoice, payment, tip and receipt.",
-          "task": "Task 3",
-          "status": "planned"
-        },
-        {
-          "id": "cash-close",
-          "label": "Cash Close",
-          "path": "/cash-close",
-          "description": "End-of-day cash count against expected totals.",
-          "task": "Task 3",
-          "status": "planned"
-        },
-        {
-          "id": "inventory",
-          "label": "Inventory",
-          "path": "/inventory",
-          "description": "View stock levels and raise reorder requests.",
-          "task": "Task 5",
-          "status": "planned"
-        },
-        {
-          "id": "my-hours",
-          "label": "My Hours & Pay",
-          "path": "/my-hours",
-          "description": "Your work sessions, hours and payslips.",
-          "task": "Task 6",
-          "status": "planned"
+          "description": "Day schedule by stylist and room. Drag a visit to move it, or use Move to.",
+          "task": "Task 3a",
+          "status": "available"
         }
       ]
     },
@@ -315,7 +289,15 @@
         "desk.appointments.read",
         "desk.appointments.confirm",
         "desk.appointments.reject",
-        "desk.appointments.resend_link"
+        "desk.appointments.resend_link",
+        "desk.appointments.move",
+        "desk.appointments.cancel",
+        "desk.appointments.no_show",
+        "desk.appointments.dismiss",
+        "desk.schedule.read",
+        "staff.pay.update",
+        "settings.pos.read",
+        "settings.pos.update"
       ],
       "routes": [],
       "menu": [
@@ -339,9 +321,9 @@
           "id": "schedule",
           "label": "Schedule",
           "path": "/schedule",
-          "description": "Drag-and-drop day schedule by stylist and room.",
-          "task": "Task 3",
-          "status": "planned"
+          "description": "Day schedule by stylist and room. Drag a visit to move it, or use Move to.",
+          "task": "Task 3a",
+          "status": "available"
         },
         {
           "id": "customers",

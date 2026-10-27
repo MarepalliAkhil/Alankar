@@ -1,5 +1,6 @@
 import { ArrowRight, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { DeskSummary } from '../../components/desk/DeskSummary';
 import { RatingPrompt } from '../../components/booking/RatingPrompt';
 import { PageHeader } from '../../components/layout/PageContainer';
 import { Badge, ButtonLink, Card } from '../../components/ui';
@@ -31,6 +32,8 @@ export default function RoleHomePage() {
       />
 
       {user.role === 'customer' && <RatingPrompt />}
+
+      {(user.role === 'receptionist' || user.role === 'admin') && <DeskSummary />}
 
       {user.role === 'admin' && (
         <Card className="flex flex-col gap-md sm:flex-row sm:items-center sm:justify-between">

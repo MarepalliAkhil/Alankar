@@ -2,28 +2,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Inbox } from 'lucide-react';
 import { useState } from 'react';
 import { genericErrorMessage } from '../../api/auth-messages';
-import { conflictSlots } from '../../api/booking';
-import { classifyError } from '../../api/client';
 import {
-  confirmRequest,
-  getConfirmOptions,
+  declineRequest,
   listDeskAppointments,
+  markNoShow,
   rejectRequest,
   resendPaymentLink,
+  type DeskAction,
   type DeskAppointment,
   type DeskFilter,
 } from '../../api/desk';
-import { SlotPicker } from '../../components/booking/SlotPicker';
+import { CancelModal } from '../../components/desk/CancelModal';
+import { PlacementDrawer } from '../../components/desk/PlacementDrawer';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
   Card,
-  Drawer,
   EmptyState,
   ErrorState,
   LoadingState,
   Modal,
-  Select,
   StatusBadge,
   Tabs,
   Textarea,
@@ -31,37 +29,34 @@ import {
   type TabItem,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import {
-  formatDateTime,
-  formatDay,
-  formatDuration,
-  formatINR,
-  SHOP_TIME_ZONE,
-} from '../../lib/format';
+import { formatDateTime, formatDuration, formatINR } from '../../lib/format';
 
 const tabLabels: Record<DeskFilter, string> = {
   requested: 'New requests',
   awaiting_payment: 'Awaiting payment',
   payment_expired: 'Payment expired',
   scheduled: 'Scheduled',
+  flags: 'Customer requests',
   closed: 'Closed',
 };
 const filters = Object.keys(tabLabels) as DeskFilter[];
 
-const shopDay = (iso: string) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: SHOP_TIME_ZONE }).format(new Date(iso));
-
 /**
- * Receptionist and admin: booking requests as cards, with confirm (stylist, time, room) and
- * reject. The full request cards and schedule board arrive in Task 3.
+ * Receptionist and admin: booking requests and appointments as cards. Confirm or reject new
+ * requests, move or cancel held and scheduled visits, mark no-shows, and answer customers who
+ * asked to reschedule or cancel.
  */
 export default function DeskAppointmentsPage() {
   useDocumentTitle('Appointments');
   const toast = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<DeskFilter>('requested');
-  const [confirming, setConfirming] = useState<DeskAppointment | null>(null);
+  const [placing, setPlacing] = useState<{
+    appt: DeskAppointment;
+    mode: 'confirm' | 'move';
+  } | null>(null);
   const [rejecting, setRejecting] = useState<DeskAppointment | null>(null);
+  const [cancelling, setCancelling] = useState<DeskAppointment | null>(null);
 
   const list = useQuery({
     queryKey: ['desk-appointments', filter],
@@ -79,6 +74,39 @@ export default function DeskAppointmentsPage() {
       toast.show({
         tone: 'danger',
         title: 'Link not sent',
+        description: genericErrorMessage(error, 'Please try again.'),
+      }),
+  });
+
+  const noShow = useMutation({
+    mutationFn: (id: string) => markNoShow(id),
+    onSuccess: () => {
+      refresh();
+      toast.show({ tone: 'success', title: 'Marked as no-show' });
+    },
+    onError: (error) =>
+      toast.show({
+        tone: 'danger',
+        title: 'Not changed',
+        description: genericErrorMessage(error, 'Please try again.'),
+      }),
+  });
+
+  const decline = useMutation({
+    mutationFn: (input: { id: string; flag: 'reschedule' | 'cancel' }) =>
+      declineRequest(input.id, input.flag),
+    onSuccess: () => {
+      refresh();
+      toast.show({
+        tone: 'success',
+        title: 'Request declined',
+        description: 'The booking stays as it is. The customer was emailed.',
+      });
+    },
+    onError: (error) =>
+      toast.show({
+        tone: 'danger',
+        title: 'Not changed',
         description: genericErrorMessage(error, 'Please try again.'),
       }),
   });
@@ -122,10 +150,19 @@ export default function DeskAppointmentsPage() {
               <li key={appt.id}>
                 <RequestCard
                   appt={appt}
-                  busy={resend.isPending}
-                  onConfirm={() => setConfirming(appt)}
-                  onReject={() => setRejecting(appt)}
-                  onResend={() => resend.mutate(appt.id)}
+                  busy={resend.isPending || noShow.isPending || decline.isPending}
+                  onAct={(action) => {
+                    if (action === 'confirm') setPlacing({ appt, mode: 'confirm' });
+                    else if (action === 'move') setPlacing({ appt, mode: 'move' });
+                    else if (action === 'reject') setRejecting(appt);
+                    else if (action === 'cancel') setCancelling(appt);
+                    else if (action === 'resend_link') resend.mutate(appt.id);
+                    else if (action === 'no_show') noShow.mutate(appt.id);
+                    else if (action === 'decline_reschedule')
+                      decline.mutate({ id: appt.id, flag: 'reschedule' });
+                    else if (action === 'decline_cancel')
+                      decline.mutate({ id: appt.id, flag: 'cancel' });
+                  }}
                 />
               </li>
             ))}
@@ -133,12 +170,23 @@ export default function DeskAppointmentsPage() {
         )}
       </div>
 
-      {confirming && (
-        <ConfirmDrawer
-          appt={confirming}
-          onClose={() => setConfirming(null)}
+      {placing && (
+        <PlacementDrawer
+          appt={placing.appt}
+          mode={placing.mode}
+          onClose={() => setPlacing(null)}
           onDone={() => {
-            setConfirming(null);
+            setPlacing(null);
+            refresh();
+          }}
+        />
+      )}
+      {cancelling && (
+        <CancelModal
+          appt={cancelling}
+          onClose={() => setCancelling(null)}
+          onDone={() => {
+            setCancelling(null);
             refresh();
           }}
         />
@@ -160,15 +208,11 @@ export default function DeskAppointmentsPage() {
 function RequestCard({
   appt,
   busy,
-  onConfirm,
-  onReject,
-  onResend,
+  onAct,
 }: {
   appt: DeskAppointment;
   busy: boolean;
-  onConfirm: () => void;
-  onReject: () => void;
-  onResend: () => void;
+  onAct: (action: DeskAction) => void;
 }) {
   const can = (action: DeskAppointment['actions'][number]) => appt.actions.includes(action);
   return (
@@ -247,177 +291,57 @@ function RequestCard({
       )}
       <div className="mt-auto flex flex-wrap gap-sm">
         {can('confirm') && (
-          <Button size="sm" onClick={onConfirm}>
+          <Button size="sm" onClick={() => onAct('confirm')}>
             {appt.status === 'payment_expired' ? 'Confirm again' : 'Confirm'}
           </Button>
         )}
         {can('reject') && (
-          <Button size="sm" variant="ghost" onClick={onReject}>
+          <Button size="sm" variant="ghost" onClick={() => onAct('reject')}>
             Reject
           </Button>
         )}
         {can('resend_link') && (
-          <Button size="sm" variant="secondary" disabled={busy} onClick={onResend}>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => onAct('resend_link')}
+          >
             Resend payment link
+          </Button>
+        )}
+        {can('move') && (
+          <Button size="sm" variant="secondary" onClick={() => onAct('move')}>
+            Move to…
+          </Button>
+        )}
+        {can('decline_reschedule') && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => onAct('decline_reschedule')}
+          >
+            Decline reschedule
+          </Button>
+        )}
+        {can('decline_cancel') && (
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onAct('decline_cancel')}>
+            Decline cancel request
+          </Button>
+        )}
+        {can('no_show') && (
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onAct('no_show')}>
+            Mark no-show
+          </Button>
+        )}
+        {can('cancel') && (
+          <Button size="sm" variant="ghost" onClick={() => onAct('cancel')}>
+            Cancel booking
           </Button>
         )}
       </div>
     </Card>
-  );
-}
-
-function ConfirmDrawer({
-  appt,
-  onClose,
-  onDone,
-}: {
-  appt: DeskAppointment;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const toast = useToast();
-  const [date, setDate] = useState(shopDay(appt.preferred_start));
-  const [stylist, setStylist] = useState(appt.preferred_stylist_id ?? '');
-  const [room, setRoom] = useState('');
-  const [start, setStart] = useState('');
-  const [problem, setProblem] = useState('');
-  const [nearest, setNearest] = useState<string[]>([]);
-
-  const options = useQuery({
-    queryKey: ['desk-options', appt.id, date, stylist, room],
-    queryFn: () => getConfirmOptions(appt.id, { date, stylist, room }),
-  });
-
-  const confirm = useMutation({
-    mutationFn: () => confirmRequest(appt.id, { stylist, start, room: room || null }),
-    onSuccess: (done) => {
-      toast.show({
-        tone: 'success',
-        title: 'Confirmed',
-        description: `Payment link emailed to ${done.customer_email}.`,
-      });
-      onDone();
-    },
-    onError: (error) => {
-      const slots = conflictSlots(error);
-      if (slots.length || classifyError(error) === 'conflict') {
-        setNearest(slots);
-        setStart('');
-        void options.refetch();
-      }
-      setProblem(genericErrorMessage(error, 'Could not confirm. Please try again.'));
-    },
-  });
-
-  const submit = () => {
-    setProblem('');
-    if (!stylist) return setProblem('Choose a stylist.');
-    if (!start) return setProblem('Choose a start time.');
-    confirm.mutate();
-  };
-
-  const data = options.data;
-  return (
-    <Drawer
-      open
-      onClose={onClose}
-      title="Confirm booking"
-      description={`${appt.service_name} for ${appt.customer_name} · ${formatDuration(appt.duration_minutes)}`}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-          <Button loading={confirm.isPending} onClick={submit}>
-            Confirm and send payment link
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-md">
-        <p className="text-sm text-text-muted">
-          Customer asked for {formatDateTime(appt.preferred_start)}
-          {appt.preferred_stylist_name ? ` with ${appt.preferred_stylist_name}` : ''}.
-        </p>
-        <Select
-          label="Stylist"
-          required
-          placeholder="Choose a stylist"
-          value={stylist}
-          onChange={(event) => {
-            setStylist(event.target.value);
-            setStart('');
-          }}
-          options={(data?.stylists ?? []).map((s) => ({
-            value: s.id,
-            label: `${s.display_name}${s.preferred ? ' (requested)' : ''}${s.free_at_preferred ? '' : ' · busy at requested time'}`,
-          }))}
-        />
-        <Select
-          label="Room (optional)"
-          placeholder="No room"
-          value={room}
-          onChange={(event) => {
-            setRoom(event.target.value);
-            setStart('');
-          }}
-          options={(data?.rooms ?? []).map((r) => ({ value: r.id, label: r.name }))}
-        />
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirm-date" className="text-sm font-medium text-text">
-            Date <span aria-hidden="true">*</span>
-          </label>
-          <input
-            id="confirm-date"
-            type="date"
-            required
-            value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
-              setStart('');
-            }}
-            className="h-11 w-full rounded-input border border-border bg-surface px-4 text-sm text-text focus-visible:shadow-focus focus-visible:outline-none"
-          />
-          <p className="text-xs text-text-muted">{date ? formatDay(date) : ''}</p>
-        </div>
-        {nearest.length > 0 && (
-          <div className="rounded-nested bg-warning-soft p-md">
-            <SlotPicker
-              label="Nearest free times"
-              slots={nearest}
-              value={start}
-              onChange={(iso) => {
-                setStart(iso);
-                setDate(shopDay(iso));
-              }}
-              format={formatDateTime}
-            />
-          </div>
-        )}
-        {options.isPending ? (
-          <LoadingState label="Finding free times…" lines={2} />
-        ) : options.isError ? (
-          <ErrorState
-            description="We couldn't load the free times."
-            onRetry={() => void options.refetch()}
-          />
-        ) : data && data.slots.length === 0 ? (
-          <p className="rounded-nested bg-surface-muted p-md text-sm text-text-muted">
-            No free times on this day{stylist ? ' for this stylist' : ''}. Try another day or
-            stylist.
-          </p>
-        ) : (
-          data && (
-            <SlotPicker label="Start time" slots={data.slots} value={start} onChange={setStart} />
-          )
-        )}
-        {problem && (
-          <p role="alert" className="text-sm font-medium text-danger-text">
-            {problem}
-          </p>
-        )}
-      </div>
-    </Drawer>
   );
 }
 

@@ -99,7 +99,16 @@ class StaffSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "role", "is_active", "status", "date_joined"]
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "role",
+            "is_active",
+            "status",
+            "date_joined",
+            "hourly_rate",
+        ]
 
     def get_status(self, obj: User) -> str:
         if obj.is_active:
@@ -107,6 +116,12 @@ class StaffSerializer(serializers.ModelSerializer):
         if obj.has_usable_password():
             return "deactivated"
         return "invited"
+
+
+class StaffPaySerializer(serializers.Serializer):
+    hourly_rate = serializers.DecimalField(
+        max_digits=8, decimal_places=2, min_value=0, max_value=10000, allow_null=True
+    )
 
 
 class InviteCreateSerializer(serializers.Serializer):

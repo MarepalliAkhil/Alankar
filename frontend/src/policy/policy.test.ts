@@ -24,7 +24,8 @@ describe('role policy (shared with the backend)', () => {
     expect(canAccess('customer', '/staff')).toBe(false);
     expect(canAccess('admin', '/staff')).toBe(true);
     expect(canAccess('admin', '/cash-close')).toBe(false);
-    expect(canAccess('receptionist', '/cash-close')).toBe(true);
+    expect(canAccess('receptionist', '/schedule')).toBe(true);
+    expect(canAccess('receptionist', '/cash-close')).toBe(false);
     expect(canAccess('receptionist', '/staff')).toBe(false);
     expect(canAccess('receptionist', '/chat')).toBe(false);
     expect(canAccess('stylist', '/my-day')).toBe(true);

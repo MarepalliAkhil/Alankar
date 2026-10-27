@@ -7,7 +7,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,9 +19,12 @@ from accounts.serializers import (
     AuditLogSerializer,
     InviteCreateSerializer,
     InviteSerializer,
+    StaffPaySerializer,
     StaffSerializer,
 )
 from accounts.tokens import new_link_token, revoke_all_refresh_tokens
+from website.content import pos_settings
+from website.models import SiteContent
 
 FAILED_HINT = "Email could not be sent. Copy the link instead."
 
@@ -126,6 +129,41 @@ def _staff_member(pk) -> User:
     return get_object_or_404(User, pk=pk, role__in=User.STAFF_ROLES)
 
 
+class StaffPayView(APIView):
+    """The admin sets a receptionist's hourly rate (used for My Hours & Pay and payroll)."""
+
+    policy_action = "staff.pay.update"
+
+    @extend_schema(
+        summary="Set a receptionist's hourly rate",
+        request=StaffPaySerializer,
+        responses=StaffSerializer,
+    )
+    def patch(self, request: Request, pk) -> Response:
+        member = _staff_member(pk)
+        if member.role != User.Role.RECEPTIONIST:
+            return Response(
+                {"detail": "An hourly rate applies to receptionists only."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        body = StaffPaySerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        new_rate = body.validated_data["hourly_rate"]
+        old_rate = member.hourly_rate
+        if new_rate != old_rate:
+            member.hourly_rate = new_rate
+            member.save(update_fields=["hourly_rate"])
+            audit(
+                AuditLog.Action.STAFF_RATE_CHANGED,
+                request=request,
+                actor=request.user,
+                target=member,
+                old=str(old_rate) if old_rate is not None else None,
+                new=str(new_rate) if new_rate is not None else None,
+            )
+        return Response(StaffSerializer(member).data)
+
+
 class StaffDeactivateView(APIView):
     policy_action = "staff.deactivate"
 
@@ -176,3 +214,34 @@ class AuditLogListView(APIView):
     def get(self, request: Request) -> Response:
         entries = AuditLog.objects.select_related("actor")[:100]
         return Response(AuditLogSerializer(entries, many=True).data)
+
+
+class PosSettingsSerializer(serializers.Serializer):
+    discount_cap_percent = serializers.IntegerField(min_value=0, max_value=100)
+
+
+class PosSettingsView(APIView):
+    """Billing rules. The receptionist reads the discount cap; only the admin changes it."""
+
+    policy_actions = {"GET": "settings.pos.read", "PATCH": "settings.pos.update"}
+
+    @extend_schema(summary="Billing settings", responses=PosSettingsSerializer)
+    def get(self, request: Request) -> Response:
+        return Response(PosSettingsSerializer(pos_settings()).data)
+
+    @extend_schema(summary="Change billing settings", request=PosSettingsSerializer)
+    def patch(self, request: Request) -> Response:
+        body = PosSettingsSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        old = pos_settings()
+        new = {**old, **body.validated_data}
+        if new != old:
+            SiteContent.objects.update_or_create(key="pos", defaults={"value": new})
+            audit(
+                AuditLog.Action.POS_SETTINGS_CHANGED,
+                request=request,
+                actor=request.user,
+                old=old,
+                new=new,
+            )
+        return Response(PosSettingsSerializer(pos_settings()).data)

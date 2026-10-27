@@ -31,6 +31,7 @@ staff_patterns = [
         staff_views.InviteResendView.as_view(),
         name="staff-invite-resend",
     ),
+    path("<uuid:pk>/pay/", staff_views.StaffPayView.as_view(), name="staff-pay"),
     path(
         "<uuid:pk>/deactivate/", staff_views.StaffDeactivateView.as_view(), name="staff-deactivate"
     ),

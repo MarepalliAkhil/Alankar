@@ -59,6 +59,15 @@ class RejectSerializer(serializers.Serializer):
     reason = serializers.CharField(min_length=3, max_length=300, trim_whitespace=True)
 
 
+class DeskCancelSerializer(serializers.Serializer):
+    reason = serializers.CharField(min_length=3, max_length=300, trim_whitespace=True)
+
+
+class DismissSerializer(serializers.Serializer):
+    flag = serializers.ChoiceField(choices=["reschedule", "cancel"])
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
 class CancelSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
 
@@ -188,15 +197,43 @@ class DeskAppointmentSerializer(_AppointmentBase):
         ]
 
     def get_actions(self, obj: Appointment) -> list[str]:
-        S = booking.S
-        if obj.status in (S.REQUESTED, S.PAYMENT_EXPIRED):
-            return ["confirm", "reject"]
-        if obj.status == S.AWAITING_PAYMENT:
-            return ["resend_link"]
-        return []
+        return booking.desk_actions(obj)
 
 
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = ["id", "name", "division"]
+
+
+class ScheduleItemSerializer(serializers.ModelSerializer):
+    """One block on the day board. No contact details, notes or allergies."""
+
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    customer_name = serializers.CharField(source="contact_name", read_only=True)
+    stylist_id = serializers.UUIDField(read_only=True)
+    room_id = serializers.UUIDField(read_only=True)
+    actions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "id",
+            "status",
+            "status_label",
+            "service_name",
+            "customer_name",
+            "stylist_id",
+            "room_id",
+            "start",
+            "end",
+            "duration_minutes",
+            "arrived_at",
+            "reschedule_requested",
+            "cancel_requested",
+            "source",
+            "actions",
+        ]
+
+    def get_actions(self, obj: Appointment) -> list[str]:
+        return booking.desk_actions(obj)

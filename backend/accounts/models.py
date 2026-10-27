@@ -24,6 +24,8 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     # Set the first time the customer proves they own the email with a one-time code.
     email_verified_at = models.DateTimeField(null=True, blank=True)
+    # Receptionist pay per hour in INR (set by the admin). Empty for every other role.
+    hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     STAFF_ROLES = (Role.RECEPTIONIST, Role.STYLIST)
 
@@ -48,6 +50,15 @@ class AuditLog(models.Model):
         INVITE_RESENT = "invite_resent", "Staff invite resent"
         EMAIL_FAILED = "email_failed", "Email could not be sent"
         PASSWORD_CHANGED = "password_changed", "Password changed"
+        APPOINTMENT_CONFIRMED = "appointment_confirmed", "Booking confirmed by staff"
+        APPOINTMENT_REJECTED = "appointment_rejected", "Booking request rejected"
+        APPOINTMENT_RESCHEDULED = "appointment_rescheduled", "Booking moved by staff"
+        APPOINTMENT_CANCELLED = "appointment_cancelled", "Booking cancelled by staff"
+        APPOINTMENT_NO_SHOW = "appointment_no_show", "Booking marked as no-show"
+        APPOINTMENT_FLAG_DECLINED = "appointment_flag_declined", "Customer request declined"
+        PAYMENT_LINK_RESENT = "payment_link_resent", "Payment link resent by staff"
+        STAFF_RATE_CHANGED = "staff_rate_changed", "Receptionist hourly rate changed"
+        POS_SETTINGS_CHANGED = "pos_settings_changed", "Billing settings changed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

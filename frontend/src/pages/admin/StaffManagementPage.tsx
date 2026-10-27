@@ -8,11 +8,14 @@ import { serverFieldErrors } from '../../api/client';
 import {
   createInvite,
   deactivateStaff,
+  getPosSettings,
   listAudit,
   listInvites,
   listStaff,
   reactivateStaff,
   resendInvite,
+  setHourlyRate,
+  setPosSettings,
   type StaffInvite,
   type StaffMember,
   type StaffRole,
@@ -205,6 +208,16 @@ export default function StaffManagementPage() {
     },
     { key: 'role', header: 'Role', render: (row) => roleLabel(row.role) },
     {
+      key: 'rate',
+      header: 'Hourly rate',
+      render: (row) =>
+        row.role === 'receptionist' ? (
+          <RateEditor member={row} onSaved={refreshAll} />
+        ) : (
+          <span className="text-xs text-text-muted">—</span>
+        ),
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (row) => <Badge tone={statusTone[row.status]}>{row.status}</Badge>,
@@ -365,6 +378,8 @@ export default function StaffManagementPage() {
         )}
       </section>
 
+      <BillingSettings />
+
       <section aria-labelledby="invites-title" className="flex flex-col gap-md">
         <h2 id="invites-title" className="text-lg font-semibold text-text">
           Invites
@@ -489,5 +504,106 @@ export default function StaffManagementPage() {
         </p>
       </Modal>
     </div>
+  );
+}
+
+/** A receptionist's hourly rate (INR), saved by the admin. Used for My Hours & Pay. */
+function RateEditor({ member, onSaved }: { member: StaffMember; onSaved: () => void }) {
+  const toast = useToast();
+  const [value, setValue] = useState(member.hourly_rate ?? '');
+  const [problem, setProblem] = useState('');
+  const save = useMutation({
+    mutationFn: (rate: string | null) => setHourlyRate(member.id, rate),
+    onSuccess: () => {
+      setProblem('');
+      onSaved();
+      toast.show({ tone: 'success', title: `Hourly rate saved for ${member.full_name}` });
+    },
+    onError: (error) =>
+      setProblem(genericErrorMessage(error, 'Could not save the rate. Please try again.')),
+  });
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const trimmed = value.trim();
+    if (trimmed !== '' && !/^\d{1,5}(\.\d{1,2})?$/.test(trimmed)) {
+      setProblem('Enter an amount like 180 or 180.50.');
+      return;
+    }
+    setProblem('');
+    save.mutate(trimmed === '' ? null : trimmed);
+  };
+  return (
+    <form onSubmit={submit} className="flex items-start gap-sm" noValidate>
+      <Input
+        label={`Hourly rate for ${member.full_name || member.email} (₹)`}
+        inputMode="decimal"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        error={problem || undefined}
+        className="w-28"
+      />
+      <Button type="submit" size="sm" variant="secondary" loading={save.isPending}>
+        Save rate
+      </Button>
+    </form>
+  );
+}
+
+/** The most a receptionist may discount a bill, as a percentage. */
+function BillingSettings() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const settings = useQuery({ queryKey: ['pos-settings'], queryFn: getPosSettings });
+  const [value, setValue] = useState<string | null>(null);
+  const [problem, setProblem] = useState('');
+  const save = useMutation({
+    mutationFn: (percent: number) => setPosSettings({ discount_cap_percent: percent }),
+    onSuccess: () => {
+      setValue(null);
+      void queryClient.invalidateQueries({ queryKey: ['pos-settings'] });
+      toast.show({ tone: 'success', title: 'Discount cap saved' });
+    },
+    onError: (error) => setProblem(genericErrorMessage(error, 'Could not save. Please try again.')),
+  });
+  const shown = value ?? String(settings.data?.discount_cap_percent ?? '');
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const number = Number(shown);
+    if (shown.trim() === '' || !Number.isInteger(number) || number < 0 || number > 100) {
+      setProblem('Enter a whole number from 0 to 100.');
+      return;
+    }
+    setProblem('');
+    save.mutate(number);
+  };
+  return (
+    <Card variant="dense" as="section" aria-labelledby="billing-title">
+      <h2 id="billing-title" className="text-lg font-semibold text-text">
+        Billing
+      </h2>
+      {settings.isPending ? (
+        <LoadingState label="Loading billing settings…" lines={1} />
+      ) : settings.isError ? (
+        <ErrorState
+          description="We couldn't load the billing settings."
+          onRetry={() => void settings.refetch()}
+        />
+      ) : (
+        <form onSubmit={submit} noValidate className="mt-md flex flex-wrap items-start gap-md">
+          <Input
+            label="Discount cap (%)"
+            hint="The most a receptionist can take off a bill at checkout."
+            inputMode="numeric"
+            value={shown}
+            onChange={(event) => setValue(event.target.value)}
+            error={problem || undefined}
+            className="w-28"
+          />
+          <Button type="submit" loading={save.isPending} className="mt-7">
+            Save discount cap
+          </Button>
+        </form>
+      )}
+    </Card>
   );
 }

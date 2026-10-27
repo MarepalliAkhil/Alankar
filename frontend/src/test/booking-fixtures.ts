@@ -111,3 +111,17 @@ export const deskRequest: DeskAppointment = {
   events: [],
   actions: ['confirm', 'reject'],
 };
+
+export const scheduledVisit: DeskAppointment = {
+  ...deskRequest,
+  id: 'ap2',
+  status: 'scheduled',
+  status_label: 'Scheduled',
+  stylist_name: 'Rahul',
+  stylist_id: 'st1',
+  room_name: 'Salon chair 1',
+  room_id: 'r1',
+  start: SLOT_A,
+  end: '2026-10-28T10:45:00+05:30',
+  actions: ['move', 'cancel'],
+};

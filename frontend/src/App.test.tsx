@@ -42,6 +42,9 @@ vi.mock('./api/staff', () => ({
   deactivateStaff: vi.fn(),
   reactivateStaff: vi.fn(),
   resendInvite: vi.fn(),
+  getPosSettings: vi.fn(),
+  setPosSettings: vi.fn(),
+  setHourlyRate: vi.fn(),
 }));
 
 vi.mock('./api/public', () => ({
@@ -67,6 +70,7 @@ beforeEach(() => {
   vi.mocked(staffApi.listStaff).mockResolvedValue([]);
   vi.mocked(staffApi.listInvites).mockResolvedValue([]);
   vi.mocked(staffApi.listAudit).mockResolvedValue([]);
+  vi.mocked(staffApi.getPosSettings).mockResolvedValue({ discount_cap_percent: 20 });
 });
 
 describe('public site shell', () => {
@@ -315,7 +319,7 @@ describe('login page', () => {
 
   it.each([
     ['admin', 'Staff'],
-    ['receptionist', 'Cash Close'],
+    ['receptionist', 'Schedule'],
     ['stylist', 'Earnings'],
   ] as const)('signs a %s in and opens their own dashboard', async (role, menuItem) => {
     loginMock.mockResolvedValue(userFor(role));
@@ -451,8 +455,15 @@ describe('route guards and role menus', () => {
     meMock.mockResolvedValue(userFor('receptionist'));
     renderAt('/dashboard');
     const menu = await screen.findByRole('navigation', { name: 'Receptionist menu' });
-    expect(within(menu).getByRole('link', { name: /Cash Close/ })).toBeInTheDocument();
-    expect(within(menu).getByRole('link', { name: /My Hours & Pay/ })).toBeInTheDocument();
+    // Only built pages are listed; the rest join the menu as their sub-task is finished.
+    for (const label of ['Dashboard', 'Appointments', 'Schedule']) {
+      expect(
+        within(menu).getByRole('link', { name: new RegExp(`^${label}( Task \\d+[a-z]?)?$`) }),
+      ).toBeInTheDocument();
+    }
+    for (const label of ['Cash Close', 'My Hours & Pay', 'POS / Billing', 'Customers']) {
+      expect(within(menu).queryByRole('link', { name: new RegExp(label) })).not.toBeInTheDocument();
+    }
     for (const label of ['Staff', 'Payroll', 'Settings', 'Stylist Chat']) {
       expect(
         within(menu).queryByRole('link', { name: new RegExp(`^${label}( Task \\d+)?$`) }),

@@ -3,7 +3,17 @@ import type { StylistCard } from './booking';
 import { api } from './client';
 
 export type DeskFilter =
-  'requested' | 'awaiting_payment' | 'payment_expired' | 'scheduled' | 'closed';
+  'requested' | 'awaiting_payment' | 'payment_expired' | 'scheduled' | 'flags' | 'closed';
+
+export type DeskAction =
+  | 'confirm'
+  | 'reject'
+  | 'resend_link'
+  | 'move'
+  | 'cancel'
+  | 'no_show'
+  | 'decline_reschedule'
+  | 'decline_cancel';
 
 export interface DeskEvent {
   action: string;
@@ -50,7 +60,7 @@ export interface DeskAppointment {
   source: string;
   created_at: string;
   events: DeskEvent[];
-  actions: ('confirm' | 'reject' | 'resend_link')[];
+  actions: DeskAction[];
 }
 
 export interface DeskList {
@@ -94,5 +104,77 @@ export async function rejectRequest(id: string, reason: string): Promise<DeskApp
 
 export async function resendPaymentLink(id: string): Promise<DeskAppointment> {
   const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/resend-link/`);
+  return data;
+}
+
+export interface Placement {
+  stylist: string;
+  start: string;
+  room?: string | null;
+}
+
+export async function moveAppointment(id: string, payload: Placement): Promise<DeskAppointment> {
+  const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/move/`, payload);
+  return data;
+}
+
+export async function cancelAppointment(id: string, reason: string): Promise<DeskAppointment> {
+  const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/cancel/`, { reason });
+  return data;
+}
+
+export async function markNoShow(id: string): Promise<DeskAppointment> {
+  const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/no-show/`);
+  return data;
+}
+
+export async function declineRequest(
+  id: string,
+  flag: 'reschedule' | 'cancel',
+  note = '',
+): Promise<DeskAppointment> {
+  const { data } = await api.post<DeskAppointment>(`/desk/appointments/${id}/dismiss/`, {
+    flag,
+    note,
+  });
+  return data;
+}
+
+export interface ScheduleItem {
+  id: string;
+  status: AppointmentStatus;
+  status_label: string;
+  service_name: string;
+  customer_name: string;
+  stylist_id: string | null;
+  room_id: string | null;
+  start: string;
+  end: string;
+  duration_minutes: number;
+  arrived_at: string | null;
+  reschedule_requested: boolean;
+  cancel_requested: boolean;
+  source: string;
+  actions: DeskAction[];
+}
+
+export interface ScheduleDay {
+  date: string;
+  closed: boolean;
+  open: string | null;
+  close: string | null;
+  step_minutes: number;
+  stylists: StylistCard[];
+  rooms: { id: string; name: string; division: string }[];
+  appointments: ScheduleItem[];
+}
+
+export async function getSchedule(date: string): Promise<ScheduleDay> {
+  const { data } = await api.get<ScheduleDay>('/desk/schedule/', { params: { date } });
+  return data;
+}
+
+export async function getDeskAppointment(id: string): Promise<DeskAppointment> {
+  const { data } = await api.get<DeskAppointment>(`/desk/appointments/${id}/`);
   return data;
 }

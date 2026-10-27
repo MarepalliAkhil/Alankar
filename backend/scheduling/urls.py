@@ -56,6 +56,27 @@ desk_patterns = [
         views.DeskRejectView.as_view(),
         name="desk-appointment-reject",
     ),
+    path("schedule/", views.DeskScheduleView.as_view(), name="desk-schedule"),
+    path(
+        "appointments/<uuid:pk>/move/",
+        views.DeskMoveView.as_view(),
+        name="desk-appointment-move",
+    ),
+    path(
+        "appointments/<uuid:pk>/cancel/",
+        views.DeskCancelView.as_view(),
+        name="desk-appointment-cancel",
+    ),
+    path(
+        "appointments/<uuid:pk>/no-show/",
+        views.DeskNoShowView.as_view(),
+        name="desk-appointment-no-show",
+    ),
+    path(
+        "appointments/<uuid:pk>/dismiss/",
+        views.DeskDismissView.as_view(),
+        name="desk-appointment-dismiss",
+    ),
     path(
         "appointments/<uuid:pk>/resend-link/",
         views.DeskResendLinkView.as_view(),

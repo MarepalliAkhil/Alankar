@@ -215,6 +215,34 @@
    Rate (try 2 stars without a comment: it is refused), then booking opens again.
 6. Invoices menu: the invoice with GST and prepaid amount; View and Print.
 
+## Task 3 split (owner-approved)
+3a requests and schedule; 3b check-in, walk-ins, customers; 3c POS, stock ledger, cash close;
+3d work sessions and My Hours & Pay. Each waits for the owner's "passed".
+
+## Task 3a decisions
+- Receptionist menu shows only built items (Dashboard, Appointments, Schedule); the rest return
+  as 3b to 3d are built. Admin also gets Schedule.
+- Desk actions: confirm (assign stylist, time, room; 409 plus 3 nearest slots), reject with
+  reason, resend payment link, move (scheduled or awaiting payment), cancel with reason,
+  no-show (only after the start time), dismiss customer flags. All audited.
+- Paid cancellations and no-shows create pending-approval refunds; the admin decides. Money is
+  never moved automatically.
+- Staff may book and move inside the customer lead time (only the past is excluded).
+- Schedule day view uses @dnd-kit (mouse, touch and keyboard) plus a "Move to..." button on each
+  card. Run `npm install` in frontend to fetch @dnd-kit/core.
+- Admin-only: hourly rate per receptionist (Staff page) and POS discount cap (default 20%),
+  both audited. `complete_demo_visit` stays behind SALON_DEBUG until 3c replaces it.
+- Dragging could not be exercised in the build sandbox (no npm registry); drop maths, Move to...
+  and rendering are tested. Please check real dragging in the browser.
+
+## Task 3a: owner browser walkthrough (to verify on the PC)
+1. Receptionist: Appointments shows request cards; confirm one via the drawer (stylist, time, room).
+2. Confirm a clashing time: a message plus nearest free times appear.
+3. Schedule: drag a card to another slot/stylist; also try keyboard (Space, arrows, Space) and "Move to...".
+4. Cancel with a reason (empty reason refused); mark no-show on a past visit; dismiss a customer flag.
+5. Admin Staff page: set a receptionist hourly rate and the discount cap; check the Audit entries.
+6. Dashboard shows "Today at the desk".
+
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it
   arrives in) via `PlannedPage`. Remove each one as its task is built. Status lives in
