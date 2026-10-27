@@ -64,3 +64,15 @@ export function formatDay(day: string): string {
 export function shopLocalToIso(value: string): string {
   return `${value.length === 16 ? `${value}:00` : value}${SHOP_OFFSET}`;
 }
+
+const inrExact = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** "1500.5" -> "₹1,500.50": bills and cash counts show the paise. */
+export function formatINRExact(value: string | number): string {
+  return inrExact.format(Number(value));
+}

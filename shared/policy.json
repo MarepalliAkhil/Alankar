@@ -64,7 +64,16 @@
     "desk.customers.create": "Register a customer at the desk",
     "desk.customers.read": "Read a customer with visit history and front-desk notes",
     "desk.customers.update": "Edit a customer's name, phone, allergies or preferences",
-    "desk.customers.notes": "Add a front-desk note to a customer"
+    "desk.customers.notes": "Add a front-desk note to a customer",
+    "pos.read": "Read the POS queue, a visit's checkout screen and a bill preview",
+    "pos.checkout": "Bill a visit: products, discount within the cap, loyalty points, tip, payments",
+    "pos.invoices": "List and read invoices",
+    "pos.refunds.request": "Ask for a refund on an invoice (the admin refunds directly)",
+    "pos.refunds.list": "List refunds waiting for a decision",
+    "pos.refunds.decide": "Approve or reject a refund",
+    "cash.close.read": "Read the day's takings and cash-close record",
+    "cash.close.sign": "Sign off the daily cash close",
+    "inventory.view": "View products and stock levels"
   },
   "public": {
     "api": [
@@ -205,7 +214,14 @@
         "desk.customers.create",
         "desk.customers.read",
         "desk.customers.update",
-        "desk.customers.notes"
+        "desk.customers.notes",
+        "pos.read",
+        "pos.checkout",
+        "pos.invoices",
+        "pos.refunds.request",
+        "cash.close.read",
+        "cash.close.sign",
+        "inventory.view"
       ],
       "routes": [
         "/customers/:id"
@@ -241,6 +257,30 @@
           "path": "/customers",
           "description": "Search customers, open a profile with visit history and notes, register walk-ins and book them.",
           "task": "Task 3b",
+          "status": "available"
+        },
+        {
+          "id": "pos",
+          "label": "POS / Billing",
+          "path": "/pos",
+          "description": "Bill checked-in visits: products, discount within your limit, loyalty points, tip and payment. Invoices and refund requests.",
+          "task": "Task 3c",
+          "status": "available"
+        },
+        {
+          "id": "cash-close",
+          "label": "Cash Close",
+          "path": "/cash-close",
+          "description": "Today's takings by payment method, count the cash and sign off the day.",
+          "task": "Task 3c",
+          "status": "available"
+        },
+        {
+          "id": "inventory",
+          "label": "Inventory (view)",
+          "path": "/inventory",
+          "description": "Products and stock levels, with a low-stock flag.",
+          "task": "Task 3c",
           "status": "available"
         }
       ]
@@ -328,7 +368,14 @@
         "desk.customers.create",
         "desk.customers.read",
         "desk.customers.update",
-        "desk.customers.notes"
+        "desk.customers.notes",
+        "pos.read",
+        "pos.checkout",
+        "pos.invoices",
+        "pos.refunds.request",
+        "pos.refunds.list",
+        "pos.refunds.decide",
+        "inventory.view"
       ],
       "routes": [
         "/customers/:id"
@@ -402,9 +449,9 @@
           "id": "pos",
           "label": "POS / Billing",
           "path": "/pos",
-          "description": "Checkout, refunds approval and all invoices.",
-          "task": "Task 3",
-          "status": "planned"
+          "description": "Bill visits, see all invoices, and approve or reject refunds.",
+          "task": "Task 3c",
+          "status": "available"
         },
         {
           "id": "inventory",

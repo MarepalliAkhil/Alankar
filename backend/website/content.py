@@ -47,7 +47,14 @@ def booking_settings() -> dict:
 
 
 # Billing rules for the POS (admin-editable). Stored under SiteContent key "pos".
-POS_DEFAULTS = {"discount_cap_percent": 20}
+POS_DEFAULTS = {
+    "discount_cap_percent": 20,
+    # Loyalty: points earned per Rs. 100 paid, rupees one point is worth, and the most of a bill
+    # (in percent) that points may pay for.
+    "loyalty_points_per_100": 1,
+    "loyalty_point_value": 1,
+    "loyalty_max_redeem_percent": 50,
+}
 
 
 def pos_settings() -> dict:

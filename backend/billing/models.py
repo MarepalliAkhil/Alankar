@@ -54,6 +54,13 @@ class Payment(models.Model):
     link = models.ForeignKey(
         PaymentLink, null=True, blank=True, on_delete=models.SET_NULL, related_name="payments"
     )
+    invoice = models.ForeignKey(
+        "billing.Invoice",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="payments",
+    )
     kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.PREPAYMENT)
     method = models.CharField(max_length=20, default="mock")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -69,17 +76,34 @@ class Payment(models.Model):
 
 
 class Refund(models.Model):
-    """Created automatically for a free cancellation; later cancellations need admin approval."""
+    """Money back to the customer. Never automatic for paid visits: the admin decides.
+
+    A refund is created `processed` for a free cancellation, or `pending_approval` for a late
+    cancellation, a no-show, a bill lower than the online payment, or a receptionist's request on
+    an invoice. The admin then approves (processed) or rejects it. Money movement is simulated.
+    """
 
     class Status(models.TextChoices):
         PROCESSED = "processed", "Processed"
         PENDING_APPROVAL = "pending_approval", "Waiting for admin approval"
+        REJECTED = "rejected", "Rejected"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     payment = models.ForeignKey(Payment, on_delete=models.PROTECT, related_name="refunds")
+    invoice = models.ForeignKey(
+        "billing.Invoice", null=True, blank=True, on_delete=models.PROTECT, related_name="refunds"
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=Status.choices)
     reason = models.CharField(max_length=300)
+    method = models.CharField(max_length=20, blank=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decision_note = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
 
@@ -130,6 +154,14 @@ class Invoice(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     prepaid_amount = models.DecimalField(max_digits=10, decimal_places=2)
     balance_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_reason = models.CharField(max_length=200, blank=True)
+    # Loyalty points used as part payment (1 point = Rs. 1 by default) and points earned.
+    loyalty_redeemed = models.PositiveIntegerField(default=0)
+    loyalty_earned = models.PositiveIntegerField(default=0)
+    # Goes 100% to the stylist. Not part of `total` and not taxed.
+    tip_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     issued_at = models.DateTimeField()
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -156,7 +188,16 @@ class Invoice(models.Model):
 
 class InvoiceItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    class Kind(models.TextChoices):
+        SERVICE = "service", "Service"
+        PRODUCT = "product", "Product"
+
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.SERVICE)
+    product = models.ForeignKey(
+        "inventory.Product", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
     description = models.CharField(max_length=300)
     quantity = models.PositiveSmallIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -175,3 +216,35 @@ class InvoiceItem(models.Model):
 
     def delete(self, *args, **kwargs):
         raise InvoiceError("A paid invoice cannot be changed. Use a refund to correct it.")
+
+
+class CashClose(models.Model):
+    """End-of-day cash count, signed off by the receptionist. One per business day, never edited."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business_date = models.DateField(unique=True)
+    expected_cash = models.DecimalField(max_digits=10, decimal_places=2)
+    expected_card = models.DecimalField(max_digits=10, decimal_places=2)
+    expected_upi = models.DecimalField(max_digits=10, decimal_places=2)
+    counted_cash = models.DecimalField(max_digits=10, decimal_places=2)
+    difference = models.DecimalField(max_digits=10, decimal_places=2)
+    invoice_count = models.PositiveIntegerField(default=0)
+    note = models.CharField(max_length=300, blank=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    closed_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-business_date"]
+
+    def __str__(self) -> str:
+        return f"Cash close {self.business_date}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise InvoiceError("A signed-off cash close cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise InvoiceError("A signed-off cash close cannot be deleted.")

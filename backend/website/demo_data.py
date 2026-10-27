@@ -402,3 +402,23 @@ ROOMS = [
     ("Parlor room 1", "beauty-parlor"),
     ("Parlor room 2", "beauty-parlor"),
 ]
+
+
+# Retail products sold at the counter: (sku, name, category, price incl. GST in INR, GST %,
+# opening stock, low-stock level). Stock enters through the ledger as "opening" movements.
+PRODUCTS = [
+    ("SHP-001", "Nourishing Shampoo 250 ml", "Hair care", 450, 18, 24, 6),
+    ("CND-001", "Smoothing Conditioner 250 ml", "Hair care", 480, 18, 20, 6),
+    ("SRM-001", "Argan Hair Serum 100 ml", "Hair care", 650, 18, 14, 4),
+    ("HMK-001", "Hair Mask Repair 200 g", "Hair care", 720, 18, 10, 4),
+    ("CLR-001", "Hair Colour Natural Brown", "Hair colour", 380, 18, 18, 6),
+    ("CLR-002", "Hair Colour Deep Black", "Hair colour", 380, 18, 18, 6),
+    ("FWS-001", "Gentle Face Wash 100 ml", "Skin care", 350, 18, 22, 6),
+    ("FKT-001", "Glow Facial Kit", "Skin care", 899, 18, 9, 3),
+    ("SUN-001", "Sunscreen SPF 50 60 ml", "Skin care", 550, 18, 12, 4),
+    ("MOL-001", "Relaxing Massage Oil 200 ml", "Spa", 600, 18, 11, 3),
+    ("WAX-001", "Warm Wax Cartridge", "Waxing", 420, 18, 16, 5),
+    ("NLP-001", "Nail Polish Ruby Red", "Nails", 250, 18, 25, 8),
+    ("NLP-002", "Nail Polish Nude Rose", "Nails", 250, 18, 25, 8),
+    ("CMB-001", "Wide-tooth Comb", "Accessories", 120, 12, 30, 10),
+]

@@ -4,12 +4,13 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.core.management import CommandError, call_command
+from django.core.management import call_command
 from django.test import Client
 from django.utils import timezone
 
 from billing import checkout
 from billing.models import Invoice, InvoiceError, InvoiceItem, Payment
+from billing.tests.helpers import bill
 from conftest import login
 from core.models import MailOutbox
 from people import ratings
@@ -48,7 +49,7 @@ def visit(catalogue, customer, desk):
     """A billed visit: (customer client, user, appointment id, invoice)."""
     client, user = customer
     appt_id = scheduled(client, desk[0], catalogue)
-    invoice = checkout.complete_and_invoice(appt_id)
+    invoice = bill(appt_id)
     return client, user, appt_id, invoice
 
 
@@ -59,7 +60,7 @@ def test_billing_completes_the_visit_and_writes_the_invoice(visit):
     _, user, appt_id, invoice = visit
     appt = Appointment.objects.get(pk=appt_id)
     assert appt.status == S.COMPLETED
-    assert [e.action for e in appt.events.all()][-3:] == ["checked_in", "started", "completed"]
+    assert [e.action for e in appt.events.all()][-2:] == ["started", "completed"]
     assert invoice.number == f"INV-{timezone.now().year}-00001"
     assert (invoice.total, invoice.prepaid_amount, invoice.balance_paid) == (
         Decimal("300.00"),
@@ -81,7 +82,7 @@ def test_a_part_prepayment_leaves_a_balance_paid_at_the_salon(catalogue, custome
     SiteContent.objects.create(key="booking", value={"deposit_percent": 50})
     client, _ = customer
     appt_id = scheduled(client, desk[0], catalogue)
-    invoice = checkout.complete_and_invoice(appt_id, method="upi")
+    invoice = bill(appt_id, method="upi")
     assert invoice.prepaid_amount == Decimal("150.00")
     assert invoice.balance_paid == Decimal("150.00")
     counter = Payment.objects.get(kind="checkout")
@@ -94,8 +95,8 @@ def test_invoice_numbers_count_up_without_repeating(catalogue, customer, desk):
     # Book both visits first: a billed, unrated visit blocks new booking requests.
     one = scheduled(client, desk[0], catalogue, hour=11)
     two = scheduled(client, desk[0], catalogue, hour=14)
-    first = checkout.complete_and_invoice(one)
-    second = checkout.complete_and_invoice(two)
+    first = bill(one)
+    second = bill(two)
     assert first.number.endswith("00001") and second.number.endswith("00002")
 
 
@@ -103,11 +104,11 @@ def test_only_a_scheduled_visit_with_a_stylist_can_be_billed(catalogue, customer
     client, _ = customer
     request_id = requested(client, catalogue)
     with pytest.raises(checkout.CheckoutError):
-        checkout.complete_and_invoice(request_id)  # still only a request
+        bill(request_id)  # still only a request
     appt_id = scheduled(client, desk[0], catalogue, hour=15)
-    checkout.complete_and_invoice(appt_id)
+    bill(appt_id)
     with pytest.raises(checkout.CheckoutError):
-        checkout.complete_and_invoice(appt_id)  # already billed
+        bill(appt_id)  # already billed
     assert Invoice.objects.count() == 1
 
 
@@ -305,26 +306,3 @@ def test_no_reminder_for_a_rating_already_given(visit):
 def test_reminder_command_runs(visit, capsys):
     call_command("send_rating_reminders")
     assert "0 rating reminder(s) sent" in capsys.readouterr().out
-
-
-# --------------------------------------------------------------------------- dev command
-
-
-def test_complete_demo_visit_bills_the_oldest_scheduled_visit(catalogue, customer, desk, settings):
-    settings.SALON_DEV_TOOLS = True
-    client, _ = customer
-    appt_id = scheduled(client, desk[0], catalogue)
-    call_command("complete_demo_visit")
-    assert Appointment.objects.get(pk=appt_id).status == S.COMPLETED
-    assert Invoice.objects.count() == 1 and Rating.objects.filter(status="pending").count() == 1
-    with pytest.raises(CommandError):
-        call_command("complete_demo_visit")  # nothing left to bill
-
-
-def test_complete_demo_visit_refuses_to_run_outside_debug_mode(catalogue, customer, desk, settings):
-    settings.SALON_DEV_TOOLS = False
-    client, _ = customer
-    scheduled(client, desk[0], catalogue)
-    with pytest.raises(CommandError, match="SALON_DEBUG"):
-        call_command("complete_demo_visit")
-    assert Invoice.objects.count() == 0

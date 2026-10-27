@@ -1,34 +1,45 @@
-"""Completing and billing a visit (Task 2c). Task 3's POS checkout builds on this module.
+"""Checkout at the POS (Task 3c): one atomic transaction that bills a visit.
 
-`complete_and_invoice` is the one place that turns a finished visit into a paid invoice. In one
-database transaction it: marks the appointment completed, applies the online prepayment,
-records any balance paid at the salon, writes the invoice and its items, and opens the
-customer's pending rating. The receipt email is sent after the transaction commits.
+In one database transaction `checkout` locks the visit and the products sold, checks stock,
+applies the discount (within the cap), GST, loyalty points and the online prepayment, writes the
+invoice and its items, records the payments, deducts stock through the ledger, credits the tip and
+loyalty points, opens the customer's pending rating and queues the receipt. Any failure rolls the
+whole thing back. The receipt email goes out after the transaction commits.
+
+Until the stylist slice (Task 4) exists, a checked-in visit is walked through "started" and
+"completed" here so its history stays complete; after Task 4 the stylist does those two steps.
 """
 
 from __future__ import annotations
 
 import secrets
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from billing.models import Invoice, InvoiceItem, InvoiceSequence, Payment
+from accounts.models import User
+from billing import pos
+from billing.models import Invoice, InvoiceItem, InvoiceSequence, Payment, Refund
+from billing.pos import METHODS, CheckoutError, Line, Totals, money
 from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
-from people.models import Rating
+from inventory import stock
+from inventory.models import Product, StockMovement
+from people.models import LoyaltyEntry, Rating
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus
+from website.content import pos_settings
 
 S = AppointmentStatus
-BILLABLE = (S.SCHEDULED, S.CHECKED_IN, S.IN_PROGRESS)
+BILLABLE = (S.CHECKED_IN, S.IN_PROGRESS)
 ZERO = Decimal("0")
+MAX_QUANTITY = 20
 
-
-class CheckoutError(Exception):
-    """The visit cannot be billed in its current state."""
+__all__ = ["CheckoutError", "checkout", "quote", "ready_visits"]
 
 
 def next_invoice_number(now) -> str:
@@ -47,8 +58,148 @@ def item_description(appt: Appointment) -> str:
     return text[:300]
 
 
-def complete_and_invoice(appt_id, *, actor=None, method: str = "cash") -> Invoice:
+def ready_visits():
+    """Visits waiting at the counter: guests who are checked in or being served."""
+    return (
+        Appointment.objects.filter(status__in=BILLABLE)
+        .select_related("stylist", "room", "customer")
+        .order_by("start")
+    )
+
+
+def max_discount_percent(actor) -> Decimal:
+    """Receptionists are held to the cap; the admin may go further (a reason is always needed)."""
+    if getattr(actor, "role", None) == User.Role.ADMIN:
+        return Decimal("100")
+    return Decimal(str(pos_settings()["discount_cap_percent"]))
+
+
+def points_balance(customer) -> int:
+    return LoyaltyEntry.objects.filter(customer=customer).aggregate(
+        total=Coalesce(Sum("points"), 0)
+    )["total"]
+
+
+def prepaid_amount(appt: Appointment) -> Decimal:
+    return Payment.objects.filter(
+        appointment=appt, kind=Payment.Kind.PREPAYMENT, status=Payment.Status.SUCCEEDED
+    ).aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
+
+
+def _decimal(value, label: str) -> Decimal:
+    try:
+        return Decimal(str(value if value not in (None, "") else "0"))
+    except InvalidOperation as exc:
+        raise CheckoutError(f"{label} is not a valid number.") from exc
+
+
+def _products(inputs, *, lock: bool) -> list[tuple[Product, int]]:
+    """Resolves {product, quantity} rows. With `lock`, the product rows are locked in id order."""
+    wanted: dict[str, int] = {}
+    for row in inputs or []:
+        key = str(row.get("product"))
+        qty = int(row.get("quantity") or 0)
+        if qty < 1 or qty > MAX_QUANTITY:
+            raise CheckoutError(f"Quantity must be between 1 and {MAX_QUANTITY}.")
+        wanted[key] = wanted.get(key, 0) + qty
+    if not wanted:
+        return []
+    qs = Product.objects.filter(pk__in=list(wanted), is_active=True).order_by("pk")
+    if lock:
+        qs = qs.select_for_update()
+    found = {str(p.pk): p for p in qs}
+    if set(found) != set(wanted):
+        raise CheckoutError("One of the products is not available.", code="not_found")
+    rows = []
+    for key, qty in wanted.items():
+        product = found[key]
+        have = stock.level(product)
+        if have < qty:
+            raise CheckoutError(f"Only {have} of {product.name} in stock.", code="stock")
+        rows.append((product, qty))
+    return rows
+
+
+def _build(appt: Appointment, rows, *, discount_percent, redeem_points, actor) -> Totals:
+    cap = max_discount_percent(actor)
+    if discount_percent < 0 or discount_percent > cap:
+        raise CheckoutError(f"Discount cannot be more than {cap:f}%.")
+    lines = [
+        Line(
+            kind="service",
+            description=item_description(appt),
+            quantity=1,
+            unit_price=appt.price_total,
+            amount=appt.price_total,
+            gst_included=appt.gst_amount,
+        )
+    ]
+    for product, qty in rows:
+        lines.append(
+            Line(
+                kind="product",
+                description=product.name,
+                quantity=qty,
+                unit_price=product.unit_price,
+                amount=money(product.unit_price * qty),
+                gst_percent=product.gst_percent,
+                product=product,
+            )
+        )
+    return pos.compute(
+        lines,
+        discount_percent=discount_percent,
+        prepaid=prepaid_amount(appt),
+        redeem_points=redeem_points,
+        points_available=points_balance(appt.customer),
+        rules=pos_settings(),
+    )
+
+
+def _options(data: dict):
+    discount = _decimal(data.get("discount_percent"), "Discount")
+    reason = (data.get("discount_reason") or "").strip()
+    if discount > 0 and len(reason) < 3:
+        raise CheckoutError("Give a reason for the discount.")
+    try:
+        redeem = int(data.get("redeem_points") or 0)
+    except (TypeError, ValueError) as exc:
+        raise CheckoutError("Points to use must be a whole number.") from exc
+    tip = money(_decimal(data.get("tip"), "Tip"))
+    if tip < 0:
+        raise CheckoutError("Tip cannot be negative.")
+    return discount, reason, redeem, tip
+
+
+def quote(appt_id, data: dict, *, actor) -> dict:
+    """What the bill would be. Writes nothing."""
+    appt = Appointment.objects.select_related("customer", "stylist").get(pk=appt_id)
+    if appt.status not in BILLABLE:
+        raise CheckoutError("Only a checked-in or in-progress visit can be billed.")
+    discount, _, redeem, tip = _options(data)
+    rows = _products(data.get("products"), lock=False)
+    totals = _build(appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor)
+    return {"totals": totals, "tip": tip, "points": points_balance(appt.customer)}
+
+
+def _validate_payments(payments, due: Decimal) -> list[tuple[str, Decimal]]:
+    rows = []
+    for row in payments or []:
+        method = str(row.get("method", "")).lower()
+        amount = money(_decimal(row.get("amount"), "Payment amount"))
+        if method not in METHODS:
+            raise CheckoutError("Pay by cash, card or UPI.")
+        if amount <= 0:
+            raise CheckoutError("Each payment must be more than zero.")
+        rows.append((method, amount))
+    if sum((a for _, a in rows), ZERO) != due:
+        raise CheckoutError(f"Payments must add up to Rs. {due} (the amount due plus any tip).")
+    return rows
+
+
+def checkout(appt_id, data: dict, *, actor) -> Invoice:
     now = timezone.now()
+    discount, reason, redeem, tip = _options(data)
     with transaction.atomic():
         appt = (
             Appointment.objects.select_for_update(of=("self",))
@@ -56,15 +207,14 @@ def complete_and_invoice(appt_id, *, actor=None, method: str = "cash") -> Invoic
             .get(pk=appt_id)
         )
         if appt.status not in BILLABLE:
-            raise CheckoutError("Only a scheduled, checked-in or in-progress visit can be billed.")
+            raise CheckoutError("Only a checked-in or in-progress visit can be billed.")
         if appt.stylist_id is None:
             raise CheckoutError("The visit has no stylist assigned.")
+        rows = _products(data.get("products"), lock=True)
+        t = _build(appt, rows, discount_percent=discount, redeem_points=redeem, actor=actor)
+        payments = _validate_payments(data.get("payments"), t.payable_now + tip)
+
         previous = appt.status
-        # Walk the lifecycle so the history shows every step (the real screens arrive later).
-        if previous == S.SCHEDULED:
-            appt.status = S.CHECKED_IN
-            booking.record(appt, "checked_in", actor=actor, from_status=previous)
-            previous = appt.status
         if previous == S.CHECKED_IN:
             appt.status = S.IN_PROGRESS
             booking.record(appt, "started", actor=actor, from_status=previous)
@@ -73,52 +223,119 @@ def complete_and_invoice(appt_id, *, actor=None, method: str = "cash") -> Invoic
         appt.save(update_fields=["status", "updated_at"])
         booking.record(appt, "completed", actor=actor, from_status=previous)
 
-        total = appt.price_total
-        gst = appt.gst_amount
-        prepaid = min(booking.paid_amount(appt), total)
-        balance = total - prepaid
-        if balance > ZERO:
-            Payment.objects.create(
-                appointment=appt,
-                kind=Payment.Kind.CHECKOUT,
-                method=method,
-                amount=balance,
-                status=Payment.Status.SUCCEEDED,
-                reference=f"{method[:4].upper()}-{secrets.token_hex(6).upper()}",
-            )
         invoice = Invoice.objects.create(
             number=next_invoice_number(now),
             appointment=appt,
             customer=appt.customer,
             customer_name=appt.contact_name,
             customer_email=appt.contact_email,
-            subtotal=total - gst,
-            gst_amount=gst,
-            total=total,
-            prepaid_amount=prepaid,
-            balance_paid=balance,
+            subtotal=t.subtotal,
+            gst_amount=t.gst_amount,
+            total=t.total,
+            prepaid_amount=t.prepaid_applied,
+            balance_paid=t.payable_now,
+            discount_percent=discount,
+            discount_amount=t.discount_amount,
+            discount_reason=reason if discount > 0 else "",
+            loyalty_redeemed=t.loyalty_redeemed,
+            loyalty_earned=t.loyalty_earned,
+            tip_amount=tip,
             issued_at=now,
             created_by=actor if getattr(actor, "is_authenticated", False) else None,
         )
-        InvoiceItem.objects.create(
-            invoice=invoice,
-            description=item_description(appt),
-            quantity=1,
-            unit_price=total,
-            amount=total,
-        )
+        for line in t.lines:
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                kind=line.kind,
+                product=line.product,
+                description=line.description,
+                quantity=line.quantity,
+                unit_price=line.unit_price,
+                amount=line.amount,
+            )
+            if line.product is not None:
+                stock.move(
+                    line.product,
+                    -line.quantity,
+                    StockMovement.Reason.SALE,
+                    actor=actor,
+                    invoice=invoice,
+                )
+        for method, amount in payments:
+            Payment.objects.create(
+                appointment=appt,
+                invoice=invoice,
+                kind=Payment.Kind.CHECKOUT,
+                method=method,
+                amount=amount,
+                status=Payment.Status.SUCCEEDED,
+                reference=f"{method[:4].upper()}-{secrets.token_hex(6).upper()}",
+            )
+        if t.loyalty_redeemed:
+            LoyaltyEntry.objects.create(
+                customer=appt.customer,
+                points=-t.loyalty_redeemed,
+                reason=LoyaltyEntry.Reason.REDEEMED,
+                invoice=invoice,
+            )
+        if t.loyalty_earned:
+            LoyaltyEntry.objects.create(
+                customer=appt.customer,
+                points=t.loyalty_earned,
+                reason=LoyaltyEntry.Reason.EARNED,
+                invoice=invoice,
+            )
+        if t.excess_prepaid > 0:
+            online = (
+                Payment.objects.filter(
+                    appointment=appt, kind=Payment.Kind.PREPAYMENT, status=Payment.Status.SUCCEEDED
+                )
+                .order_by("-created_at")
+                .first()
+            )
+            if online is not None:
+                Refund.objects.create(
+                    payment=online,
+                    invoice=invoice,
+                    amount=t.excess_prepaid,
+                    status=Refund.Status.PENDING_APPROVAL,
+                    reason="The bill is lower than the online payment",
+                    requested_by=actor if getattr(actor, "is_authenticated", False) else None,
+                )
         Rating.objects.create(appointment=appt, customer=appt.customer, stylist=appt.stylist)
         queue_mail(
             kind=MailOutbox.Kind.INVOICE,
             to=appt.contact_email,
             subject=f"{brand.SHOP_NAME}: invoice {invoice.number}",
-            body=(
-                f"Hello {appt.contact_name},\n\nThank you for visiting us. "
-                f"Your invoice {invoice.number} for Rs. {total} (incl. GST) is paid.\n\n"
-                f"{booking.booking_lines(appt)}\n\n"
-                "Please take a moment to rate your stylist. It helps us, and you need to rate "
-                "before your next booking."
-            ),
+            body=receipt_text(appt, invoice, t),
             link=frontend_link("/customer/appointments"),
         )
     return invoice
+
+
+def receipt_text(appt: Appointment, invoice: Invoice, t: Totals) -> str:
+    lines = [f"Hello {appt.contact_name},", "", "Thank you for visiting us."]
+    lines.append(f"Invoice {invoice.number} (all prices include GST):")
+    for line in t.lines:
+        suffix = f" x {line.quantity}" if line.quantity > 1 else ""
+        lines.append(f"  {line.description}{suffix}: Rs. {line.amount}")
+    if t.discount_amount > 0:
+        lines.append(
+            f"  Discount ({invoice.discount_percent.normalize()}%): -Rs. {t.discount_amount}"
+        )
+    lines.append(f"Total: Rs. {t.total} (GST included: Rs. {t.gst_amount})")
+    if t.loyalty_redeemed:
+        lines.append(f"Paid with loyalty points: Rs. {t.loyalty_value}")
+    if invoice.prepaid_amount:
+        lines.append(f"Paid online earlier: Rs. {invoice.prepaid_amount}")
+    lines.append(f"Paid at the salon: Rs. {invoice.balance_paid}")
+    if invoice.tip_amount:
+        lines.append(f"Tip for your stylist: Rs. {invoice.tip_amount}. Thank you!")
+    if t.loyalty_earned:
+        lines.append(f"Loyalty points earned: {t.loyalty_earned}")
+    lines += [
+        "",
+        "Please take a moment to rate your stylist. It helps us, and you need to rate "
+        "before your next booking.",
+    ]
+    return "\n".join(lines)

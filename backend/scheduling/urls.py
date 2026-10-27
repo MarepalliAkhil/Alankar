@@ -1,5 +1,6 @@
 from django.urls import path
 
+from billing import desk_views as pos
 from billing.views import MyInvoiceDetailView, MyInvoiceListView
 from people.desk_views import CustomerDetailView, CustomerListView, CustomerNoteView
 from people.views import PendingRatingsView, ProfileView, RatingSubmitView
@@ -36,6 +37,21 @@ my_patterns = [
 ]
 
 desk_patterns = [
+    path("pos/queue/", pos.PosQueueView.as_view(), name="pos-queue"),
+    path("pos/visits/<uuid:pk>/", pos.PosVisitView.as_view(), name="pos-visit"),
+    path("pos/quote/", pos.PosQuoteView.as_view(), name="pos-quote"),
+    path("pos/checkout/", pos.PosCheckoutView.as_view(), name="pos-checkout"),
+    path("invoices/", pos.DeskInvoiceListView.as_view(), name="desk-invoices"),
+    path("invoices/<uuid:pk>/", pos.DeskInvoiceDetailView.as_view(), name="desk-invoice"),
+    path(
+        "invoices/<uuid:pk>/refunds/", pos.InvoiceRefundView.as_view(), name="desk-invoice-refund"
+    ),
+    path("refunds/", pos.RefundListView.as_view(), name="desk-refunds"),
+    path(
+        "refunds/<uuid:pk>/decision/", pos.RefundDecisionView.as_view(), name="desk-refund-decide"
+    ),
+    path("cash-close/", pos.CashCloseView.as_view(), name="desk-cash-close"),
+    path("inventory/", pos.InventoryListView.as_view(), name="desk-inventory"),
     path("appointments/", views.DeskAppointmentListView.as_view(), name="desk-appointments"),
     path(
         "appointments/<uuid:pk>/",

@@ -2,9 +2,10 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils.text import slugify
 
+from inventory.models import Product, StockMovement
 from people.models import StylistProfile
 from scheduling.models import Room, Service, ServiceAddon, ServiceCategory, ServiceVariant
-from website.demo_data import CATALOGUE, FAQS, ROOMS, SITE_CONTENT, TEAM
+from website.demo_data import CATALOGUE, FAQS, PRODUCTS, ROOMS, SITE_CONTENT, TEAM
 from website.models import KnowledgeEntry, SiteContent
 
 
@@ -24,6 +25,7 @@ class Command(BaseCommand):
             "rooms": 0,
             "content": 0,
             "faq": 0,
+            "products": 0,
         }
         services_by_division: dict[str, list[Service]] = {}
         for c_order, (division, category_name, services) in enumerate(CATALOGUE):
@@ -85,6 +87,26 @@ class Command(BaseCommand):
                 name=name, defaults={"division": division, "sort_order": order}
             )
             created["rooms"] += int(made)
+        for order, (sku, name, category, price, gst, opening, low) in enumerate(PRODUCTS):
+            product, made = Product.objects.get_or_create(
+                sku=sku,
+                defaults={
+                    "name": name,
+                    "category": category,
+                    "unit_price": price,
+                    "gst_percent": gst,
+                    "low_stock_level": low,
+                    "sort_order": order,
+                },
+            )
+            created["products"] += int(made)
+            if made:  # stock only ever enters through the ledger
+                StockMovement.objects.create(
+                    product=product,
+                    delta=opening,
+                    reason=StockMovement.Reason.OPENING,
+                    note="Opening stock (demo data)",
+                )
         for key, value in SITE_CONTENT.items():
             _, made = SiteContent.objects.get_or_create(key=key, defaults={"value": value})
             created["content"] += int(made)

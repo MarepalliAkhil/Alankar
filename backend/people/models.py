@@ -157,3 +157,36 @@ class CustomerNote(models.Model):
 
     def __str__(self) -> str:
         return f"Note for {self.customer_id}"
+
+
+class LoyaltyEntry(models.Model):
+    """Loyalty points ledger: positive = earned, negative = redeemed. Never edited."""
+
+    class Reason(models.TextChoices):
+        EARNED = "earned", "Earned on a visit"
+        REDEEMED = "redeemed", "Used at checkout"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="loyalty_entries"
+    )
+    points = models.IntegerField()
+    reason = models.CharField(max_length=10, choices=Reason.choices)
+    invoice = models.ForeignKey(
+        "billing.Invoice", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.points:+d} points ({self.reason})"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("A loyalty entry cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("A loyalty entry cannot be deleted.")

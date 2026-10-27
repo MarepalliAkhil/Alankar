@@ -67,6 +67,11 @@ class AuditLog(models.Model):
         CUSTOMER_CREATED = "customer_created", "Customer registered at the desk"
         CUSTOMER_UPDATED = "customer_updated", "Customer details changed by staff"
         CUSTOMER_NOTE_ADDED = "customer_note_added", "Customer note added"
+        INVOICE_CREATED = "invoice_created", "Visit billed at the POS"
+        REFUND_REQUESTED = "refund_requested", "Refund requested"
+        REFUND_APPROVED = "refund_approved", "Refund approved"
+        REFUND_REJECTED = "refund_rejected", "Refund rejected"
+        CASH_CLOSE_SIGNED = "cash_close_signed", "Daily cash close signed off"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

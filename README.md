@@ -140,8 +140,8 @@ appointments are read; to also run it on a schedule: `python manage.py expire_pa
 
 Customers confirm registration and every sign-in with a 6-digit emailed code
 (`SALON_CUSTOMER_OTP=true` by default; set `false` to disable; it is skipped automatically when
-no email delivery or dev mailbox exists). Until the POS (Task 3) exists, finish a visit with
-`python manage.py complete_demo_visit` (dev only) to get an invoice and a rating request.
+no email delivery or dev mailbox exists). A visit is billed at the front desk in POS / Billing
+(receptionist or admin); billing issues the invoice and the customer's rating request.
 Optional reminder job: `python manage.py send_rating_reminders`.
 
 ## Checks

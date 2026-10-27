@@ -1,6 +1,10 @@
 # Progress
 
 ## Status
+- Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): IMPLEMENTED in the build
+  sandbox, waiting for the owner's PC run (migrate, seed_demo, pytest, npm test, walkthrough below).
+  Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
+  (the production build could not run in the sandbox; please run `npm run build`).
 - Task 3b (check-in, walk-in and phone bookings, customers): IMPLEMENTED in the build sandbox,
   waiting for the owner's PC run (migrate, pytest, npm test, walkthrough below).
 - Task 3a (requests inbox, schedule, desk actions, pay settings): DONE. Verified on the owner's PC
@@ -199,10 +203,9 @@
   in. Booking requests are also refused (403 `email_unverified`) for an unverified customer when
   codes are in force (defence in depth for sessions started while codes were off).
   Older customers from before this change are unverified too and verify once at next sign-in.
-- Invoice (INV-YYYY-NNNNN) is created by `billing.checkout.complete_and_invoice` in one atomic
-  transaction, applies the online prepayment, and is immutable afterwards. Task 3's POS reuses it.
-- Until the POS exists, the dev-only command `python manage.py complete_demo_visit` completes a
-  scheduled visit and bills it (refuses unless SALON_DEV_TOOLS).
+- Invoice (INV-YYYY-NNNNN) is created by `billing.checkout.checkout` (Task 3c POS) in one atomic
+  transaction, applies the online prepayment, and is immutable afterwards. The dev-only
+  `complete_demo_visit` command was removed in 3c.
 - Rating: pending rating created at billing; stars 1-5, comment required for 1-2 stars, tags,
   immutable once submitted. While any is pending the server refuses new booking requests
   (403 code `ratings_pending`); the UI shows the "Rate your stylist" card on Home, My
@@ -213,8 +216,7 @@
 1. Register a new customer: a 6-digit code appears in /dev/mailbox (or your inbox). Enter it.
 2. Sign out, sign in again as that customer: code step again. Try a wrong code (generic error).
 3. Staff sign-in (admin/receptionist) still has no code step.
-4. Book, confirm as receptionist, pay (as in 2b). Then in backend (venv active):
-   `python manage.py complete_demo_visit` (add `--appointment <id>` for a specific one).
+4. Book, confirm as receptionist, pay (as in 2b), check the guest in, then bill in POS / Billing (3c).
 5. Customer: Home / My Appointments show "Rate your stylist"; Book is held until rated.
    Rate (try 2 stars without a comment: it is refused), then booking opens again.
 6. Invoices menu: the invoice with GST and prepaid amount; View and Print.
@@ -235,7 +237,7 @@
 - Schedule day view uses @dnd-kit (mouse, touch and keyboard) plus a "Move to..." button on each
   card. Run `npm install` in frontend to fetch @dnd-kit/core.
 - Admin-only: hourly rate per receptionist (Staff page) and POS discount cap (default 20%),
-  both audited. `complete_demo_visit` stays behind SALON_DEBUG until 3c replaces it.
+  both audited. `complete_demo_visit` was replaced by the POS in 3c and removed.
 - Dragging could not be exercised in the build sandbox (no npm registry); drop maths, Move to...
   and rendering are tested. Please check real dragging in the browser.
 
@@ -274,6 +276,39 @@
 5. Appointments > Scheduled: a visit booked for today has Check in. Tomorrow's visit does not.
 6. As a customer, book online, pay (as in 2b), then as receptionist check that visit in on its day.
 7. Stylist and customer accounts cannot open /customers (403 page).
+
+## Task 3c decisions
+- Prices include GST. Receptionist discount is capped (default 20%); the admin may go higher. Any
+  discount needs a reason. GST is the part of each line after discount (price x rate / (100 + rate)).
+- Loyalty: 1 point per Rs. 100 paid (points used excluded), 1 point = Rs. 1, at most 50% of a bill.
+  Tip is separate, untaxed, 100% to the stylist. Split payments (cash/card/UPI, simulated) must add up
+  to bill + tip. Settings are not admin-editable yet.
+- Stock only changes through StockMovement ledger rows; a sale beyond stock is refused (409 "Only N
+  in stock"). Ledger, loyalty entries, invoices and cash closes are immutable. Refunds do not restock.
+- Excess online prepayment (bill lower than what was paid) creates a pending refund for the admin.
+- Refunds: receptionist requests, admin approves (choosing how the money returns) or rejects with a
+  reason; an admin refund is processed at once. Cap = prepaid + paid at counter minus other refunds.
+- Cash Close is receptionist-only (admin has none). Expected cash = cash taken that day minus cash
+  refunds processed that day; a difference needs a note; one close per day, never a future day.
+- Inventory is view-only for the receptionist; the admin Inventory page arrives in Task 5.
+- Run `python manage.py seed_demo` again to get the 14 demo products with opening stock.
+- `complete_demo_visit` command removed (the POS replaces it).
+
+## Task 3c: owner browser walkthrough (to verify on the PC)
+1. Backend: `python manage.py migrate`, then `python manage.py seed_demo` (adds products).
+2. Customer books and pays online; receptionist confirms and checks the guest in (Appointments).
+3. Receptionist > POS / Billing: the guest is under "Ready to bill". Click Bill.
+4. Add a product (stock shown), try a 30% discount (refused, cap 20%), 10% with a reason (accepted),
+   add a tip, split the payment between cash and UPI; "Complete bill" stays disabled until the
+   amounts match. Complete: the invoice opens; Print works.
+5. Inventory (view): the product count dropped by what you sold; low-stock items are flagged.
+6. Try to bill more than the stock: the message says "Only N ... in stock".
+7. Invoices tab: search by number or name. Open an invoice > Request refund (amount up to refundable).
+8. Admin > POS / Billing > Refunds tab: approve (choose cash/card/UPI) or reject (reason needed).
+9. Receptionist > Cash Close: today's cash, card and UPI; count the drawer; a wrong count needs a
+   note; sign off; the day becomes read-only. The admin has no Cash Close.
+10. Customer: the invoice shows in Invoices and a new "Rate your stylist" card appears.
+11. Customer and stylist accounts cannot open /pos, /cash-close or /inventory (403 page).
 
 ## Temporary exceptions (owner-approved)
 - Planned menu items show an informative empty state (name, what it will do, the task it
