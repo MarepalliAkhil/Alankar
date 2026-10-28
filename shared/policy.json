@@ -151,7 +151,10 @@
     "auth.two_factor_verify": "Check the authenticator (or backup) code and start the admin session",
     "twofactor.manage": "Set up, use and switch off my own two-step sign-in",
     "twofactor.reset": "Reset another admin's two-step sign-in (they lost their phone)",
-    "purchasing.manage": "Create, send, receive and close purchase orders; see a supplier's order history"
+    "purchasing.manage": "Create, send, receive and close purchase orders; see a supplier's order history",
+    "ratings.read": "Admin: see every stylist's ratings, averages and comments",
+    "ratings.moderate": "Admin: put a rating under review, exclude it, or restore it (reason required)",
+    "pay.read": "Admin: see every stylist's estimated pay for a month with the breakdown"
   },
   "public": {
     "api": [
@@ -570,7 +573,10 @@
         "wallet.giftcheck",
         "twofactor.manage",
         "twofactor.reset",
-        "purchasing.manage"
+        "purchasing.manage",
+        "ratings.read",
+        "ratings.moderate",
+        "pay.read"
       ],
       "routes": [
         "/customers/:id"
@@ -617,6 +623,14 @@
           "status": "available"
         },
         {
+          "id": "ratings",
+          "label": "Ratings",
+          "path": "/ratings",
+          "description": "Each stylist's average, count and trend, customer comments, and review or exclusion of unfair ratings (never deleted).",
+          "task": "Task 6a",
+          "status": "available"
+        },
+        {
           "id": "staff-summary",
           "label": "Staff Summary",
           "path": "/staff-summary",
@@ -628,9 +642,9 @@
           "id": "payroll",
           "label": "Payroll",
           "path": "/payroll",
-          "description": "Generate, adjust, approve and pay payroll.",
-          "task": "Task 6",
-          "status": "planned"
+          "description": "Stylist pay for a month with the breakdown per appointment. Payroll runs, adjustments and payslips follow in Task 6c.",
+          "task": "Task 6a",
+          "status": "available"
         },
         {
           "id": "services",

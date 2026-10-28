@@ -9,13 +9,24 @@ from inventory import purchase_views as po
 from marketing import private_views as pc
 from marketing import views as m
 from people import admin_views as v
+from people import pay_admin_views as pay
 from people import privacy_views as pv
+from people import rating_admin_views as ra
 from scheduling import catalogue_admin as c
 from wallet.urls import admin_wallet_patterns
 from website import content_admin as ca
 from website import settings_admin as w
 
 admin_patterns = [
+    path("ratings/", ra.RatingsOverviewView.as_view(), name="admin-ratings"),
+    path(
+        "ratings/stylists/<uuid:pk>/", ra.StylistRatingsView.as_view(), name="admin-stylist-ratings"
+    ),
+    path(
+        "ratings/<uuid:pk>/moderate/", ra.ModerateRatingView.as_view(), name="admin-rating-moderate"
+    ),
+    path("pay/stylists/", pay.StylistPayListView.as_view(), name="admin-pay-stylists"),
+    path("pay/stylists/<uuid:pk>/", pay.StylistPayDetailView.as_view(), name="admin-pay-stylist"),
     path("audit/export/", sec.AuditExportView.as_view(), name="admin-audit-export"),
     path("audit/", sec.AuditLogView.as_view(), name="admin-audit"),
     path("security/", sec.SecurityOverviewView.as_view(), name="admin-security"),

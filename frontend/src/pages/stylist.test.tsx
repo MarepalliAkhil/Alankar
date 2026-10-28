@@ -121,6 +121,7 @@ function setup(role: 'stylist' | 'customer' | 'receptionist' | 'admin' = 'stylis
   vi.mocked(stylistApi.getEarnings).mockResolvedValue(earnings(3));
   vi.mocked(stylistApi.getRatings).mockResolvedValue({
     count: 0,
+    under_review: 0,
     average: null,
     distribution: {},
     trend: [],
@@ -174,6 +175,20 @@ describe('stylist pages', () => {
     expect(screen.getByText(/4.5 and above/).closest('li')).toHaveTextContent('× 1.20');
     expect(screen.getByText('Global Hair Colour')).toBeInTheDocument();
     expect(screen.getByText('Lovely')).toBeInTheDocument();
+  });
+
+  it('shows only that a rating is under review: a count, with no details', async () => {
+    vi.mocked(stylistApi.getRatings).mockResolvedValue({
+      count: 1,
+      under_review: 2,
+      average: '5.00',
+      distribution: { '5': 1 },
+      trend: [],
+      comments: [{ stars: 5, comment: 'Lovely', tags: [], date: '2026-10-01', service: 'Haircut' }],
+    });
+    renderAt('/earnings');
+    expect(await screen.findByText(/2 ratings are under review/)).toBeInTheDocument();
+    expect(screen.getByText(/not counted in your average or pay/)).toBeInTheDocument();
   });
 
   it('tells the stylist to ask reception when days off clash with visits', async () => {

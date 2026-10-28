@@ -103,6 +103,11 @@ class Rating(models.Model):
         PENDING = "pending", "Waiting for the customer"
         SUBMITTED = "submitted", "Rated"
 
+    class Moderation(models.TextChoices):
+        ACTIVE = "active", "Counts"
+        UNDER_REVIEW = "under_review", "Under review"
+        EXCLUDED = "excluded", "Excluded"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     appointment = models.OneToOneField(
         "scheduling.Appointment", on_delete=models.PROTECT, related_name="rating"
@@ -120,6 +125,19 @@ class Rating(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    # Admin moderation (Task 6a). The stars and comment above never change; only these do.
+    moderation = models.CharField(
+        max_length=12, choices=Moderation.choices, default=Moderation.ACTIVE, db_index=True
+    )
+    moderation_reason = models.CharField(max_length=300, blank=True)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    moderated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created_at"]

@@ -537,9 +537,11 @@ describe('route guards and role menus', () => {
 
   it('explains planned pages with their purpose and the task they arrive in', async () => {
     meMock.mockResolvedValue(userFor('admin'));
-    renderAt('/payroll');
-    expect(await screen.findByText('Payroll arrives in Task 6')).toBeInTheDocument();
-    expect(screen.getByText('Generate, adjust, approve and pay payroll.')).toBeInTheDocument();
+    renderAt('/staff-summary');
+    expect(await screen.findByText('Staff Summary arrives in Task 6')).toBeInTheDocument();
+    expect(
+      screen.getByText('Graphs for stylist ratings and tasks and receptionist hours.'),
+    ).toBeInTheDocument();
   });
 
   it('gives a signed-in customer the account menu instead of Login/Register', async () => {

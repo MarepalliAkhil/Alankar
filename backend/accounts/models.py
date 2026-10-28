@@ -131,6 +131,9 @@ class AuditLog(models.Model):
         PO_SENT = "po_sent", "Purchase order sent to the supplier"
         PO_RECEIVED = "po_received", "Purchase order goods received"
         PO_CLOSED = "po_closed", "Purchase order cancelled or closed"
+        RATING_FLAGGED = "rating_flagged", "Rating put under review"
+        RATING_EXCLUDED = "rating_excluded", "Rating excluded from pay and graphs"
+        RATING_RESTORED = "rating_restored", "Rating restored after review"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

@@ -142,6 +142,14 @@ export default function EarningsPage() {
 
       <Card className="flex flex-col gap-sm">
         <h2 className="text-lg font-semibold text-text">Guest comments</h2>
+        {ratings.data && ratings.data.under_review > 0 && (
+          <p role="status" className="rounded-input bg-surface p-md text-sm text-text">
+            {ratings.data.under_review === 1
+              ? '1 rating is under review.'
+              : `${ratings.data.under_review} ratings are under review.`}{' '}
+            It is not counted in your average or pay while it is being looked at.
+          </p>
+        )}
         {ratings.isPending ? (
           <LoadingState label="Loading comments…" />
         ) : ratings.isError ? (

@@ -83,22 +83,32 @@ def rules_table() -> dict:
     return {"min_ratings": int(rules["min_ratings"]), "bands": rows}
 
 
-def earnings(profile: StylistProfile, start: datetime, end: datetime) -> dict:
+def counted_ratings():
+    """Submitted ratings that count: not held for review and not excluded by the admin."""
+    return Rating.objects.filter(
+        status=Rating.Status.SUBMITTED, moderation=Rating.Moderation.ACTIVE
+    )
+
+
+def earnings(
+    profile: StylistProfile, start: datetime, end: datetime, *, detail: bool = False
+) -> dict:
+    """The month's estimate. `detail` (admin only) adds invoice, customer and rating state."""
     invoices = list(
         Invoice.objects.filter(
             appointment__stylist=profile, issued_at__gte=start, issued_at__lt=end
         )
-        .select_related("appointment__service", "appointment__completion")
+        .select_related("appointment__service", "appointment__completion", "appointment__customer")
         .order_by("issued_at")
     )
-    stars = [
-        s
-        for s in Rating.objects.filter(
+    seen = {
+        r.appointment_id: r
+        for r in Rating.objects.filter(
             appointment__in=[i.appointment_id for i in invoices],
             status=Rating.Status.SUBMITTED,
-        ).values_list("stars", flat=True)
-        if s
-    ]
+        )
+    }
+    stars = [r.stars for r in seen.values() if r.stars and r.moderation == Rating.Moderation.ACTIVE]
     rating = rating_summary(stars)
     multiplier = Decimal(rating["multiplier"])
     rows = []
@@ -109,8 +119,25 @@ def earnings(profile: StylistProfile, start: datetime, end: datetime) -> dict:
         paid = money(base * multiplier)
         tip = money(invoice.tip_amount)
         completion = getattr(appt, "completion", None)
+        extra = {}
+        if detail:
+            rated = seen.get(appt.id)
+            if rated is None:
+                state = "unrated"
+            elif rated.moderation == Rating.Moderation.ACTIVE:
+                state = "counted"
+            else:
+                state = "held"
+            extra = {
+                "invoice": invoice.number,
+                "customer": appt.customer.full_name if appt.customer_id else "",
+                "service_price": str(money(appt.price_total)),
+                "stars": rated.stars if rated else None,
+                "rating_state": state,
+            }
         rows.append(
             {
+                **extra,
                 "id": str(appt.id),
                 "date": invoice.issued_at,
                 "service": appt.service_name
@@ -145,9 +172,13 @@ def earnings(profile: StylistProfile, start: datetime, end: datetime) -> dict:
 
 
 def ratings_overview(profile: StylistProfile, limit: int = 50) -> dict:
-    """The stylist's own ratings and comments, without customer names."""
+    """The stylist's own ratings and comments, without customer names. A rating the admin has
+    put under review (or excluded) is shown only as a count: no stars, comment, customer or
+    reason, and it is not in the average, graph or pay while it is held."""
+    everything = Rating.objects.filter(stylist=profile, status=Rating.Status.SUBMITTED)
+    held = everything.exclude(moderation=Rating.Moderation.ACTIVE).count()
     rows = list(
-        Rating.objects.filter(stylist=profile, status=Rating.Status.SUBMITTED)
+        everything.filter(moderation=Rating.Moderation.ACTIVE)
         .select_related("appointment")
         .order_by("-submitted_at")
     )
@@ -164,6 +195,7 @@ def ratings_overview(profile: StylistProfile, limit: int = 50) -> dict:
     ]
     return {
         "count": len(rows),
+        "under_review": held,
         "average": None if average is None else str(average),
         "distribution": distribution,
         "trend": trend,

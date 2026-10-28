@@ -16,7 +16,12 @@
   Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): DONE. Verified on the owner's PC
   (2026-10-28).
   Task 5e-3 (purchase orders, optional admin two-step sign-in) and 5e-4 (policy sweep, own-data and concurrency
-  tests): IMPLEMENTED, waiting for the owner's "passed". Next after them: Task 6.
+  tests): DONE. Verified on the owner's PC (2026-10-28).
+- Task 6 (ratings, work sessions, payroll, Staff Summary) is split 6a..6c (owner-approved plan). One sub-task at a
+  time; wait for "passed". Task 6a (admin Ratings overview and moderation, stylist pay breakdown): IMPLEMENTED,
+  waiting for the owner's "passed". Next: 6b (work sessions, shifts, receptionist pay), 6c (payroll runs, Staff
+  Summary, Performance Review).
+- Task 5 (admin slice, 5a to 5e): DONE. Verified on the owner's PC and pushed (2026-10-28). Next: Task 6.
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -797,3 +802,43 @@
 - Own-data tests for waitlist, offers, membership and wallet; concurrency tests for private coupons, last package
   session and campaign runners (`billing/tests/test_concurrency_5e.py`).
 - Reconciliation reports (payments by method, supplier history) have tests that assert difference 0.00.
+
+## Task 6: owner decisions (2026-10-28)
+- Punctuality needs a weekly shift editor (built in 6b). No shift = "No shift set". Stylist on time = first appointment
+  of the day starts on schedule. Receptionist on time = session starts within the grace period of the shift start
+  (default 10 minutes, a setting).
+- Rebooking rate = share of the month's completed-visit customers (cancelled and no-show excluded) with another booking
+  with the same stylist within 60 days. "Not enough data" below 5 customers in the month.
+- Moderation: the stylist only ever sees that a rating is under review (a count). No customer name, comment, stars or
+  reason. The original stars stay in the database and in the audit log.
+- Payroll adjustments (bonus/deduction) are separate lines on the payslip, never merged into base pay.
+- Performance Review is visible to the admin only. No "share with staff" action for now.
+
+## Task 6a: decisions
+- New menu item Admin > Ratings (`/ratings`). Payroll (`/payroll`) is now a real page; for 6a it shows the monthly
+  stylist pay estimate and breakdown (runs, adjustments and payslips are added in 6c).
+- Ratings are never edited or deleted. A rating has a moderation state: Counts / Under review / Excluded, with the
+  reason, who and when. Only "Counts" ratings are in the stylist's average, graphs, the pay multiplier and the
+  5-ratings minimum. Under review and Excluded look the same to the stylist: one line "N ratings are under review".
+  The admin can Put under review (from Counts), Exclude (from Counts or Under review) and Count again (restore).
+  Each needs a reason (3 letters or more) and writes an audit entry (`rating_flagged`, `rating_excluded`,
+  `rating_restored`) that includes the original stars.
+- Admin ratings overview: average, count, month-by-month trend (up/down/steady by 0.2), number under review and
+  excluded, "Needs attention" when an average with enough ratings is below the flag level (3.0).
+- Stylist pay (admin): same formula as the stylist's Earnings page: task payout (scaled to the services really done)
+  x rating multiplier + tips (never multiplied). Breakdown per billed visit: invoice, customer, rating state
+  (counted / not rated / not counted under review), base payout, multiplier, payout, tip, total.
+  A check line compares tips on invoices with tips in pay (difference 0.00).
+- No migrations conflict: `accounts` 0020 (audit actions), `people` 0011 (rating moderation fields).
+
+## Task 6a: owner browser walkthrough (to verify on the PC)
+1. Seed or use existing data: a few completed, paid, rated visits (customer rates from My Appointments).
+2. Admin > Ratings: each stylist card shows average, count, trend. Open "Comments for <stylist>": stars, comment,
+   customer name, service, date; spread of stars; average-by-month graph. There is no delete button.
+3. On a 1-star comment press "Put under review", write a reason. The card now says "1 under review". Sign in as that
+   stylist > Earnings: "1 rating is under review..." and the average no longer includes it; no comment, name or
+   reason is shown. Admin: Exclude, then "Count again": numbers return.
+4. Admin > Audit Log: rating_flagged / rating_excluded / rating_restored entries with the reason and original stars.
+5. Admin > Payroll: pick the month. Totals, the "difference" check, one card per stylist; "Breakdown for <name>"
+   lists every billed visit with the multiplier. With fewer than 5 counted ratings the multiplier is x 1.00.
+6. Receptionist, stylist, customer: no Ratings or Payroll menu; direct URLs show "not allowed".

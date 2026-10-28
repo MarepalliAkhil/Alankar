@@ -57,6 +57,8 @@ export async function completeVisit(
 
 export interface RatingsOverview {
   count: number;
+  /** Ratings the admin is looking at; shown only as a number, never with details. */
+  under_review: number;
   average: string | null;
   distribution: Record<string, number>;
   trend: { month: string; average: string; count: number }[];
