@@ -52,6 +52,7 @@ const insights: botApi.Insights = {
   days: 30,
   total_questions: 20,
   unanswered_questions: 4,
+  services_without_description: [{ id: 's1', name: 'Pedicure', division: 'beauty-parlor' }],
   unanswered: [row],
   usage: [
     { intent: 'service_price', count: 9 },
@@ -74,6 +75,26 @@ describe('Chatbot insights (admin)', () => {
     expect(screen.getByText(/Asked 4 times/)).toBeInTheDocument();
     expect(screen.getByText(/20 questions, 4 could not be answered/)).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'service price: 9' })).toBeInTheDocument();
+  });
+
+  it('lists services without a description with a link to Services', async () => {
+    renderAt('/chatbot-insights');
+    await screen.findByText('Pedicure');
+    const section = screen.getByRole('region', { name: 'Services without description' });
+    expect(within(section).getByText('Pedicure')).toBeInTheDocument();
+    expect(within(section).getByRole('link', { name: 'Services' })).toHaveAttribute(
+      'href',
+      '/services',
+    );
+  });
+
+  it('says so when every service has a description', async () => {
+    vi.mocked(botApi.getInsights).mockResolvedValue({
+      ...insights,
+      services_without_description: [],
+    });
+    renderAt('/chatbot-insights');
+    expect(await screen.findByText('Every active service has a description.')).toBeInTheDocument();
   });
 
   it('adds a question as an FAQ in one step', async () => {

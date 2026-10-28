@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import {
   addAsFaq,
   dismissQuestion,
@@ -264,6 +265,34 @@ export default function ChatbotInsightsPage() {
             )}
           </>
         )}
+      </Card>
+
+      <Card variant="dense" as="section" aria-label="Services without description">
+        <h2 className="text-lg font-semibold text-text">Services without description</h2>
+        <p className="mt-xs text-sm text-text-muted">
+          When someone asks “tell me about …”, the bot explains a service from its description.
+          These services only have their one-line summary, so the answer is short. Add a description
+          in{' '}
+          <Link to="/services" className="font-medium text-primary underline">
+            Services
+          </Link>
+          .
+        </p>
+        {insights.data &&
+          (insights.data.services_without_description.length === 0 ? (
+            <p className="mt-md text-sm text-text-muted">Every active service has a description.</p>
+          ) : (
+            <ul className="mt-md flex flex-wrap gap-xs">
+              {insights.data.services_without_description.map((sv) => (
+                <li
+                  key={sv.id}
+                  className="rounded-full border border-border bg-surface px-md py-xs text-sm text-text"
+                >
+                  {sv.name}
+                </li>
+              ))}
+            </ul>
+          ))}
       </Card>
 
       <TestBox />

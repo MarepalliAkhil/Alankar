@@ -17,7 +17,13 @@ export interface UsageRow {
   intent: string;
   count: number;
 }
+export interface UndescribedService {
+  id: string;
+  name: string;
+  division: string;
+}
 export interface Insights {
+  services_without_description: UndescribedService[];
   days: number;
   total_questions: number;
   unanswered_questions: number;

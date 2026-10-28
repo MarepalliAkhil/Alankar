@@ -7,7 +7,7 @@ from django.utils.text import slugify
 from inventory.models import Product, StockMovement
 from people.models import StylistProfile
 from scheduling.models import Room, Service, ServiceAddon, ServiceCategory, ServiceVariant
-from website.demo_data import CATALOGUE, FAQS, PRODUCTS, ROOMS, SITE_CONTENT, TEAM
+from website.demo_data import CATALOGUE, DESCRIPTIONS, FAQS, PRODUCTS, ROOMS, SITE_CONTENT, TEAM
 from website.models import KnowledgeEntry, SiteContent
 
 
@@ -52,6 +52,9 @@ class Command(BaseCommand):
                     },
                 )
                 created["services"] += int(made)
+                if not service.description and name in DESCRIPTIONS:
+                    service.description = DESCRIPTIONS[name]
+                    service.save(update_fields=["description", "updated_at"])
                 services_by_division.setdefault(division, []).append(service)
                 if made:
                     for v_order, (label, v_price, v_minutes) in enumerate(variants):

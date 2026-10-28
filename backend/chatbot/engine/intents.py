@@ -318,7 +318,26 @@ INTENTS += [
     ),
 ]
 
-INTENTS.append(Intent("service_details", {}, template="Tell me about {what}"))
+INTENTS.append(
+    Intent(
+        "service_details",
+        {
+            "detail": 3,
+            "explain": 3,
+            "describe": 3,
+            "include": 2,
+            "about": 1.5,
+            "suitable": 2,
+            "ideal": 2,
+            "good": 1.5,
+            "suit": 2,
+            "safe": 1.5,
+        },
+        entity_boost={"service": 1.5},
+        excludes=["stylist", "expert", "team"],
+        template="Tell me about {what}",
+    )
+)
 
 INTENT_TO_KB = {
     "shop_info": "what_is_alankar",

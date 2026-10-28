@@ -422,3 +422,90 @@ PRODUCTS = [
     ("NLP-002", "Nail Polish Nude Rose", "Nails", 250, 18, 25, 8),
     ("CMB-001", "Wide-tooth Comb", "Accessories", 120, 12, 30, 10),
 ]
+
+# Longer descriptions for the demo services (2 to 3 factual sentences, no medical claims). They are
+# only written to services whose description is still empty, so the admin's own text is never
+# overwritten. The chatbot's "tell me about <service>" answer is built from these.
+DESCRIPTIONS = {
+    "Men's Haircut": (
+        "A classic or modern cut chosen with your stylist, including a wash and a finishing style. "
+        "It takes about half an hour."
+    ),
+    "Women's Haircut": (
+        "A cut and finish shaped to your hair length and the look you want. "
+        "The price and time depend on whether your hair is short, medium or long."
+    ),
+    "Kids' Haircut": ("A quick, gentle haircut for children under 12. It takes about 25 minutes."),
+    "Beard Trim & Shape": (
+        "The beard is trimmed, the edges are lined up and the shape is set to your face. "
+        "It finishes with a hot towel."
+    ),
+    "Global Hair Colour": (
+        "A full-head colour in one shade, with ammonia-free options available. "
+        "Short, medium and long hair are priced separately, and a bond-repair add-on can be chosen."
+    ),
+    "Root Touch-up": (
+        "Colour applied only at the roots to cover regrowth of up to about one inch. "
+        "It takes about an hour."
+    ),
+    "Hair Spa": (
+        "A deep-conditioning treatment applied to the hair and scalp, followed by a relaxing head "
+        "massage. Price and time depend on your hair length."
+    ),
+    "Keratin Smoothening": (
+        "A smoothening treatment that leaves hair smoother and less frizzy. "
+        "How long the result lasts depends on your hair type and how you look after it afterwards."
+    ),
+    "Blow-dry & Styling": (
+        "Your hair is washed, blow-dried and styled for a finished look. It takes about 45 minutes."
+    ),
+    "Swedish Massage": (
+        "A full-body relaxation massage using long, flowing strokes and light pressure. "
+        "You can choose a 60-minute or a 90-minute session."
+    ),
+    "Deep Tissue Massage": (
+        "A massage using firm pressure that works on the deeper layers of muscle. "
+        "You can choose a 60-minute or a 90-minute session."
+    ),
+    "Head, Neck & Shoulder": (
+        "A short massage focused on the head, neck and shoulders, where many people feel tight "
+        "after long hours at a desk. It takes about half an hour."
+    ),
+    "Foot Reflexology": (
+        "A foot treatment that applies pressure to points on the soles and feet. "
+        "It takes about 45 minutes."
+    ),
+    "Body Scrub & Polish": (
+        "The skin is exfoliated with a scrub and then polished for a smooth, fresh feel. "
+        "It takes about an hour."
+    ),
+    "Classic Facial": (
+        "A facial that cleanses the skin, exfoliates, includes a short massage and finishes with a "
+        "mask. It takes about an hour."
+    ),
+    "De-tan Facial": (
+        "A brightening facial designed to reduce the look of tan and even out skin tone. "
+        "It takes about an hour."
+    ),
+    "Party Makeup": (
+        "Event-ready makeup together with a simple hairdo. It takes about an hour and a half."
+    ),
+    "Bridal Makeup": (
+        "A complete bridal look for your big day, with optional saree draping and a bridal hairdo "
+        "as add-ons. Plan about three hours."
+    ),
+    "Manicure": (
+        "Nails are shaped, cuticles are cared for and the nails are finished with polish. "
+        "It takes about 45 minutes."
+    ),
+    "Pedicure": ("A foot soak and scrub, nail care and polish. It takes about an hour."),
+    "Gel Nail Extensions": (
+        "Durable gel extensions applied in the length and finish of your choice. "
+        "Allow about an hour and a half for the first set."
+    ),
+    "Full Arms Waxing": (
+        "Hair is removed from the full arms with gentle wax for a smooth finish. "
+        "It takes about half an hour."
+    ),
+    "Eyebrow Threading": ("Precise brow shaping done with thread. It takes about 15 minutes."),
+}

@@ -150,3 +150,17 @@ def test_changes_need_csrf(logged_in, question):
     strict.cookies = client.cookies
     r = strict.post(f"{BASE}/unanswered/{question.pk}/dismiss/", content_type="application/json")
     assert r.status_code == 403
+
+
+def test_services_without_description_are_listed_for_the_admin(admin):
+    from scheduling.models import Service
+
+    sv = Service.objects.get(name="Hair Spa")
+    sv.description = ""
+    sv.save()
+    rows = call(admin, "get", f"{BASE}/insights/").json()["services_without_description"]
+    assert [r["name"] for r in rows] == ["Hair Spa"]  # the seed describes all the others
+    assert set(rows[0]) == {"id", "name", "division"}
+    sv.description = "Now described."
+    sv.save()
+    assert call(admin, "get", f"{BASE}/insights/").json()["services_without_description"] == []

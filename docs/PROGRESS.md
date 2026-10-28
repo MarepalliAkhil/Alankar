@@ -4,6 +4,8 @@
 - Task 7 (AI Alankar Intelligence chatbot: 7a engine and data, 7b API and widget, 7c admin Chatbot insights and
   accuracy evaluation): IMPLEMENTED in the build sandbox in one go (owner's instruction), waiting for the owner's PC
   run (migrate, seed_demo, pytest, npm test, walkthrough below). New migrations: chatbot 0001, accounts 0023.
+  Task 7 follow-up (service explanation answers, seeded descriptions, admin "Services without description"):
+  implemented in the build sandbox, see "Task 7 follow-up" below. No new migration.
   Next: Task 8 (hardening, Playwright full-workflow test) after "passed".
 - Task 3 (receptionist slice: 3a requests/schedule, 3b check-in/walk-ins/customers, 3c POS/stock/
   refunds/cash close/inventory view, 3d work sessions/idle sign-out/My Hours & Pay): DONE. Verified
@@ -1000,3 +1002,58 @@ optimistic. Real accuracy will be lower. Check Chatbot insights after launch for
 7. In the test box ask "when is my next appointment": it says to log in (no user data). Check the audit log for
    "Unanswered chatbot question added as an FAQ or dismissed".
 8. As receptionist or stylist open /chatbot-insights directly: you are sent away (403).
+
+## Task 7 follow-up: "tell me about <service>" (decisions)
+- The answer (intent `service_details`) is built only from the service's own database fields, in this order, and a
+  line is skipped when its data is empty: (1) description (if empty, the one-line summary, which every service has);
+  (2) what is included or the steps: **skipped, the service model has no such field**, nothing is invented; add a field
+  later if you want it; (3) "Time:" (one value, or a range when the options differ) and "Price: from Rs X incl. GST."
+  followed by the sentence "Prices include GST and may vary with options such as hair length or add-ons.";
+  (4) "Suits:" audience (Men, Women, Kids, Everyone (unisex)) and the division; (5) "Offered by:" published team
+  profiles linked to the service (first name and specialisation); (6) actions "Book this service"
+  (`/customer/book?service=<slug>`, the booking page preselects the service; a guest is asked to log in first) and
+  "See similar services" (the division page).
+- "I understood: ..." appears only when a spelling was corrected, a synonym or alias was used (for example "gents
+  haircut"), or a Hindi/Telugu word had to be translated. It does not appear when the service name was used as is.
+- Phrasings that give the same answer (tested): what is / what's / whats X, tell me about X, explain X, details of X,
+  X details, describe X, what does X include, is X good for ..., typos, and Hindi/Telugu words in English letters
+  (kya hai, ke bare mein batao, gurinchi cheppandi, ante enti). Words added: bare, gurinchi, batao, cheppandi, enti.
+  If several services match ("tell me about massage") the bot lists them and asks which one.
+- Fixed on the way: "manicure" and "pedicure" were treated as the same word ("nails"), so a question about one listed
+  all nail services. They are now separate; "nails" still matches all three.
+- Duration and "from" price now use the service options (shortest option), so a service with hair-length options shows
+  the range instead of only the base time.
+- Seeded descriptions: all 23 demo services have a 2 to 3 sentence factual description (no medical claims, no
+  invented policies; durations match the seed). `seed_demo` writes a description only where it is empty, so it fills
+  an existing database too and never overwrites the admin's text. The chatbot picks up changes within 5 minutes or
+  when the service is saved in the app.
+- Admin: Chatbot insights has a new section "Services without description" (active services whose description is
+  empty), with a link to Services where the description can be filled in. Test: guest and customer get the same
+  public answer (text and actions).
+- Not done: a follow-up such as "price of hair spa" then "tell me about it" (no service named in the second question)
+  is not understood yet.
+
+## Task 7 follow-up: accuracy report (rerun)
+Same caveats as before: questions written by me, not real customers, optimistic. Phrasings for this feature were
+also exercised by me while building it (the list in test_details.py), so the new holdout items are NOT blind.
+- New questions: 22 tuning + 17 holdout "tell me about <service>" phrasings across 20 services, in English, with
+  typos, Hindi and Telugu words. Totals now: TUNING 130 questions, HOLDOUT 78 questions (plus the 94 ported ones).
+- TUNING: 120/130 = 92.3% (previous run 98/108 = 90.7%). All 22 new items pass. One regression found by the tuning set
+  ("which stylist is good for hair colour" was read as a service explanation) was fixed by excluding stylist words.
+- HOLDOUT: 63/78 = 80.8%. The original 61 are unchanged at 46/61 = 75.4% (same 15 misses, listed above; not tuned on);
+  the 17 new details items pass 17/17.
+- Remaining tuning misses (10) are the same as in the first report. The one holdout miss that changed:
+  "which treatment is good for stress" now returns a service explanation instead of a suggestion list; still a miss.
+- Floors in test_accuracy.py stay at 85% (tuning) and 70% (holdout).
+
+## Task 7 follow-up: owner browser walkthrough
+1. Run `python manage.py seed_demo` (fills the empty descriptions). Open the chat as a guest.
+2. Ask "what is hair spa", "tell me about keratin smoothening", "swedish massage kya hai", "describe pedicure",
+   "is deep tissue massage good for beginners", "explian head massage". Each shows description, Time, Price (with the
+   GST sentence), Suits, Offered by, and the buttons "Book this service" and "See similar services". "I understood"
+   appears only for the typo and the Hindi question.
+3. Click "Book this service" as a customer: the booking page opens with the service preselected. As a guest it goes
+   to login first.
+4. Ask "tell me about massage": it lists the massages and asks which one; click one of the suggestions.
+5. As admin open Services, clear the description of one service and save; open Chatbot insights: it appears under
+   "Services without description". Ask the bot about it: a short answer from the summary. Add the description again.

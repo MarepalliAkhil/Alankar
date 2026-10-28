@@ -24,6 +24,7 @@ from chatbot import registry
 from chatbot.api import public_reply
 from chatbot.engine.engine import MAX_QUERY_CHARS
 from chatbot.models import IntentUsage, UnansweredQuestion
+from scheduling.models import Service
 from website.models import KnowledgeEntry
 
 USAGE_DAYS = 30
@@ -60,9 +61,18 @@ class InsightsView(APIView):
         rows = [{"intent": u["intent"], "count": u["total"]} for u in usage]
         total = sum(r["count"] for r in rows)
         missed = sum(r["count"] for r in rows if r["intent"] in FALLBACK_INTENTS)
+        undescribed = (
+            Service.objects.filter(is_active=True, category__is_active=True, description="")
+            .select_related("category")
+            .order_by("category__division", "name")
+        )
         return Response(
             {
                 "days": USAGE_DAYS,
+                "services_without_description": [
+                    {"id": str(sv.id), "name": sv.name, "division": sv.category.division}
+                    for sv in undescribed
+                ],
                 "total_questions": total,
                 "unanswered_questions": missed,
                 "unanswered": [question_row(q) for q in questions[:100]],

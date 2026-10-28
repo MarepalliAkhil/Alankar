@@ -62,21 +62,38 @@ def _price(value: Decimal) -> int | float:
 
 def service_rows() -> list[dict]:
     rows = []
-    for s in Service.objects.filter(is_active=True, category__is_active=True).select_related(
-        "category"
-    ):
+    offered_by: dict[int, list[dict]] = {}
+    for p in StylistProfile.objects.filter(is_public=True).prefetch_related("services"):
+        first = p.display_name.split()[0] if p.display_name else ""
+        if not first:
+            continue
+        for svc in p.services.all():
+            offered_by.setdefault(svc.pk, []).append(
+                {"name": first, "specialization": p.specialization or p.title}
+            )
+    services = (
+        Service.objects.filter(is_active=True, category__is_active=True)
+        .select_related("category")
+        .prefetch_related("variants")
+    )
+    for s in services:
         tags = [t for t in (s.tags or []) if str(t).lower() not in NOT_ALIASES]
         aliases = list(dict.fromkeys([*DEFAULT_ALIASES.get(s.name, []), *map(str, tags)]))
         rows.append(
             {
                 "id": str(s.id),
+                "slug": s.slug,
                 "name": s.name,
                 "aliases": aliases,
                 "division": DIVISION_KEY.get(s.category.division, "salon"),
                 "gender": s.audience,
-                "price_from": _price(s.price),
-                "duration": s.duration_minutes,
+                "price_from": _price(s.from_price),
+                "duration": s.min_duration,
+                "duration_max": s.max_duration,
                 "info": s.summary,
+                "description": (s.description or "").strip(),
+                "category": s.category.name,
+                "stylists": offered_by.get(s.pk, []),
             }
         )
     return rows

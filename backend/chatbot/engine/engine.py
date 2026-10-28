@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 
 from .analyzer import FILLER_STEMS, Analysis, Analyzer
 from .intents import INTENT_TO_KB, INTENTS, Intent
 from .knowledge import BM25Index, KBEntry, build_vocabulary
-from .text import stem
+from .text import TRANSLIT, normalize, stem
 
 MIN_CONF = 0.60  # accept an intent at or above this confidence
 STRONG_CONF = 0.80  # accept without the "did you mean" check
@@ -20,6 +21,7 @@ GENDERS = {"men": "men", "women": "women", "kid": "kids"}  # keys are STEMS
 DIVISIONS = {"salon": "salon", "spa": "spa", "parlor": "parlor"}  # keys are STEMS
 DIVISION_LABEL = {"salon": "Salon", "spa": "Spa", "parlor": "Beauty Parlor"}
 DIVISION_URL = {"salon": "/salon", "spa": "/spa", "parlor": "/beauty-parlor"}
+AUDIENCE_LABEL = {"men": "Men", "women": "Women", "kids": "Kids", "unisex": "Everyone (unisex)"}
 URL_APPOINTMENTS = "/customer/appointments"
 URL_INVOICES = "/customer/invoices"
 URL_WALLET = "/customer/wallet"
@@ -353,8 +355,27 @@ class Engine:
                     first = waiting[0]
                     r.text += f" You currently have a booking awaiting payment: {first['service']} on {first['when']}."
         elif n == "service_details":
-            if ents["services"]:
-                r.text, r.actions = self._price(ents)
+            if len(ents["services"]) == 1:
+                svc = ents["services"][0]
+                r.text, r.actions = self._details(svc)
+                r.show_rephrase = bool(a.corrections) or not self._exact(svc, a)
+            elif ents["services"]:
+                lines = [
+                    f"- {s['name']}: from Rs {s['price_from']} (about {s['duration']} min)"
+                    for s in ents["services"][:8]
+                ]
+                r.text = (
+                    "Several of our services match. Which one would you like to know about?\n"
+                    + "\n".join(lines)
+                )
+                r.actions = [
+                    {
+                        "label": f"Open {DIVISION_LABEL[ents['services'][0]['division']]}",
+                        "url": DIVISION_URL[ents["services"][0]["division"]],
+                    }
+                ]
+                r.suggestions = [f"Tell me about {s['name']}" for s in ents["services"][:4]]
+                r.show_rephrase = bool(a.corrections)
             else:
                 r.text, r.actions = self._list_services(ents)
         elif n == "services_list":
@@ -501,6 +522,52 @@ class Engine:
         )
         d = ents.get("division") or (pool[0]["division"] if pool else None)
         return text, ([{"label": f"Open {DIVISION_LABEL[d]}", "url": DIVISION_URL[d]}] if d else [])
+
+    def _exact(self, svc: dict, a: Analysis) -> bool:
+        """True when the question used the service's own words: no spelling fix, no synonym
+        (such as "gents" for "men") and no Hindi or Telugu word was needed to understand it."""
+        if a.corrections:
+            return False
+        if any(w in TRANSLIT for w in re.findall(r"[a-z']+", a.original.lower())):
+            return False
+        name = {stem(t) for t in normalize(svc["name"])}
+        return bool(name) and name <= {stem(t) for t in a.tokens}
+
+    def _details(self, svc: dict) -> tuple[str, list[dict]]:
+        """A full explanation built only from the service's own fields. Empty fields are skipped."""
+        lines = []
+        about = svc.get("description") or svc.get("info")
+        lines.append(f"{svc['name']}" + (f": {about}" if about else ""))
+        lo, hi = svc["duration"], svc.get("duration_max") or svc["duration"]
+        time = (
+            f"about {lo} minutes" if lo == hi else f"{lo} to {hi} minutes depending on the option"
+        )
+        lines.append(f"Time: {time}.")
+        lines.append(
+            f"Price: from Rs {svc['price_from']} incl. GST. "
+            "Prices include GST and may vary with options such as hair length or add-ons."
+        )
+        who = AUDIENCE_LABEL.get(svc.get("gender"), "")
+        lines.append(
+            "Suits: "
+            + (f"{who}. " if who else "")
+            + f"Division: {DIVISION_LABEL[svc['division']]}."
+        )
+        team = svc.get("stylists") or []
+        if team:
+            lines.append(
+                "Offered by: "
+                + ", ".join(
+                    f"{t['name']} ({t['specialization']})" if t.get("specialization") else t["name"]
+                    for t in team[:5]
+                )
+                + "."
+            )
+        actions = [
+            {"label": "Book this service", "url": f"{URL_BOOK}?service={svc['slug']}"},
+            {"label": "See similar services", "url": DIVISION_URL[svc["division"]]},
+        ]
+        return "\n".join(lines), actions
 
     def _price(self, ents: dict) -> tuple[str, list[dict]]:
         pool = (
