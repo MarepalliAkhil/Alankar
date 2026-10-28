@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts import lockout, otp, work
+from accounts import lockout, otp, twofactor, work
 from accounts.audit import audit, client_ip
 from accounts.models import AuditLog, OtpChallenge, PasswordResetToken, StaffInvite, User
 from accounts.serializers import (
@@ -27,6 +27,7 @@ from accounts.serializers import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
     SetPasswordWithTokenSerializer,
+    TwoFactorVerifySerializer,
     check_password_strength,
 )
 from accounts.tokens import (
@@ -171,6 +172,16 @@ class LoginView(AuthThrottleMixin, APIView):
                 audit(AuditLog.Action.LOCKOUT, request=request, target=user, email=email)
             return Response({"detail": GENERIC_LOGIN_ERROR}, status=status.HTTP_401_UNAUTHORIZED)
 
+        if twofactor.applies_to(user):
+            # Right password, but not signed in yet: the app code comes next. The failure count is
+            # kept until that code is right, so the code cannot be guessed without limit.
+            return Response(
+                {
+                    "two_factor_required": True,
+                    "challenge": twofactor.make_challenge(user),
+                    "detail": "Enter the 6-digit code from your authenticator app.",
+                }
+            )
         lockout.record_success(email, ip)
         if user.role == User.Role.CUSTOMER and otp.otp_enabled():
             # Right password: now ask for the emailed code before any session starts.
@@ -191,6 +202,50 @@ class LoginView(AuthThrottleMixin, APIView):
                     "purpose": purpose,
                     "detail": otp.sent_message(),
                 }
+            )
+        return start_session(request, user)
+
+
+class TwoFactorVerifyView(AuthThrottleMixin, APIView):
+    policy_action = "auth.two_factor_verify"
+    authentication_classes: list = []
+
+    @extend_schema(
+        summary="Check the authenticator (or backup) code and start the admin session",
+        request=TwoFactorVerifySerializer,
+        responses=MeSerializer,
+    )
+    def post(self, request: Request) -> Response:
+        serializer = TwoFactorVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = twofactor.user_from_challenge(data["challenge"])
+        if user is None:
+            return Response({"detail": twofactor.WRONG}, status=status.HTTP_400_BAD_REQUEST)
+        ip = client_ip(request)
+        if lockout.is_locked(user.email):
+            return Response({"detail": LOCKED_MESSAGE}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        how = twofactor.verify(user, data["code"])
+        if how is None:
+            audit(
+                AuditLog.Action.LOGIN_FAILED,
+                request=request,
+                target=user,
+                email=user.email,
+                reason="bad_two_factor",
+                tab="admin",
+            )
+            if lockout.record_failure(user.email, ip):
+                audit(AuditLog.Action.LOCKOUT, request=request, target=user, email=user.email)
+            return Response({"detail": twofactor.WRONG}, status=status.HTTP_400_BAD_REQUEST)
+        lockout.record_success(user.email, ip)
+        if how == "backup":
+            audit(
+                AuditLog.Action.TWO_FACTOR_BACKUP_USED,
+                request=request,
+                actor=user,
+                target=user,
+                left=twofactor.backup_codes_left(user),
             )
         return start_session(request, user)
 

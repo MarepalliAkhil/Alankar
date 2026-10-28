@@ -270,9 +270,9 @@ class SupplierDetailView(APIView):
     @extend_schema(summary="Delete a supplier that was never used", request=None)
     def delete(self, request: Request, pk) -> Response:
         row = get_object_or_404(Supplier, pk=pk)
-        if row.movements.exists():
+        if row.movements.exists() or row.purchase_orders.exists():
             return Response(
-                {"detail": "Stock was received from this supplier. Hide it instead."},
+                {"detail": "Stock was ordered or received from this supplier. Hide it instead."},
                 status=status.HTTP_409_CONFLICT,
             )
         name = row.name

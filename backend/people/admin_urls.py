@@ -1,9 +1,11 @@
 from django.urls import path
 
 from accounts import security_views as sec
+from accounts import twofactor_views as tf
 from billing import admin_views as b
 from billing import report_views as r
 from inventory import admin_views as i
+from inventory import purchase_views as po
 from marketing import private_views as pc
 from marketing import views as m
 from people import admin_views as v
@@ -17,6 +19,30 @@ admin_patterns = [
     path("audit/export/", sec.AuditExportView.as_view(), name="admin-audit-export"),
     path("audit/", sec.AuditLogView.as_view(), name="admin-audit"),
     path("security/", sec.SecurityOverviewView.as_view(), name="admin-security"),
+    path("security/two-factor/", tf.TwoFactorStatusView.as_view(), name="admin-two-factor"),
+    path(
+        "security/two-factor/setup/", tf.TwoFactorSetupView.as_view(), name="admin-two-factor-setup"
+    ),
+    path(
+        "security/two-factor/confirm/",
+        tf.TwoFactorConfirmView.as_view(),
+        name="admin-two-factor-confirm",
+    ),
+    path(
+        "security/two-factor/disable/",
+        tf.TwoFactorDisableView.as_view(),
+        name="admin-two-factor-disable",
+    ),
+    path(
+        "security/two-factor/backup-codes/",
+        tf.TwoFactorCodesView.as_view(),
+        name="admin-two-factor-codes",
+    ),
+    path(
+        "security/two-factor/<uuid:pk>/reset/",
+        tf.TwoFactorResetView.as_view(),
+        name="admin-two-factor-reset",
+    ),
     path("security/unlock/", sec.UnlockView.as_view(), name="admin-security-unlock"),
     path("security/sessions/", sec.StaffSessionListView.as_view(), name="admin-sessions"),
     path(
@@ -49,6 +75,28 @@ admin_patterns = [
     path("inventory/ledger/", i.LedgerView.as_view(), name="admin-ledger"),
     path("inventory/suppliers/", i.SupplierListView.as_view(), name="admin-suppliers"),
     path("inventory/suppliers/<uuid:pk>/", i.SupplierDetailView.as_view(), name="admin-supplier"),
+    path(
+        "inventory/suppliers/<uuid:pk>/history/",
+        po.SupplierHistoryView.as_view(),
+        name="admin-supplier-history",
+    ),
+    path("inventory/purchase-orders/", po.OrderListView.as_view(), name="admin-pos"),
+    path("inventory/purchase-orders/<uuid:pk>/", po.OrderDetailView.as_view(), name="admin-po"),
+    path(
+        "inventory/purchase-orders/<uuid:pk>/send/",
+        po.OrderSendView.as_view(),
+        name="admin-po-send",
+    ),
+    path(
+        "inventory/purchase-orders/<uuid:pk>/receive/",
+        po.OrderReceiveView.as_view(),
+        name="admin-po-receive",
+    ),
+    path(
+        "inventory/purchase-orders/<uuid:pk>/close/",
+        po.OrderCloseView.as_view(),
+        name="admin-po-close",
+    ),
     path("cash-closes/", b.CashCloseListView.as_view(), name="admin-cash-closes"),
     path(
         "cash-closes/<uuid:pk>/review/", b.CashCloseReviewView.as_view(), name="admin-cash-review"

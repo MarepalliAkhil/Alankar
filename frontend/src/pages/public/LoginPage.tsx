@@ -2,9 +2,10 @@ import { Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { needsOtp, type OtpPurpose } from '../../api/auth';
+import { needsOtp, needsTwoFactor, type OtpPurpose } from '../../api/auth';
 import { loginErrorMessage } from '../../api/auth-messages';
 import { OtpStep } from '../../components/auth/OtpStep';
+import { TwoFactorStep } from '../../components/auth/TwoFactorStep';
 import { PageContainer } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -33,7 +34,7 @@ type FormErrors = Partial<Record<'email' | 'password', string>>;
 export default function LoginPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { status, user, signIn, completeOtp, signOut } = useSession();
+  const { status, user, signIn, completeOtp, completeTwoFactor, signOut } = useSession();
   const roleParam = params.get('role');
   const role: LoginRole = isLoginRole(roleParam) ? roleParam : 'customer';
   const bookingIntent = params.get('intent') === 'book';
@@ -48,6 +49,8 @@ export default function LoginPage() {
   const [otp, setOtp] = useState<{ email: string; detail: string; purpose: OtpPurpose } | null>(
     null,
   );
+
+  const [twoFactor, setTwoFactor] = useState<{ challenge: string; detail: string } | null>(null);
 
   useDocumentTitle('Login');
 
@@ -76,6 +79,12 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const result = await signIn({ role, ...parsed.data });
+      if (needsTwoFactor(result)) {
+        setTwoFactor({ challenge: result.challenge, detail: result.detail });
+        setPassword('');
+        setSubmitting(false);
+        return;
+      }
       if (needsOtp(result)) {
         setOtp({ email: result.email, detail: result.detail, purpose: result.purpose });
         setPassword('');
@@ -97,6 +106,20 @@ export default function LoginPage() {
     setSubmitting(true); // keeps the "already signed in" panel from flashing
     try {
       const verified = await completeOtp(otp.email, code, otp.purpose);
+      navigate(destinationAfterLogin(verified, params.get('next'), bookingIntent), {
+        replace: true,
+      });
+    } catch (error) {
+      setSubmitting(false);
+      throw error;
+    }
+  };
+
+  const verifyAppCode = async (code: string) => {
+    if (!twoFactor) return;
+    setSubmitting(true);
+    try {
+      const verified = await completeTwoFactor(twoFactor.challenge, code);
       navigate(destinationAfterLogin(verified, params.get('next'), bookingIntent), {
         replace: true,
       });
@@ -137,7 +160,15 @@ export default function LoginPage() {
             : `Welcome back to ${brand.shopName}. Choose who you are and sign in.`}
         </p>
 
-        {otp ? (
+        {twoFactor ? (
+          <div className="mt-lg">
+            <TwoFactorStep
+              message={twoFactor.detail}
+              onVerify={verifyAppCode}
+              onBack={() => setTwoFactor(null)}
+            />
+          </div>
+        ) : otp ? (
           <div className="mt-lg">
             <OtpStep
               email={otp.email}

@@ -56,7 +56,18 @@ export interface OtpPending {
   detail: string;
 }
 
-export type LoginResult = SessionUser | OtpPending;
+/** An admin with two-step sign-in on: the password was right, the app code comes next. */
+export interface TwoFactorPending {
+  two_factor_required: true;
+  challenge: string;
+  detail: string;
+}
+
+export type LoginResult = SessionUser | OtpPending | TwoFactorPending;
+
+export function needsTwoFactor(result: LoginResult): result is TwoFactorPending {
+  return 'two_factor_required' in result && result.two_factor_required === true;
+}
 
 export function needsOtp(result: LoginResult): result is OtpPending {
   return 'otp_required' in result && result.otp_required === true;
@@ -122,5 +133,11 @@ export async function acceptInvite(token: string, password: string): Promise<{ r
     token,
     password,
   });
+  return data;
+}
+
+/** Checks the authenticator (or a backup) code; on success the server starts the session. */
+export async function verifyTwoFactor(challenge: string, code: string): Promise<SessionUser> {
+  const { data } = await api.post<SessionUser>('/auth/two-factor/verify/', { challenge, code });
   return data;
 }

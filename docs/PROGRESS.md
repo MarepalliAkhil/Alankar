@@ -14,7 +14,9 @@
   Task 5e (growth features) is split 5e-1..5e-4 (owner-approved). One sub-task at a time; wait for "passed".
   Task 5e-1 (packages, memberships, gift cards, waitlist): DONE. Verified on the owner's PC (2026-10-27).
   Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): DONE. Verified on the owner's PC
-  (2026-10-28). Next: 5e-3 (purchase orders, optional admin 2FA), 5e-4 (policy sweep).
+  (2026-10-28).
+  Task 5e-3 (purchase orders, optional admin two-step sign-in) and 5e-4 (policy sweep, own-data and concurrency
+  tests): IMPLEMENTED, waiting for the owner's "passed". Next after them: Task 6.
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
@@ -761,3 +763,37 @@
    difference is 0.00), "Busiest hours: visits" and "Busiest hours: revenue" (grid; darker is busier), and
    "Packages, memberships and gift cards". Download CSV for each.
 6. Receptionist, stylist: no private-coupon, schedule or report access (direct URLs show "not allowed").
+
+## Task 5e-3: decisions
+- Two-step sign-in (optional, admin only, TOTP with any authenticator app). Setup: Admin > Settings > Security >
+  "Two-step sign-in" > Turn on: scan the QR (or type the key), enter the 6-digit code, then save the 10 backup codes
+  (shown once; stored hashed). Once confirmed, every sign-in asks for a code after the password. A backup code works
+  once. A code cannot be used twice (replay refused). Wrong codes count toward the 5-failures lockout.
+- The secret is stored encrypted. The QR code is drawn by our own small encoder (`accounts/qr.py`, no new dependency).
+- Turning it off or making new backup codes needs the password and a current code.
+- Lost phone and codes: another admin can press "Reset" on the Security tab (reason required; signs that admin out,
+  emails them, audited). Or on the server: `python manage.py reset_admin_2fa <email>` (audited).
+- Purchase orders (Admin > Inventory > Purchase orders): Draft (editable) > Sent (queues an email to the supplier,
+  simulated mailbox) > Receive goods (partial allowed; never more than ordered; each receipt writes ledger rows
+  with the supplier) > Received. "Close" a part-received order short (reason required) or cancel an unsent one.
+  Supplier history shows ordered/received/value and reconciles with the stock ledger.
+- A supplier that has orders or received stock can no longer be deleted (409); hide it instead.
+- Item 9 (anonymize/delete) was already verified by the 5d tests; not repeated.
+
+## Task 5e-3: owner browser walkthrough
+1. Admin > Settings > Security > Two-step sign-in > Turn on. Scan the QR, enter the code, save the codes. Sign out.
+2. Sign in as admin: after the password a "Code from your app" step appears. Wrong code: refused. Right code: in.
+   Sign out and sign in with a backup code: works once; the same code again fails.
+3. Turn off needs password + code. With a second admin, press Reset on the first one; the first signs in with the
+   password only.
+4. Inventory > Purchase orders > New order: pick supplier, add lines, Save draft, Send. Mailbox shows the email.
+   Receive goods for part of it: status "Partly received", Stock page rises. Receive the rest: "Received".
+   Another order: send, receive part, Close with a reason. Supplier filter shows the history line.
+5. Receptionist/stylist: no Purchase orders or Two-step controls (direct URLs show "not allowed").
+
+## Task 5e-4: decisions
+- `core/tests/test_sweep.py` tries every API endpoint as a guest and as each role: anything the policy denies must
+  return 403 (401 for guests); anything allowed must never crash (no 5xx).
+- Own-data tests for waitlist, offers, membership and wallet; concurrency tests for private coupons, last package
+  session and campaign runners (`billing/tests/test_concurrency_5e.py`).
+- Reconciliation reports (payments by method, supplier history) have tests that assert difference 0.00.

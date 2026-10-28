@@ -19,6 +19,7 @@ auth_patterns = [
     ),
     path("otp/verify/", views.OtpVerifyView.as_view(), name="auth-otp-verify"),
     path("otp/resend/", views.OtpResendView.as_view(), name="auth-otp-resend"),
+    path("two-factor/verify/", views.TwoFactorVerifyView.as_view(), name="auth-two-factor-verify"),
     path("password/change/", views.PasswordChangeView.as_view(), name="auth-password-change"),
     path("invite/", views.InviteCheckView.as_view(), name="auth-invite-check"),
     path("invite/accept/", views.InviteAcceptView.as_view(), name="auth-invite-accept"),

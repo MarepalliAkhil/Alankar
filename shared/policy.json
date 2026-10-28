@@ -147,7 +147,11 @@
     "my.waitlist.create": "Join the waitlist",
     "my.waitlist.cancel": "Leave the waitlist",
     "my.waitlist.respond": "Accept or decline a freed slot",
-    "my.coupons.read": "See my private coupons"
+    "my.coupons.read": "See my private coupons",
+    "auth.two_factor_verify": "Check the authenticator (or backup) code and start the admin session",
+    "twofactor.manage": "Set up, use and switch off my own two-step sign-in",
+    "twofactor.reset": "Reset another admin's two-step sign-in (they lost their phone)",
+    "purchasing.manage": "Create, send, receive and close purchase orders; see a supplier's order history"
   },
   "public": {
     "api": [
@@ -157,6 +161,7 @@
       "auth.login",
       "auth.otp_verify",
       "auth.otp_resend",
+      "auth.two_factor_verify",
       "auth.refresh",
       "auth.logout",
       "auth.session",
@@ -562,7 +567,10 @@
         "wallet.catalogue",
         "wallet.customer",
         "wallet.sell",
-        "wallet.giftcheck"
+        "wallet.giftcheck",
+        "twofactor.manage",
+        "twofactor.reset",
+        "purchasing.manage"
       ],
       "routes": [
         "/customers/:id"

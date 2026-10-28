@@ -5,7 +5,9 @@ import {
   getSession,
   login,
   needsOtp,
+  needsTwoFactor,
   verifyOtp,
+  verifyTwoFactor,
   logout,
   refreshSession,
   type LoginPayload,
@@ -75,12 +77,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     const result = await login(payload);
-    if (!needsOtp(result)) setState({ status: 'authenticated', user: result });
+    if (!needsOtp(result) && !needsTwoFactor(result))
+      setState({ status: 'authenticated', user: result });
     return result;
   }, []);
 
   const completeOtp = useCallback(async (email: string, code: string, purpose: OtpPurpose) => {
     const user = await verifyOtp(email, code, purpose);
+    setState({ status: 'authenticated', user });
+    return user;
+  }, []);
+
+  const completeTwoFactor = useCallback(async (challenge: string, code: string) => {
+    const user = await verifyTwoFactor(challenge, code);
     setState({ status: 'authenticated', user });
     return user;
   }, []);
@@ -94,8 +103,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [becomeAnonymous]);
 
   const value = useMemo(
-    () => ({ status: state.status, user: state.user, signIn, completeOtp, signOut }),
-    [state, signIn, completeOtp, signOut],
+    () => ({
+      status: state.status,
+      user: state.user,
+      signIn,
+      completeOtp,
+      completeTwoFactor,
+      signOut,
+    }),
+    [state, signIn, completeOtp, completeTwoFactor, signOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

@@ -18,6 +18,8 @@ vi.mock('../api/auth', () => ({
   verifyOtp: vi.fn(),
   resendOtp: vi.fn(),
   needsOtp: (result: object) => 'otp_required' in result,
+  needsTwoFactor: (result: object) => 'two_factor_required' in result,
+  verifyTwoFactor: vi.fn(),
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   checkInvite: vi.fn(),

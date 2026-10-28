@@ -18,6 +18,7 @@ import {
   type Supplier,
 } from '../../api/adminOps';
 import { errorDetail } from '../../api/client';
+import { PurchaseOrdersPanel } from '../../components/admin/inventory/PurchaseOrdersPanel';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Badge,
@@ -38,11 +39,12 @@ import {
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 
-type Tab = 'products' | 'ledger' | 'suppliers';
+type Tab = 'products' | 'ledger' | 'suppliers' | 'orders';
 const tabs: TabItem<Tab>[] = [
   { id: 'products', label: 'Products' },
   { id: 'ledger', label: 'Stock ledger' },
   { id: 'suppliers', label: 'Suppliers' },
+  { id: 'orders', label: 'Purchase orders' },
 ];
 
 const failure = (error: unknown, fallback: string) => errorDetail(error) ?? fallback;
@@ -71,6 +73,7 @@ export default function AdminInventoryPage() {
         )}
         {tab === 'ledger' && <LedgerTab product={ledgerFor} onProduct={setLedgerFor} />}
         {tab === 'suppliers' && <SuppliersTab />}
+        {tab === 'orders' && <PurchaseOrdersPanel />}
       </TabPanel>
     </div>
   );

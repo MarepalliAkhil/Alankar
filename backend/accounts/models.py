@@ -122,6 +122,15 @@ class AuditLog(models.Model):
         COUPON_REVOKED = "coupon_revoked", "Private coupon withdrawn"
         CAMPAIGN_SCHEDULED = "campaign_scheduled", "Campaign scheduled"
         CAMPAIGN_UNSCHEDULED = "campaign_unscheduled", "Campaign schedule removed"
+        TWO_FACTOR_ENABLED = "two_factor_enabled", "Two-step sign-in switched on"
+        TWO_FACTOR_DISABLED = "two_factor_disabled", "Two-step sign-in switched off"
+        TWO_FACTOR_RESET = "two_factor_reset", "Two-step sign-in reset by another admin"
+        TWO_FACTOR_CODES = "two_factor_codes", "New backup codes created"
+        TWO_FACTOR_BACKUP_USED = "two_factor_backup_used", "A backup code was used to sign in"
+        PO_CREATED = "po_created", "Purchase order created or changed"
+        PO_SENT = "po_sent", "Purchase order sent to the supplier"
+        PO_RECEIVED = "po_received", "Purchase order goods received"
+        PO_CLOSED = "po_closed", "Purchase order cancelled or closed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)
@@ -291,3 +300,32 @@ class WorkSession(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class TwoFactor(models.Model):
+    """An admin's authenticator-app secret. Only confirmed ones are asked for at sign-in."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="two_factor"
+    )
+    secret = models.CharField(max_length=300)  # encrypted
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_step = models.BigIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"Two-step sign-in for {self.user_id}"
+
+
+class BackupCode(models.Model):
+    """A one-time code for a lost phone. Only a keyed hash is stored."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="backup_codes"
+    )
+    code_hash = models.CharField(max_length=64, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"Backup code for {self.user_id}"

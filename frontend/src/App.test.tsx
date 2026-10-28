@@ -1,7 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ensureCsrf, getSession, login, logout, registerCustomer, verifyOtp } from './api/auth';
+import {
+  ensureCsrf,
+  getSession,
+  login,
+  logout,
+  registerCustomer,
+  verifyOtp,
+  verifyTwoFactor,
+} from './api/auth';
 import { brand, poweredBy } from './config/brand';
 import * as publicApi from './api/public';
 import * as staffApi from './api/staff';
@@ -19,6 +27,8 @@ vi.mock('./api/auth', () => ({
   verifyOtp: vi.fn(),
   resendOtp: vi.fn(),
   needsOtp: (result: object) => 'otp_required' in result,
+  needsTwoFactor: (result: object) => 'two_factor_required' in result,
+  verifyTwoFactor: vi.fn(),
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
   checkInvite: vi.fn(),
@@ -343,6 +353,55 @@ describe('login page', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Staff' })).toBeInTheDocument();
   });
+  it('asks an admin with two-step sign-in for the app code, then opens the dashboard', async () => {
+    loginMock.mockResolvedValue({
+      two_factor_required: true,
+      challenge: 'signed-challenge',
+      detail: 'Enter the 6-digit code from your authenticator app.',
+    });
+    vi.mocked(verifyTwoFactor).mockResolvedValue(userFor('admin'));
+    const user = userEvent.setup();
+    renderAt('/login?role=admin');
+    await user.type(await screen.findByLabelText(/Email/), 'admin@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
+    expect(
+      await screen.findByText('Enter the 6-digit code from your authenticator app.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Code from your app/), '12');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    expect(screen.getByText(/Enter the 6-digit code from your app/)).toBeInTheDocument();
+    expect(verifyTwoFactor).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText(/Code from your app/), '3456');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    await waitFor(() => expect(verifyTwoFactor).toHaveBeenCalledWith('signed-challenge', '123456'));
+  });
+
+  it('shows the server message for a wrong app code and lets the admin go back', async () => {
+    loginMock.mockResolvedValue({
+      two_factor_required: true,
+      challenge: 'signed-challenge',
+      detail: 'Enter the 6-digit code from your authenticator app.',
+    });
+    vi.mocked(verifyTwoFactor).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { detail: 'That code is incorrect or has expired.' } },
+    });
+    const user = userEvent.setup();
+    renderAt('/login?role=admin');
+    await user.type(await screen.findByLabelText(/Email/), 'admin@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+    await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
+    await user.type(await screen.findByLabelText(/Code from your app/), '000000');
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    expect(await screen.findByText('That code is incorrect or has expired.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByLabelText(/^Password/)).toBeInTheDocument();
+  });
+
   it('asks a customer for the emailed code, then opens their home', async () => {
     loginMock.mockResolvedValue({
       otp_required: true,

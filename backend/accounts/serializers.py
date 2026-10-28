@@ -75,6 +75,11 @@ class OtpVerifySerializer(serializers.Serializer):
         return normalize_email(value)
 
 
+class TwoFactorVerifySerializer(serializers.Serializer):
+    challenge = serializers.CharField(max_length=500)
+    code = serializers.CharField(max_length=20, trim_whitespace=True)
+
+
 class OtpResendSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     purpose = serializers.ChoiceField(choices=["register", "login"])

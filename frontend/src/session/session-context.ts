@@ -9,6 +9,7 @@ export interface SessionValue {
   /** Staff get a user back; customers may get an OtpPending to finish with `completeOtp`. */
   signIn: (payload: LoginPayload) => Promise<LoginResult>;
   completeOtp: (email: string, code: string, purpose: OtpPurpose) => Promise<SessionUser>;
+  completeTwoFactor: (challenge: string, code: string) => Promise<SessionUser>;
   signOut: () => Promise<void>;
 }
 
