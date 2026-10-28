@@ -54,7 +54,7 @@ class Offer(models.Model):
 
 
 class KnowledgeEntry(models.Model):
-    """FAQ on the website; later also the knowledge base of the chatbot (Task 8)."""
+    """FAQ on the website; later also the knowledge base of the chatbot (Task 7)."""
 
     question = models.CharField(max_length=200)
     answer = models.TextField()

@@ -1,6 +1,10 @@
 # Progress
 
 ## Status
+- Task 7 (AI Alankar Intelligence chatbot: 7a engine and data, 7b API and widget, 7c admin Chatbot insights and
+  accuracy evaluation): IMPLEMENTED in the build sandbox in one go (owner's instruction), waiting for the owner's PC
+  run (migrate, seed_demo, pytest, npm test, walkthrough below). New migrations: chatbot 0001, accounts 0023.
+  Next: Task 8 (hardening, Playwright full-workflow test) after "passed".
 - Task 3 (receptionist slice: 3a requests/schedule, 3b check-in/walk-ins/customers, 3c POS/stock/
   refunds/cash close/inventory view, 3d work sessions/idle sign-out/My Hours & Pay): DONE. Verified
   on the owner's PC (2026-10-27): tests, lint, typecheck, build and the browser walkthroughs passed.
@@ -19,8 +23,9 @@
   tests): DONE. Verified on the owner's PC (2026-10-28).
 - Task 6 (ratings, work sessions, payroll, Staff Summary) is split 6a..6c (owner-approved plan). One sub-task at a
   time; wait for "passed". Task 6a (admin Ratings overview and moderation, stylist pay breakdown): DONE. Verified on the owner's PC
-  (2026-10-28). Task 6b (Work Hours, shifts, receptionist pay) and Task 6c (payroll runs, payslips, Staff Summary, Performance Review): IMPLEMENTED, waiting for the owner's "passed".
-  Next: Task 8 (chatbot), then 9 (deployment) and 10 (For Zenotians).
+  (2026-10-28). Tasks 6b (Work Hours, shifts, receptionist pay) and 6c (payroll runs, payslips, Staff Summary,
+  Performance Review): DONE. Verified on the owner's PC and pushed (2026-10-29). **Task 6: DONE.**
+  Next: Task 7 (chatbot), see the task list below.
 - Task 5 (admin slice, 5a to 5e): DONE. Verified on the owner's PC and pushed (2026-10-28). Next: Task 6.
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
@@ -44,6 +49,16 @@
   vitest 75 passed in the build sandbox. EMAIL_HOST_PASSWORD spaces are stripped.
 - Task 1 (auth and policy): DONE. Verified on the owner's PC (2026-10-26): pytest 99 passed,
   ruff clean, vitest 65 passed, eslint, typecheck and build OK; browser run of every flow.
+
+## Task list (renumbered by the owner, 2026-10-29)
+- Tasks 1 to 6: DONE (6a, 6b, 6c verified on the owner's PC and pushed).
+- Task 7: "AI Alankar Intelligence" chatbot (7a port and data, 7b API and widget, 7c admin insights and accuracy). No LLMs.
+- Task 8: hardening and the Playwright full-workflow test with four users.
+- Task 9: "For Zenotians" page design (MASTER_NOTES section 36), including the About me resume section.
+- Task 10: admin assistant that handles things with commands. Rule-based, no LLM, same permissions and audit log as the
+  admin screens, asks for confirmation before any change.
+- Task 11: stage 2, the owner's custom UI design.
+- Task 12: to be decided later. Deployment is not assigned to any task yet; candidate for 8 or 12.
 
 ## Decisions
 - Defaults in CLAUDE.md section 9 and MASTER_NOTES section 28 are assumed accepted until changed.
@@ -159,7 +174,7 @@
   incl. GST; from-price = cheapest active variant). Public team profiles in
   `people.StylistProfile` (customer-safe; `user` links a profile to a stylist account later).
   Website content in new app `website` (SiteContent keyed JSON, Achievement, Offer,
-  KnowledgeEntry = FAQ now, chatbot knowledge in Task 8).
+  KnowledgeEntry = FAQ now, chatbot knowledge in Task 7).
 - `python manage.py seed_demo` loads DEMO content (Indian-salon services and prices, 4 team
   profiles, contact/hours/policies/FAQ). Demo address/phone are clearly placeholders.
   Achievements, offers, ratings and reviews are NOT seeded: they come only from the owner or
@@ -415,7 +430,7 @@
 - UI: person cards (avatar, first name for guests, appointment chip, last message, unread badge)
   under stylist menu "Zen Chat" (/chat) and customer "Stylist Chat" (/customer/chat), plus a
   "Message <stylist>" link on My Appointments cards.
-- Single-process dev uses the in-memory channel layer. For deployment (Task 9) switch
+- Single-process dev uses the in-memory channel layer. For deployment (task not assigned yet, see Task 12) switch
   CHANNEL_LAYERS to Redis so several workers share messages.
 - Open question left as agreed: true end-to-end encryption (server cannot read) is a later add-on.
 
@@ -439,7 +454,7 @@
   `shared/policy.json` (`status: planned|available`).
 
 ## Known issues
-- Task 10 (planned, spec in MASTER_NOTES section 36): "For Zenotians" page with a left sidebar
+- Task 9 (planned, spec in MASTER_NOTES section 36): "For Zenotians" page with a left sidebar
   (Overview, About me as a resume, The project, How it maps to Zenoti, Engineering decisions, Try
   the demo, Contact). The owner must supply the resume before About me can be filled.
 - "For Zenotians" page content is pending from the owner (the one allowed placeholder; the
@@ -465,7 +480,7 @@
   cannot be deleted. Changes show on the public site at once. Audited as CATALOGUE_CHANGED.
 - Policy: new actions staff.details.read/update/link, staff.daysoff.list/decide, catalogue.read/write,
   admin only. Denial tests for customer, stylist, receptionist and guest on every endpoint.
-- Admin menu items not on the 5a to 5d list and not in Task 6: Concierge (Task 8), Users & Roles
+- Admin menu items not on the 5a to 5d list and not in Task 6: Concierge (Task 7), Users & Roles
   (a Settings sub-page) and live numbers on the admin Dashboard. Owner to decide where they go.
 - Migrations: scheduling 0004 (Service.gst_percent), accounts 0011 (audit actions).
 
@@ -911,3 +926,77 @@
 7. Performance Review tab: indicators with their rules. Review a person, choose Put on notice without notes (it asks for
    notes), add notes, Save. Audit Log has `review_saved` without the notes text. Staff cannot open reviews.
 8. Receptionist, stylist, customer: no Payroll or Staff Summary menu; the URLs show "not allowed".
+
+## Task 7: decisions
+- Engine: ported from reference/chatbot_reference into backend/chatbot/engine (standard library only). Data comes
+  from the database: catalogue, prices, durations, hours, contact and team from the real tables; knowledge base from
+  built-in entries (chatbot/defaults.py) plus active FAQs (website.KnowledgeEntry). An FAQ tagged `kb:<id>` replaces
+  the built-in answer with that id. The engine is cached and rebuilt on any change to services, categories, stylists,
+  ratings, site content or FAQs (signals) and at least every 300 s (bulk updates and other processes).
+- Aliases (owner answer 1): the existing `Service.tags` field plus default aliases in chatbot/aliases.py. No new
+  column; demo_data tags unchanged.
+- Personal answers go through `UserTools(user)`, bound to the one logged-in customer. The id the engine passes is
+  ignored, so another user's data can not be asked for. Guests get "please log in". Packages, membership and gift-card
+  balances reuse `wallet.data.customer_wallet` (which also lapses expired items, same as My Wallet).
+- Stylist rating is shown in an answer only when there are at least 5 counted ratings.
+- POST /api/chatbot/ask/ is a public policy action (guests and customers). The policy file has no "guests and
+  customers but not staff" concept, so staff accounts are refused (403) inside the view; tests cover all three staff
+  roles. CSRF applies to guests too (existing global rule). Rate limit: 20 questions per minute per user, or per
+  IP address for guests (cache counter, no message text). Behind a proxy the real client IP needs handling at
+  deployment (Task 12). Message limit 500 characters. The raw message is never stored or echoed.
+- Anonymous log: an unanswered question is stored only as its normalized content words (a key) with a count.
+  Messages with digits, "@", links, or more than 8 words are dropped; rows expire after 90 days. A name typed inside a
+  question could still end up in a key; admin can dismiss it. Known limitation.
+- Insights (7c): admin only (actions chatbot.insights.read / .manage / .test). Add as FAQ creates a website FAQ,
+  closes the row, audits it (new audit action `chatbot_question_handled`) and the bot learns it on the next rebuild.
+  The test box asks as a guest and logs nothing. The menu item "Concierge" (planned) became "Chatbot insights".
+- Only the chatbot's label uses the word "AI" (owner exception in CLAUDE.md).
+- Deployment stays unassigned under Task 12 (owner answer 3).
+- Not done on purpose: no new dependency, no network call, no ML library.
+
+## Task 7: accuracy report (read the caveats)
+The evaluation questions in backend/chatbot/tests/eval_sets.py were written by me (the AI coding assistant), in the
+style of real customers (typos, Telugu and Hindi words in English letters, follow-ups, "hair spa" versus "spa").
+They are NOT real customer questions, and I knew how the engine works while writing them, so these numbers are
+optimistic. Real accuracy will be lower. Check Chatbot insights after launch for real misses.
+- Reference sets ported from the earlier project (58 + 36 questions): 100% / 100%. They were used while the rules
+  were written, so they count as tuning data and say little.
+- TUNING (108 new questions): first run 72.2% (78/108); after general rule changes 90.7% (98/108).
+- HOLDOUT (61 new questions, written before tuning started, run once after tuning, never tuned on): 75.4% (46/61).
+  The honest gap between the two is the point.
+- Tuning changes (all general rules, no question-specific code): synonyms for UPI apps and refund word forms; Hindi
+  words (khulta, paisa, wapas); price weight for "rate"; duration weight for "time"; contact, team, booking and
+  payment intent weights; a "tomorrow" signal for booking; "pay link" phrase; a rule that keeps the service from the
+  previous answer ("how long does it take?"); a rule for short weak same-topic follow-ups ("and on sunday?"); one
+  tuning label corrected ("price of spa" is a price list, as in the reference set).
+- Tuning misses (10): "number do", "what all do you do", "best service for dry skin" (answered from allergy FAQ),
+  "i have a wedding next week what should i book" (read as next appointment), "who does the massages", "can i book
+  without logging in" and "how long for refund" (asks which one you mean), "my appointment got cancelled because i did
+  not pay", "do you have a membership" (read as my membership), "do you sell cars" (spell-fixed to "card", answers
+  with the gift card FAQ).
+- Holdout misses (15): "what time do you shut" (shut unknown), "kitne baje tak open ho", "which area are you in",
+  "how do i reach the owner", "what do you offer" (read as offers), "hair colour time", "which treatment is good for
+  stress", "how many hours before can i cancel", "i cannot come, what do i do", "move my appointment to another day",
+  "is your shop hygienic and are tools sterilised", "do i have any booking this week", "haircut price -> and for kids?"
+  (answered as a price follow-up, but the reply did not contain the expected Kids' Haircut text; not investigated), "what are your opening hours -> what about sunday" (follow-up
+  not recognised), "what is the price of gold" (answered as a price question; should say it does not know).
+- Floors in test_accuracy.py (tuning 85%, holdout 70%) are regression guards, not targets. Not fixed on purpose:
+  fixing holdout misses now would turn it into tuning data. They are the first candidates for Task 8, using real
+  questions from Chatbot insights.
+
+## Task 7: owner browser walkthrough (to verify on the PC)
+1. Run migrate and seed_demo (commands in the hand-off). Open the site as a guest: a round "AI Alankar Intelligence"
+   button sits bottom right on the home and service pages.
+2. Open it (Tab to it and press Enter also works). Click the "Opening hours" chip, then type "price of hair spa", then
+   "haircut prise" (typo: "I understood: ..." appears), then "kitna haircut ka". Press Escape: it closes and focus
+   returns to the button.
+3. Type "when is my next appointment" as a guest: it asks you to log in. Type "spa" or "hair spa vs spa": see the
+   "Did you mean" buttons or the right price.
+4. Log in as a customer with a booking, ask "my next appointment", "my invoices", "how many points do i have": own data only.
+5. Type nonsense ("flurb wibble"): honest fallback with contact details.
+6. Log in as admin, receptionist, stylist: no chat button anywhere. As admin open Chatbot insights: the nonsense
+   question appears as an anonymous key with a count. Click "Add as FAQ", write an answer, save; ask the bot the same
+   question as a guest (after up to 5 minutes, or at once if the FAQ is saved through the app): it answers.
+7. In the test box ask "when is my next appointment": it says to log in (no user data). Check the audit log for
+   "Unanswered chatbot question added as an FAQ or dismissed".
+8. As receptionist or stylist open /chatbot-insights directly: you are sent away (403).

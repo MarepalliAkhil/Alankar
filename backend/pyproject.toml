@@ -14,9 +14,13 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 "scheduling/tests/*" = ["F401", "F811"]
 "wallet/tests/*" = ["F401", "F811"]
 "waitlist/tests/*" = ["F401", "F811"]
+"chatbot/tests/*" = ["F401", "F811", "E501"]
+# Ported from reference/chatbot_reference: long rule tables and answer texts are kept readable.
+"chatbot/defaults.py" = ["E501"]
+"chatbot/engine/*" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = [
   "config", "core", "accounts", "people", "scheduling",
-  "billing", "inventory", "chat", "marketing", "website",
+  "billing", "inventory", "chat", "marketing", "website", "chatbot", "wallet", "waitlist",
 ]

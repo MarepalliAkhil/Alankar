@@ -441,7 +441,7 @@ New notifications: payment link sent (customer); payment received (customer rece
 
 ---
 
-# UPDATE 4: "For Zenotians" page specification (Task 10) **LOCKED**
+# UPDATE 4: "For Zenotians" page specification (Task 9; renumbered from Task 10 on 2026-10-29) **LOCKED**
 
 ## 36. "For Zenotians" page (Task 10)
 

@@ -506,7 +506,7 @@ describe('route guards and role menus', () => {
       ).toBeInTheDocument();
     }
     expect(within(menu).queryByRole('link', { name: /Cash Close/ })).not.toBeInTheDocument();
-    expect(within(menu).queryByRole('link', { name: /Chat/ })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('link', { name: /^Chat(?!bot)/ })).not.toBeInTheDocument();
   });
 
   it('shows the receptionist their menu without admin items or chat', async () => {
@@ -533,15 +533,6 @@ describe('route guards and role menus', () => {
         within(menu).queryByRole('link', { name: new RegExp(`^${label}( Task \\d+)?$`) }),
       ).not.toBeInTheDocument();
     }
-  });
-
-  it('explains planned pages with their purpose and the task they arrive in', async () => {
-    meMock.mockResolvedValue(userFor('admin'));
-    renderAt('/concierge');
-    expect(await screen.findByText('Concierge arrives in Task 8')).toBeInTheDocument();
-    expect(
-      screen.getByText('Chatbot knowledge entries and unanswered questions.'),
-    ).toBeInTheDocument();
   });
 
   it('gives a signed-in customer the account menu instead of Login/Register', async () => {

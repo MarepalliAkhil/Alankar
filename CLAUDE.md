@@ -31,7 +31,7 @@ Lifecycle: requested -> awaiting_payment -> scheduled -> checked_in -> in_progre
 - Customer menu: Home, Book Appointment, My Appointments, Zen Chat, Invoices, Profile.
 - Receptionist menu: Dashboard, Appointments, Schedule, Customers, POS / Billing, Cash Close, Inventory (view), My Hours & Pay. NO chat.
 - Stylist menu: My Day, My Appointments, My Schedule, Zen Chat, Earnings.
-- Admin menu: Dashboard, Appointments, Schedule, Customers, Staff, Staff Summary, Payroll, Services, POS / Billing, Inventory, Marketing, Reports, Concierge, Settings (Business, Users & Roles, Audit Log, Security). NO chat.
+- Admin menu: Dashboard, Appointments, Schedule, Customers, Staff, Staff Summary, Payroll, Services, POS / Billing, Inventory, Marketing, Reports, Chatbot insights, Settings (Business, Users & Roles, Audit Log, Security). NO chat.
 - Entry: first screen is a ROLE PICKER (Customer, Stylist, Receptionist, Admin). Customer: sign in or create account (email, OTP step simulated). Stylist/Receptionist/Admin: SIGN IN ONLY. Staff accounts are created only by admin invite. The server verifies the real role; a mismatch returns a generic error. Registration always forces role = customer.
 - Chat: customer and their assigned stylist ONLY. No receptionist/admin access. UI = grid of person cards; clicking a card opens that conversation.
 
@@ -42,7 +42,7 @@ Lifecycle: requested -> awaiting_payment -> scheduled -> checked_in -> in_progre
 - ALL public content (about, achievements, contact, hours, services, variants, photos, stylist profiles, FAQ, chatbot knowledge) is stored in the database and edited by ADMIN ONLY. No hard-coded shop content in components.
 - Booking requires login. A logged-out Book click goes to login/register and returns to the same booking sheet. Prices show as "from X incl. GST"; payment link is emailed after the receptionist confirms.
 - Chatbot "AI Alankar Intelligence": corner floating toggle for guests and customers; answers only from the app's own data (knowledge base + the user's own records), NO external API keys and NO LLM of any kind (no Ollama, no hosted models, no ML libraries). It is a deterministic engine specified in docs/CHATBOT_ALGORITHM.md with a tested reference implementation in reference/chatbot_reference/. Port it into backend/chatbot/. Unknown -> honest fallback with contact details; never exposes other users' data.
-- "For Zenotians" page: route /zenotians, built in Task 10 per docs/MASTER_NOTES.md section 36. Until then a content-pending shell (the only allowed placeholder; mark it content-pending in docs/PROGRESS.md). Zenoti-inspired look but no Zenoti logo, wordmark or copied material; footer note "Independent portfolio project, not affiliated with Zenoti". About me content comes only from the owner's resume and is admin-editable.
+- "For Zenotians" page: route /zenotians, built in Task 9 per docs/MASTER_NOTES.md section 36. Until then a content-pending shell (the only allowed placeholder; mark it content-pending in docs/PROGRESS.md). Zenoti-inspired look but no Zenoti logo, wordmark or copied material; footer note "Independent portfolio project, not affiliated with Zenoti". About me content comes only from the owner's resume and is admin-editable.
 
 ## 5. ROLE ISOLATION (critical)
 A logged-in user sees only the menu, pages, buttons and data defined for their role. Nothing from another role may be visible, reachable by URL, or returnable by the API.

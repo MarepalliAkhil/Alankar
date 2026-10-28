@@ -1,0 +1,253 @@
+{
+  "_comment": "Editable. 'words' map a word to its canonical word. 'phrases' map a multi-word phrase to canonical words. Longest phrase wins. Everything is stemmed at load time. 'surface' maps exact written forms BEFORE stemming (use it when two different words share a stem, e.g. time/timing).",
+  "words": {
+    "price": [
+      "cost",
+      "charge",
+      "fee",
+      "amount",
+      "tariff",
+      "pricing"
+    ],
+    "appointment": [
+      "reservation",
+      "visit"
+    ],
+    "book": [
+      "booking",
+      "reserve",
+      "rebook"
+    ],
+    "hours": [],
+    "location": [
+      "address",
+      "direction",
+      "directions",
+      "map",
+      "locate",
+      "located",
+      "route",
+      "landmark"
+    ],
+    "contact": [
+      "phone",
+      "call",
+      "whatsapp",
+      "mobile",
+      "telephone",
+      "helpline"
+    ],
+    "women": [
+      "ladies",
+      "lady",
+      "girl",
+      "girls",
+      "female",
+      "woman",
+      "womens"
+    ],
+    "men": [
+      "gents",
+      "gentleman",
+      "gentlemen",
+      "male",
+      "man",
+      "guys",
+      "mens"
+    ],
+    "kids": [
+      "kid",
+      "child",
+      "children",
+      "baby",
+      "toddler",
+      "junior"
+    ],
+    "bridal": [
+      "bride",
+      "wedding",
+      "marriage"
+    ],
+    "stylist": [
+      "barber",
+      "hairdresser",
+      "therapist",
+      "beautician",
+      "staff"
+    ],
+    "offer": [
+      "coupon",
+      "promo",
+      "voucher",
+      "deal",
+      "discount",
+      "offers"
+    ],
+    "invoice": [
+      "bill",
+      "receipt",
+      "invoices"
+    ],
+    "loyalty": [
+      "reward",
+      "rewards"
+    ],
+    "color": [
+      "colour",
+      "dye",
+      "colouring",
+      "coloring"
+    ],
+    "reschedule": [
+      "postpone",
+      "prepone"
+    ],
+    "register": [
+      "signup",
+      "registration",
+      "enroll"
+    ],
+    "login": [
+      "signin",
+      "logon"
+    ],
+    "hello": [
+      "hi",
+      "hey",
+      "hii",
+      "hiii",
+      "hello"
+    ],
+    "thanks": [
+      "thank",
+      "thanks",
+      "thankyou"
+    ],
+    "bye": [
+      "goodbye",
+      "bye",
+      "cya"
+    ],
+    "refund": [
+      "reimburse",
+      "reimbursement",
+      "refundable",
+      "refunded",
+      "refunds"
+    ],
+    "nails": [
+      "nail",
+      "manicure",
+      "pedicure"
+    ],
+    "wax": [
+      "waxing"
+    ],
+    "facial": [
+      "facials",
+      "cleanup"
+    ],
+    "parlor": [
+      "parlour"
+    ],
+    "massage": [
+      "relax",
+      "relaxing",
+      "relaxation",
+      "stress"
+    ],
+    "upi": [
+      "phonepe",
+      "gpay",
+      "paytm",
+      "googlepay"
+    ]
+  },
+  "phrases": {
+    "duration": [
+      "how much time",
+      "how long",
+      "how many minutes",
+      "how many hours"
+    ],
+    "price": [
+      "how much",
+      "how many rupees",
+      "what is the rate",
+      "rate of"
+    ],
+    "haircut": [
+      "hair cut"
+    ],
+    "parlor": [
+      "beauty parlour",
+      "beauty parlor",
+      "beauty salon"
+    ],
+    "login": [
+      "log in",
+      "sign in",
+      "log on"
+    ],
+    "register": [
+      "sign up",
+      "create account",
+      "new account",
+      "make account",
+      "create an account",
+      "make an account",
+      "open an account",
+      "create my account",
+      "new user"
+    ],
+    "hours": [
+      "working hours",
+      "opening hours",
+      "open time",
+      "business hours"
+    ],
+    "hello": [
+      "good morning",
+      "good evening",
+      "good afternoon",
+      "good night"
+    ],
+    "thanks": [
+      "thank you",
+      "many thanks"
+    ],
+    "refund": [
+      "money back",
+      "get my money"
+    ],
+    "reschedule": [
+      "change appointment",
+      "change time",
+      "change date",
+      "move appointment",
+      "shift appointment",
+      "change my slot",
+      "change my appointment",
+      "change the appointment",
+      "change my booking",
+      "change my time",
+      "change the time"
+    ],
+    "giftcard": [
+      "gift card"
+    ],
+    "noshow": [
+      "no show",
+      "missed appointment"
+    ]
+  },
+  "surface": {
+    "hours": [
+      "timing",
+      "timings"
+    ],
+    "price": [
+      "rates"
+    ]
+  }
+}

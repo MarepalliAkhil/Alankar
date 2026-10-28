@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LoadingState } from '../ui/Skeleton';
 import { AnnouncementBar } from './AnnouncementBar';
@@ -33,6 +34,7 @@ export function PublicLayout() {
         </ErrorBoundary>
       </main>
       <Footer />
+      <ChatWidget />
     </div>
   );
 }

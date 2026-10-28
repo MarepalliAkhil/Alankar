@@ -142,6 +142,10 @@ class AuditLog(models.Model):
         PAYROLL_APPROVED = "payroll_approved", "Payroll run approved"
         PAYROLL_PAID = "payroll_paid", "Payroll run marked as paid"
         REVIEW_SAVED = "review_saved", "Performance review saved"
+        CHATBOT_QUESTION_HANDLED = (
+            "chatbot_question_handled",
+            "Unanswered chatbot question added as an FAQ or dismissed",
+        )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)

@@ -72,8 +72,12 @@ This replaces the memory a new session doesn't have.
 4. **Task 4:** stylist slice and Zen Chat (person cards, real-time, encrypted).
 5. **Task 5:** admin slice (staff, services/catalogue, inventory, marketing, reports, settings, audit, security, refunds).
 6. **Task 6:** ratings, work sessions, payroll, Staff Summary graphs.
-7. **Task 7:** hardening and a Playwright full-workflow test with four users.
-8. **Task 8:** "AI Alankar Intelligence" chatbot: port `reference/chatbot_reference/` into `backend/chatbot/` following `docs/CHATBOT_ALGORITHM.md` (no LLMs, no Ollama, no keys), connect it to the database, build the corner widget, then wow features. **Task 9:** deployment. **Task 10:** the "For Zenotians" page, built to `docs/MASTER_NOTES.md` section 36 (left sidebar: Overview, About me as a resume, The project, How it maps to Zenoti, Engineering decisions, Try the demo, Contact; admin-editable; About me only from the resume you provide; Zenoti-inspired but no Zenoti logo or wordmark; footer "Independent portfolio project, not affiliated with Zenoti").
+7. **Task 7:** "AI Alankar Intelligence" chatbot: port `reference/chatbot_reference/` into `backend/chatbot/` following `docs/CHATBOT_ALGORITHM.md` (no LLMs, no Ollama, no keys), connect it to the database, build the corner widget (7a port and data, 7b API and widget, 7c admin insights and accuracy).
+8. **Task 8:** hardening and the Playwright full-workflow test with four users.
+9. **Task 9:** the "For Zenotians" page design, built to `docs/MASTER_NOTES.md` section 36 (left sidebar: Overview, About me as a resume, The project, How it maps to Zenoti, Engineering decisions, Try the demo, Contact; admin-editable; About me only from the resume you provide; Zenoti-inspired but no Zenoti logo or wordmark; footer "Independent portfolio project, not affiliated with Zenoti").
+10. **Task 10:** admin assistant that handles things with commands (rule-based, no LLM, same permissions and audit log as the admin screens, asks for confirmation before any change).
+11. **Task 11:** stage 2, the owner's custom UI design.
+12. **Task 12:** to be decided later (deployment is not assigned to a task yet).
 Split any task that feels too big into two. Ask me (in the planning chat) for the exact prompt for each task if you want one written in detail.
 
 ## What this chat is still good for

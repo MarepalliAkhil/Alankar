@@ -162,7 +162,11 @@
     "payslips.own": "Read my own payslips (approved or paid runs only)",
     "staffsummary.read": "Admin: Staff Summary numbers and graph series",
     "reviews.read": "Admin: monthly performance review indicators and saved reviews",
-    "reviews.write": "Admin: save a monthly performance review (status and notes)"
+    "reviews.write": "Admin: save a monthly performance review (status and notes)",
+    "chatbot.ask": "Ask AI Alankar Intelligence a question (guests and customers; staff accounts are refused)",
+    "chatbot.insights.read": "Read the chatbot's unanswered questions (anonymous keys) and intent usage",
+    "chatbot.insights.manage": "Turn an unanswered chatbot question into an FAQ, or dismiss it (audited)",
+    "chatbot.insights.test": "Try a question in the chatbot test box (guest context, nothing logged)"
   },
   "public": {
     "api": [
@@ -187,7 +191,8 @@
       "public.service",
       "public.team",
       "public.page",
-      "public.unsubscribe"
+      "public.unsubscribe",
+      "chatbot.ask"
     ],
     "routes": [
       "/",
@@ -593,7 +598,10 @@
         "payroll.manage",
         "staffsummary.read",
         "reviews.read",
-        "reviews.write"
+        "reviews.write",
+        "chatbot.insights.read",
+        "chatbot.insights.manage",
+        "chatbot.insights.test"
       ],
       "routes": [
         "/customers/:id"
@@ -744,12 +752,12 @@
           "status": "available"
         },
         {
-          "id": "concierge",
-          "label": "Concierge",
-          "path": "/concierge",
-          "description": "Chatbot knowledge entries and unanswered questions.",
-          "task": "Task 8",
-          "status": "planned"
+          "id": "chatbot-insights",
+          "label": "Chatbot insights",
+          "path": "/chatbot-insights",
+          "description": "Questions the chatbot could not answer (anonymous), what people ask most, and a test box.",
+          "task": "Task 7c",
+          "status": "available"
         },
         {
           "id": "settings",

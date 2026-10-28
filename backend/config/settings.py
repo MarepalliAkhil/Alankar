@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "website",
     "wallet",
     "waitlist",
+    "chatbot",
 ]
 
 MIDDLEWARE = [

@@ -10,6 +10,7 @@ const ServicesPage = lazy(() => import('../admin/ServicesPage'));
 const AdminInventoryPage = lazy(() => import('../admin/AdminInventoryPage'));
 const ContentPage = lazy(() => import('../admin/ContentPage'));
 const MarketingPage = lazy(() => import('../admin/MarketingPage'));
+const ChatbotInsightsPage = lazy(() => import('../admin/ChatbotInsightsPage'));
 const ReportsPage = lazy(() => import('../admin/ReportsPage'));
 const AuditLogPage = lazy(() => import('../admin/AuditLogPage'));
 const SecurityPage = lazy(() => import('../admin/SecurityPage'));
@@ -75,6 +76,7 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/content' && user.role === 'admin') return <ContentPage />;
   if (path === '/marketing' && user.role === 'admin') return <MarketingPage />;
   if (path === '/reports' && user.role === 'admin') return <ReportsPage />;
+  if (path === '/chatbot-insights' && user.role === 'admin') return <ChatbotInsightsPage />;
   if (path === '/audit-log' && user.role === 'admin') return <AuditLogPage />;
   if (path === '/security' && user.role === 'admin') return <SecurityPage />;
   if (path === '/packages' && user.role === 'admin') return <PackagesPage />;

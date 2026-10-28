@@ -28,6 +28,8 @@ urlpatterns = [
     path("api/payslips/", include(payslip_patterns)),
     path("api/stylist/", include(stylist_patterns)),
     path("api/chat/", include("chat.urls")),
+    path("api/chatbot/", include("chatbot.urls")),
+    path("api/admin/chatbot/", include("chatbot.admin_urls")),
     path("api/admin/", include(admin_patterns)),
 ]
 
