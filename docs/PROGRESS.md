@@ -13,8 +13,8 @@
   Task 5d (audit log, security, data requests): DONE. Verified on the owner's PC (2026-10-27).
   Task 5e (growth features) is split 5e-1..5e-4 (owner-approved). One sub-task at a time; wait for "passed".
   Task 5e-1 (packages, memberships, gift cards, waitlist): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): IMPLEMENTED, waiting for the
-  owner's "passed". Next after it: 5e-3 (purchase orders, optional admin 2FA), 5e-4 (policy sweep).
+  Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): DONE. Verified on the owner's PC
+  (2026-10-28). Next: 5e-3 (purchase orders, optional admin 2FA), 5e-4 (policy sweep).
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
   Sandbox: pytest all passed, ruff clean, vitest 154 passed, eslint, typecheck, prettier clean
