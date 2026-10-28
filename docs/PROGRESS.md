@@ -2,27 +2,11 @@
 
 ## Status
 - Task 7 (AI Alankar Intelligence chatbot: 7a engine and data, 7b API and widget, 7c admin Chatbot insights and
-  accuracy evaluation): IMPLEMENTED in the build sandbox in one go (owner's instruction), waiting for the owner's PC
-  run (migrate, seed_demo, pytest, npm test, walkthrough below). New migrations: chatbot 0001, accounts 0023.
-  Task 7 follow-up (service explanation answers, seeded descriptions, admin "Services without description"):
-  implemented in the build sandbox, see "Task 7 follow-up" below. No new migration.
-  Next: Task 8 (hardening, Playwright full-workflow test) after "passed".
-- Task 3 (receptionist slice: 3a requests/schedule, 3b check-in/walk-ins/customers, 3c POS/stock/
-  refunds/cash close/inventory view, 3d work sessions/idle sign-out/My Hours & Pay): DONE. Verified
-  on the owner's PC (2026-10-27): tests, lint, typecheck, build and the browser walkthroughs passed.
-- Task 4 (stylist slice 4a, Zen Chat 4b): DONE. Verified on the owner's PC (2026-10-27): tests,
-  lint, typecheck, build and the browser walkthroughs passed. Sandbox at hand-off: pytest all
-  passed, vitest 192 passed, ruff, eslint, typecheck, prettier clean.
-- Task 5a (admin: team and catalogue): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5b (operations): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5c (content editor, marketing, reports): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5d (audit log, security, data requests): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5e (growth features) is split 5e-1..5e-4 (owner-approved). One sub-task at a time; wait for "passed".
-  Task 5e-1 (packages, memberships, gift cards, waitlist): DONE. Verified on the owner's PC (2026-10-27).
-  Task 5e-2 (private coupons, scheduled campaigns, hour/payment/heatmap reports): DONE. Verified on the owner's PC
-  (2026-10-28).
-  Task 5e-3 (purchase orders, optional admin two-step sign-in) and 5e-4 (policy sweep, own-data and concurrency
-  tests): DONE. Verified on the owner's PC (2026-10-28).
+  accuracy evaluation) and the follow-up (full "tell me about <service>" answers, seeded descriptions, admin
+  "Services without description"): DONE. Verified on the owner's PC and pushed (2026-10-30). **Task 7: DONE.**
+  Migrations added: chatbot 0001, accounts 0023. Accuracy (developer-written questions, not real customers):
+  tuning 120/130, holdout 63/78, see "Task 7 follow-up: accuracy report (rerun)" below.
+  Next: Task 8 (hardening, reliability, Playwright full-workflow test, README and demo data).
 - Task 6 (ratings, work sessions, payroll, Staff Summary) is split 6a..6c (owner-approved plan). One sub-task at a
   time; wait for "passed". Task 6a (admin Ratings overview and moderation, stylist pay breakdown): DONE. Verified on the owner's PC
   (2026-10-28). Tasks 6b (Work Hours, shifts, receptionist pay) and 6c (payroll runs, payslips, Staff Summary,
