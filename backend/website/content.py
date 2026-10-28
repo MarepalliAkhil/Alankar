@@ -103,4 +103,9 @@ def security_settings() -> dict:
     from django.conf import settings
 
     stored = content("security", {}) or {}
-    return {"idle_minutes": stored.get("idle_minutes") or settings.SALON_AUTH["IDLE_MINUTES"]}
+    grace = stored.get("late_grace_minutes")
+    return {
+        "idle_minutes": stored.get("idle_minutes") or settings.SALON_AUTH["IDLE_MINUTES"],
+        # How many minutes after the shift start (or the booked time) still count as on time.
+        "late_grace_minutes": 10 if grace is None else grace,
+    }

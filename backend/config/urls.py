@@ -6,7 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from accounts.staff_views import AuditLogListView, PosSettingsView
 from accounts.urls import auth_patterns, staff_patterns
 from marketing.private_views import MyCouponsView
-from people.admin_urls import admin_patterns
+from people.admin_urls import admin_patterns, payslip_patterns
 from people.stylist_urls import stylist_patterns
 from scheduling.urls import booking_patterns, desk_patterns, my_patterns
 from wallet.urls import desk_wallet_patterns, my_waitlist_patterns, my_wallet_patterns
@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/my/", include(my_patterns)),
     path("api/desk/wallet/", include(desk_wallet_patterns)),
     path("api/desk/", include(desk_patterns)),
+    path("api/payslips/", include(payslip_patterns)),
     path("api/stylist/", include(stylist_patterns)),
     path("api/chat/", include("chat.urls")),
     path("api/admin/", include(admin_patterns)),

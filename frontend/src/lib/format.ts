@@ -65,6 +65,21 @@ export function shopLocalToIso(value: string): string {
   return `${value.length === 16 ? `${value}:00` : value}${SHOP_OFFSET}`;
 }
 
+/** ISO time -> value for an <input type="datetime-local"> in shop time ("2026-10-27T09:30"). */
+export function isoToShopLocal(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: SHOP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(iso));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
 const inrExact = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
@@ -75,4 +90,25 @@ const inrExact = new Intl.NumberFormat('en-IN', {
 /** "1500.5" -> "₹1,500.50": bills and cash counts show the paise. */
 export function formatINRExact(value: string | number): string {
   return inrExact.format(Number(value));
+}
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** "2026-10" -> "October 2026". */
+export function monthName(key: string): string {
+  const [year, month] = key.split('-').map(Number);
+  return `${MONTH_NAMES[(month ?? 1) - 1] ?? key} ${year}`;
 }

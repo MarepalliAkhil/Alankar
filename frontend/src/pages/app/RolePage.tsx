@@ -17,7 +17,9 @@ const PackagesPage = lazy(() => import('../admin/PackagesPage'));
 const GiftCardsPage = lazy(() => import('../admin/GiftCardsPage'));
 const AdminWaitlistPage = lazy(() => import('../admin/AdminWaitlistPage'));
 const RatingsPage = lazy(() => import('../admin/RatingsPage'));
+const WorkHoursPage = lazy(() => import('../admin/WorkHoursPage'));
 const PayrollPage = lazy(() => import('../admin/PayrollPage'));
+const StaffSummaryPage = lazy(() => import('../admin/StaffSummaryPage'));
 const WalletPage = lazy(() => import('../customer/WalletPage'));
 const WaitlistPage = lazy(() => import('../customer/WaitlistPage'));
 const SettingsPage = lazy(() => import('../admin/SettingsPage'));
@@ -64,7 +66,9 @@ export default function RolePage({ path }: { path: string }) {
   }
   if (path === '/staff' && user.role === 'admin') return <StaffManagementPage />;
   if (path === '/ratings' && user.role === 'admin') return <RatingsPage />;
+  if (path === '/work-hours' && user.role === 'admin') return <WorkHoursPage />;
   if (path === '/payroll' && user.role === 'admin') return <PayrollPage />;
+  if (path === '/staff-summary' && user.role === 'admin') return <StaffSummaryPage />;
   if (path === '/services' && user.role === 'admin') return <ServicesPage />;
   if (path === '/inventory' && user.role === 'admin') return <AdminInventoryPage />;
   if (path === '/settings' && user.role === 'admin') return <SettingsPage />;

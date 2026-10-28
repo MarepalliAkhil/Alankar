@@ -71,3 +71,24 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Printing a payslip: show only the payslip, on a plain white page. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .payslip-print,
+  .payslip-print * {
+    visibility: visible;
+  }
+  .payslip-print {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: #fff;
+    color: #000;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

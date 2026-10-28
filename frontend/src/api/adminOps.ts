@@ -146,7 +146,7 @@ export interface BusinessSettings {
   hours: { weekly_hours: WeeklyHours };
   booking: { free_cancel_hours: number; hold_hours: number; waitlist_offer_minutes: number };
   billing: { discount_cap_percent: number };
-  security: { idle_minutes: number };
+  security: { idle_minutes: number; late_grace_minutes: number };
   rating: {
     min_ratings: number;
     flag_below: string;

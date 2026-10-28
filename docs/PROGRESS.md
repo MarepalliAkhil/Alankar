@@ -18,9 +18,9 @@
   Task 5e-3 (purchase orders, optional admin two-step sign-in) and 5e-4 (policy sweep, own-data and concurrency
   tests): DONE. Verified on the owner's PC (2026-10-28).
 - Task 6 (ratings, work sessions, payroll, Staff Summary) is split 6a..6c (owner-approved plan). One sub-task at a
-  time; wait for "passed". Task 6a (admin Ratings overview and moderation, stylist pay breakdown): IMPLEMENTED,
-  waiting for the owner's "passed". Next: 6b (work sessions, shifts, receptionist pay), 6c (payroll runs, Staff
-  Summary, Performance Review).
+  time; wait for "passed". Task 6a (admin Ratings overview and moderation, stylist pay breakdown): DONE. Verified on the owner's PC
+  (2026-10-28). Task 6b (Work Hours, shifts, receptionist pay) and Task 6c (payroll runs, payslips, Staff Summary, Performance Review): IMPLEMENTED, waiting for the owner's "passed".
+  Next: Task 8 (chatbot), then 9 (deployment) and 10 (For Zenotians).
 - Task 5 (admin slice, 5a to 5e): DONE. Verified on the owner's PC and pushed (2026-10-28). Next: Task 6.
 - Task 3c (POS, stock ledger, loyalty, refunds, cash close, Inventory view): DONE. Verified on the
   owner's PC (2026-10-27), including the refund flow for paid bookings cancelled by the desk.
@@ -842,3 +842,72 @@
 5. Admin > Payroll: pick the month. Totals, the "difference" check, one card per stylist; "Breakdown for <name>"
    lists every billed visit with the multiplier. With fewer than 5 counted ratings the multiplier is x 1.00.
 6. Receptionist, stylist, customer: no Ratings or Payroll menu; direct URLs show "not allowed".
+
+## Task 6b: decisions
+- New menu item Admin > Work Hours (`/work-hours`): pick a month; one card per receptionist with hours, monthly pay
+  (hours x hourly rate, corrections already applied because the corrected times are the stored times), punctuality and
+  how many sessions to check. "Sessions for <name>" opens the session table, the punctuality days and the shift editor.
+- Sessions that look wrong are flagged: Very long (over 12 hours), Overlaps another session, Ended by the idle
+  sign-out, Still open but idle. A flag is a hint only; nothing changes until the admin corrects a session.
+- Correct (Admin only, reason required, audited with old and new times): sign-in and sign-out times; cannot overlap
+  another session, cannot end in the future or run over 16 hours. The receptionist sees "Corrected by admin" with
+  the reason on My Hours & Pay (they do not see flags). A receptionist cannot correct a session.
+- Weekly shifts (Admin only, `shifts_changed` audited): one shift per weekday, none = day off. Used only for
+  punctuality. No shifts at all = "No shift set" (no percentage is invented).
+- Receptionist on time = first session of the shift day starts no later than shift start + grace. Late = after that
+  (minutes late shown). Missed = no session that day, or it started after the shift ended. Days whose shift has not
+  started yet are not counted. Grace = Settings > Security > "On-time grace" (default 10 minutes).
+- Stylist punctuality (first visit of the day starts within the grace of its booked time) is built in 6c with the
+  Staff Summary and Performance Review.
+- Migration: `accounts` 0021 (ShiftSchedule, audit action).
+
+## Task 6b: owner browser walkthrough (to verify on the PC)
+1. Sign in as a receptionist for a minute and out (creates a session). As admin open Work Hours: the receptionist
+   card shows hours, "No shift set".
+2. Open "Sessions for ...": Add shift on today's weekday (e.g. 09:00 to 17:00), Save shifts. The punctuality line
+   changes to on time / late / missed for the days that have started.
+3. Correct a session: change the times, give a reason, Save. Pay and hours update. Sign in as that receptionist:
+   My Hours & Pay shows "Corrected by admin" with your reason. Audit Log has `work_session_corrected` with old and
+   new times and `shifts_changed`.
+4. Settings > Security > On-time grace: change to 30 and save (audit entry shows 10 to 30).
+5. Receptionist, stylist, customer: no Work Hours menu; the URL shows "not allowed".
+
+## Task 6c: decisions
+- Payroll run: one per month (a second create returns 409). Draft: Recalculate rebuilds the lines from the latest data and
+  keeps adjustments. Approve locks every line (a frozen snapshot). After approval nothing is recalculated; corrections are
+  new bonus/deduction lines marked "added after approval". Paid runs accept nothing (a correction goes in next month).
+  Voiding is draft-only; a voided line stays visible, struck through, and no longer counts. Deductions can't exceed the net.
+- Payment is simulated: "Mark as paid" records who/when and an optional reference (max 60 characters). Nothing goes to a bank.
+- Stylist line = task pay (after the rating multiplier) with tips as a separate column; receptionist line = hours x rate
+  (0 if no rate set). Bonus/deduction are separate payslip lines, never merged into base pay.
+- Run checks on screen: tips on invoices vs tips in the run, invoices and visits counted, visits waiting for checkout.
+- Payslips: stylist (Earnings page) and receptionist (My Hours & Pay) see only their own, only for approved or paid runs
+  (anything else is a 404). Printable with the browser (Print payslip).
+- Staff Summary (`/staff-summary`): month or date range (max 366 days; weekly buckets, monthly over 120 days). Team,
+  Stylists, Receptionists tabs with Recharts bar and line charts. Revenue is before GST and uses the same allocation as the
+  Reports page, so the numbers match "Revenue by stylist".
+- Performance Review (same page, admin only): monthly status Continue / Put on notice / Recommend ending the job plus private
+  notes, saved once per person and month and updatable. Each save keeps a copy of the indicators. The audit entry records
+  the status before/after and the notes length, not the notes. "Recommend ending" does NOT deactivate anyone. No "share with
+  staff" action. No overall score.
+- Indicator rules (shown under each indicator): ratings good from 4.0, watch from 3.0; punctuality good from 90%, watch from
+  70%; rebooking good from 40%, watch from 20%. Rebooking needs at least 5 customers with a completed visit in the month,
+  otherwise "Not enough data"; cancelled and no-show visits are left out; visits in the last 60 days may still rebook.
+- Migrations: `accounts` 0021 (shifts) and 0022 (payroll/review audit actions), `people` 0012 (payroll and review tables).
+- `tsc` may still show the known recharts typing error from earlier tasks.
+
+## Task 6c: owner browser walkthrough (to verify on the PC)
+1. As admin open Payroll > Payroll runs. Pick last month (or this month), Create draft run. Each stylist and receptionist
+   has a line; "Check: tips on invoices" equals "tips in this run".
+2. Open "Payslip for <stylist>": add a Bonus with a reason, then a Deduction. They appear as their own lines under base pay
+   and tips. Void one: it is struck through and the net changes back.
+3. Recalculate, then Approve run (confirm). Recalculate and Approve disappear. Open a payslip: you can still add a
+   correction line; it says "added after approval". Audit Log shows `payroll_*` entries.
+4. Mark as paid with a reference. The run is now read-only. Payment is simulated.
+5. Sign in as that stylist: Earnings > Payslips shows only that stylist's payslip with separate lines. Print payslip opens the
+   print dialog showing only the payslip. Same for a receptionist under My Hours & Pay. A draft run is not visible to them.
+6. As admin open Staff Summary: change month, then "A date range"; charts and cards update. Stylists tab: pick a stylist
+   (rebooking says "Not enough data" under 5 customers). Receptionists tab: hours chart.
+7. Performance Review tab: indicators with their rules. Review a person, choose Put on notice without notes (it asks for
+   notes), add notes, Save. Audit Log has `review_saved` without the notes text. Staff cannot open reviews.
+8. Receptionist, stylist, customer: no Payroll or Staff Summary menu; the URLs show "not allowed".

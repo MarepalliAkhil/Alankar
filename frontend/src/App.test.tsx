@@ -537,10 +537,10 @@ describe('route guards and role menus', () => {
 
   it('explains planned pages with their purpose and the task they arrive in', async () => {
     meMock.mockResolvedValue(userFor('admin'));
-    renderAt('/staff-summary');
-    expect(await screen.findByText('Staff Summary arrives in Task 6')).toBeInTheDocument();
+    renderAt('/concierge');
+    expect(await screen.findByText('Concierge arrives in Task 8')).toBeInTheDocument();
     expect(
-      screen.getByText('Graphs for stylist ratings and tasks and receptionist hours.'),
+      screen.getByText('Chatbot knowledge entries and unanswered questions.'),
     ).toBeInTheDocument();
   });
 

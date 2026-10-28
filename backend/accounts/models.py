@@ -134,6 +134,14 @@ class AuditLog(models.Model):
         RATING_FLAGGED = "rating_flagged", "Rating put under review"
         RATING_EXCLUDED = "rating_excluded", "Rating excluded from pay and graphs"
         RATING_RESTORED = "rating_restored", "Rating restored after review"
+        SHIFTS_CHANGED = "shifts_changed", "Weekly shifts changed"
+        PAYROLL_CREATED = "payroll_created", "Payroll run drafted"
+        PAYROLL_REFRESHED = "payroll_refreshed", "Payroll run recalculated"
+        PAYROLL_ADJUSTED = "payroll_adjusted", "Payroll adjustment added"
+        PAYROLL_ADJUSTMENT_VOIDED = "payroll_adjustment_voided", "Payroll adjustment voided"
+        PAYROLL_APPROVED = "payroll_approved", "Payroll run approved"
+        PAYROLL_PAID = "payroll_paid", "Payroll run marked as paid"
+        REVIEW_SAVED = "review_saved", "Performance review saved"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     action = models.CharField(max_length=40, choices=Action.choices, db_index=True)
@@ -303,6 +311,35 @@ class WorkSession(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class ShiftSchedule(models.Model):
+    """One receptionist's shift on one weekday (0 = Monday). No row means a day off. Used only to
+    judge punctuality: a session that starts within the grace period of the shift start is on
+    time. The admin sets shifts; the receptionist cannot."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="shifts"
+    )
+    weekday = models.PositiveSmallIntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        ordering = ["user_id", "weekday"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "weekday"], name="one_shift_per_weekday"),
+            models.CheckConstraint(
+                condition=models.Q(weekday__gte=0, weekday__lte=6), name="shift_weekday_0_to_6"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(start_time__lt=models.F("end_time")),
+                name="shift_start_before_end",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} day {self.weekday} {self.start_time}-{self.end_time}"
 
 
 class TwoFactor(models.Model):

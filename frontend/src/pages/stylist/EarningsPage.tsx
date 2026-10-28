@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/layout/PageContainer';
 import { Badge, Card, Input, LoadingState, Table, type Column } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
+import MyPayslips from '../../components/MyPayslips';
 import { StylistError } from './common';
 
 function thisMonth(): string {
@@ -170,6 +171,7 @@ export default function EarningsPage() {
           </ul>
         )}
       </Card>
+      <MyPayslips />
     </section>
   );
 }

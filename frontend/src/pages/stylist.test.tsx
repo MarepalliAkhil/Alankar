@@ -32,6 +32,10 @@ vi.mock('../api/public', () => ({
   getTeam: vi.fn(),
   getPolicyPage: vi.fn(),
 }));
+vi.mock('../api/payroll', () => ({
+  myPayslips: () => Promise.resolve([]),
+  myPayslip: () => Promise.reject(new Error('none')),
+}));
 vi.mock('../api/stylist', () => ({
   listAppointments: vi.fn(),
   getAppointment: vi.fn(),

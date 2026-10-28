@@ -91,6 +91,7 @@ class BillingSerializer(serializers.Serializer):
 
 class SecuritySerializer(serializers.Serializer):
     idle_minutes = serializers.IntegerField(min_value=5, max_value=120, required=False)
+    late_grace_minutes = serializers.IntegerField(min_value=0, max_value=60, required=False)
 
 
 class BandSerializer(serializers.Serializer):

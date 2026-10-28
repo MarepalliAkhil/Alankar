@@ -103,7 +103,7 @@ const settings: opsApi.BusinessSettings = {
   },
   booking: { free_cancel_hours: 24, hold_hours: 6, waitlist_offer_minutes: 15 },
   billing: { discount_cap_percent: 20 },
-  security: { idle_minutes: 15 },
+  security: { idle_minutes: 15, late_grace_minutes: 10 },
   rating: {
     min_ratings: 5,
     flag_below: '3.00',

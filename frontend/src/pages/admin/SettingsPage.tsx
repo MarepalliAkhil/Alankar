@@ -379,13 +379,16 @@ function BillingSection({ value }: { value: BusinessSettings['billing'] }) {
 
 function SecuritySection({ value }: { value: BusinessSettings['security'] }) {
   const [idle, setIdle] = useState(String(value.idle_minutes));
+  const [grace, setGrace] = useState(String(value.late_grace_minutes));
   const { save, problem, setProblem } = useSection();
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const n = wholeNumber(idle, 5, 120);
     if (n === null) return setProblem('Enter a whole number of minutes, 5 to 120.');
+    const g = wholeNumber(grace, 0, 60);
+    if (g === null) return setProblem('Enter the on-time grace as whole minutes, 0 to 60.');
     setProblem('');
-    save.mutate({ security: { idle_minutes: n } });
+    save.mutate({ security: { idle_minutes: n, late_grace_minutes: g } });
   };
   return (
     <Section
@@ -401,6 +404,14 @@ function SecuritySection({ value }: { value: BusinessSettings['security'] }) {
         inputMode="numeric"
         value={idle}
         onChange={(e) => setIdle(e.target.value)}
+        className="max-w-xs"
+      />
+      <Input
+        label="On-time grace (minutes)"
+        hint="A receptionist who signs in within this many minutes of the shift start, or a stylist who starts their first visit within this many minutes of its booked time, counts as on time."
+        inputMode="numeric"
+        value={grace}
+        onChange={(e) => setGrace(e.target.value)}
         className="max-w-xs"
       />
     </Section>

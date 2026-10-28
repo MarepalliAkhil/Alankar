@@ -154,7 +154,15 @@
     "purchasing.manage": "Create, send, receive and close purchase orders; see a supplier's order history",
     "ratings.read": "Admin: see every stylist's ratings, averages and comments",
     "ratings.moderate": "Admin: put a rating under review, exclude it, or restore it (reason required)",
-    "pay.read": "Admin: see every stylist's estimated pay for a month with the breakdown"
+    "pay.read": "Admin: see every stylist's estimated pay for a month with the breakdown",
+    "work.admin.read": "Admin: receptionists' hours, sessions that look wrong, punctuality, shifts and monthly pay",
+    "work.shifts.update": "Admin: set a receptionist's weekly shifts",
+    "payroll.read": "Admin: read payroll runs, lines and any payslip",
+    "payroll.manage": "Admin: draft, recalculate, adjust, approve and mark payroll as paid",
+    "payslips.own": "Read my own payslips (approved or paid runs only)",
+    "staffsummary.read": "Admin: Staff Summary numbers and graph series",
+    "reviews.read": "Admin: monthly performance review indicators and saved reviews",
+    "reviews.write": "Admin: save a monthly performance review (status and notes)"
   },
   "public": {
     "api": [
@@ -350,7 +358,8 @@
         "wallet.catalogue",
         "wallet.customer",
         "wallet.sell",
-        "wallet.giftcheck"
+        "wallet.giftcheck",
+        "payslips.own"
       ],
       "routes": [
         "/customers/:id"
@@ -442,7 +451,8 @@
         "chat.messages.send",
         "chat.messages.read",
         "chat.ws.connect",
-        "chat.ws.send"
+        "chat.ws.send",
+        "payslips.own"
       ],
       "routes": [
         "/my-appointments/:id",
@@ -576,7 +586,14 @@
         "purchasing.manage",
         "ratings.read",
         "ratings.moderate",
-        "pay.read"
+        "pay.read",
+        "work.admin.read",
+        "work.shifts.update",
+        "payroll.read",
+        "payroll.manage",
+        "staffsummary.read",
+        "reviews.read",
+        "reviews.write"
       ],
       "routes": [
         "/customers/:id"
@@ -631,19 +648,27 @@
           "status": "available"
         },
         {
+          "id": "work-hours",
+          "label": "Work Hours",
+          "path": "/work-hours",
+          "description": "Receptionists' sign-in sessions by month: hours, sessions that look wrong, corrections with a reason, weekly shifts, punctuality and monthly pay.",
+          "task": "Task 6b",
+          "status": "available"
+        },
+        {
           "id": "staff-summary",
           "label": "Staff Summary",
           "path": "/staff-summary",
-          "description": "Graphs for stylist ratings and tasks and receptionist hours.",
-          "task": "Task 6",
-          "status": "planned"
+          "description": "Graphs per stylist, per receptionist and for the team (appointments, revenue, ratings, hours, earnings, no-shows) with month and range filters, and the monthly Performance Review.",
+          "task": "Task 6c",
+          "status": "available"
         },
         {
           "id": "payroll",
           "label": "Payroll",
           "path": "/payroll",
-          "description": "Stylist pay for a month with the breakdown per appointment. Payroll runs, adjustments and payslips follow in Task 6c.",
-          "task": "Task 6a",
+          "description": "Monthly payroll: draft, review every line, add bonuses or deductions, approve, mark as paid, and open payslips. Includes the stylist pay breakdown.",
+          "task": "Task 6c",
           "status": "available"
         },
         {

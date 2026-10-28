@@ -2,6 +2,7 @@ from django.urls import path
 
 from accounts import security_views as sec
 from accounts import twofactor_views as tf
+from accounts import work_admin_views as wa
 from billing import admin_views as b
 from billing import report_views as r
 from inventory import admin_views as i
@@ -10,14 +11,44 @@ from marketing import private_views as pc
 from marketing import views as m
 from people import admin_views as v
 from people import pay_admin_views as pay
+from people import payroll_views as pr
 from people import privacy_views as pv
 from people import rating_admin_views as ra
+from people import review_views as rv
 from scheduling import catalogue_admin as c
 from wallet.urls import admin_wallet_patterns
 from website import content_admin as ca
 from website import settings_admin as w
 
 admin_patterns = [
+    path("staff-summary/", rv.StaffSummaryView.as_view(), name="admin-staff-summary"),
+    path("reviews/", rv.ReviewListView.as_view(), name="admin-reviews"),
+    path("reviews/<uuid:pk>/", rv.ReviewPersonView.as_view(), name="admin-review"),
+    path("payroll/runs/", pr.RunListView.as_view(), name="admin-payroll-runs"),
+    path("payroll/runs/<uuid:pk>/", pr.RunDetailView.as_view(), name="admin-payroll-run"),
+    path(
+        "payroll/runs/<uuid:pk>/refresh/", pr.RunRefreshView.as_view(), name="admin-payroll-refresh"
+    ),
+    path(
+        "payroll/runs/<uuid:pk>/approve/", pr.RunApproveView.as_view(), name="admin-payroll-approve"
+    ),
+    path("payroll/runs/<uuid:pk>/pay/", pr.RunPayView.as_view(), name="admin-payroll-pay"),
+    path("payroll/items/<uuid:pk>/", pr.ItemDetailView.as_view(), name="admin-payroll-item"),
+    path(
+        "payroll/items/<uuid:pk>/adjustments/",
+        pr.AdjustmentCreateView.as_view(),
+        name="admin-payroll-adjust",
+    ),
+    path(
+        "payroll/adjustments/<uuid:pk>/void/",
+        pr.AdjustmentVoidView.as_view(),
+        name="admin-payroll-void",
+    ),
+    path("work/receptionists/", wa.ReceptionistListView.as_view(), name="admin-work-list"),
+    path(
+        "work/receptionists/<uuid:pk>/", wa.ReceptionistDetailView.as_view(), name="admin-work-one"
+    ),
+    path("work/receptionists/<uuid:pk>/shifts/", wa.ShiftsView.as_view(), name="admin-work-shifts"),
     path("ratings/", ra.RatingsOverviewView.as_view(), name="admin-ratings"),
     path(
         "ratings/stylists/<uuid:pk>/", ra.StylistRatingsView.as_view(), name="admin-stylist-ratings"
@@ -161,3 +192,8 @@ admin_patterns = [
     path("reports/", r.ReportListView.as_view(), name="admin-reports"),
     path("reports/<slug:name>/", r.ReportView.as_view(), name="admin-report"),
 ] + admin_wallet_patterns
+
+payslip_patterns = [
+    path("", pr.MyPayslipsView.as_view(), name="my-payslips"),
+    path("<uuid:pk>/", pr.MyPayslipView.as_view(), name="my-payslip"),
+]

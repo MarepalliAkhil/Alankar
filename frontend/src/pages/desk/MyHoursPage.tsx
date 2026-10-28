@@ -15,6 +15,7 @@ import {
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
+import MyPayslips from '../../components/MyPayslips';
 
 function thisMonth(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' })
@@ -124,6 +125,7 @@ export default function MyHoursPage() {
           )}
         </>
       )}
+      <MyPayslips />
     </section>
   );
 }

@@ -33,6 +33,7 @@ vi.mock('../api/public', () => ({
   getTeam: vi.fn(),
   getPolicyPage: vi.fn(),
 }));
+vi.mock('../api/payroll', () => ({ listRuns: () => Promise.resolve([]) }));
 vi.mock('../api/work', () => ({ getMyHours: vi.fn(), pingActivity: vi.fn() }));
 vi.mock('../api/ratingsAdmin', () => ({
   listRatingSummaries: vi.fn(),
@@ -244,6 +245,7 @@ describe('admin payroll: stylist pay', () => {
       totals: { tasks: '240.00', tips: '40.00', total: '280.00' },
     });
     renderAt('/payroll');
+    await user.click(await screen.findByRole('tab', { name: 'Stylist pay estimate' }));
     expect(await screen.findByRole('heading', { name: 'Asha' })).toBeInTheDocument();
     expect(screen.getByText(/difference ₹0\.00/)).toBeInTheDocument();
     expect(screen.getByText('Estimated')).toBeInTheDocument();
@@ -275,6 +277,7 @@ describe('admin payroll: stylist pay', () => {
       reconciliation: { tips_on_invoices: '0.00', tips_in_pay: '0.00', difference: '0.00' },
     });
     renderAt('/payroll');
+    await userEvent.setup().click(await screen.findByRole('tab', { name: 'Stylist pay estimate' }));
     expect(await screen.findByText(/2 of 5 ratings needed: × 1\.00/)).toBeInTheDocument();
   });
 

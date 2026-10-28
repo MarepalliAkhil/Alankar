@@ -305,3 +305,150 @@ class DataRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.kind} request ({self.status})"
+
+
+# --------------------------------------------------------------------------- payroll (Task 6c)
+
+REVIEW_NOTES_CONTEXT = "people.performancereview.notes"
+
+
+class PayrollRun(models.Model):
+    """One month of pay for all staff. Draft -> approved -> paid. Approving locks the calculated
+    lines; after that a correction is a new adjustment entry, never an edit."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+        PAID = "paid", "Paid"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    month = models.CharField(max_length=7, unique=True)  # "2026-10"
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_reference = models.CharField(max_length=60, blank=True)
+
+    class Meta:
+        ordering = ["-month"]
+
+    def __str__(self) -> str:
+        return f"Payroll {self.month} ({self.status})"
+
+
+class PayrollItem(models.Model):
+    """One staff member's line in a run. `components` is a frozen copy of how the base pay was
+    worked out (visits, ratings and multiplier for a stylist; hours and rate for a receptionist),
+    so a payslip never changes after the run is approved."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(PayrollRun, on_delete=models.CASCADE, related_name="items")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="payroll_items"
+    )
+    role = models.CharField(max_length=20)
+    name = models.CharField(max_length=120)
+    components = models.JSONField(default=dict)
+    base_pay = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tips = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["role", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["run", "user"], name="one_payroll_line_per_person")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} in {self.run_id}"
+
+
+class PayrollAdjustment(models.Model):
+    """A bonus or deduction on one line, always with a reason. Entries are never edited or
+    deleted. In a draft run an entry can be voided (it then no longer counts but stays visible);
+    once the run is approved a correction is a new entry."""
+
+    class Kind(models.TextChoices):
+        BONUS = "bonus", "Bonus"
+        DEDUCTION = "deduction", "Deduction"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    item = models.ForeignKey(PayrollItem, on_delete=models.CASCADE, related_name="adjustments")
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.CharField(max_length=200)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    after_approval = models.BooleanField(default=False)
+    voided_at = models.DateTimeField(null=True, blank=True)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    void_reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="adjustment_positive")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.kind} {self.amount}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("A payroll adjustment cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("A payroll adjustment cannot be deleted.")
+
+    @property
+    def signed(self):
+        return self.amount if self.kind == self.Kind.BONUS else -self.amount
+
+
+class PerformanceReview(models.Model):
+    """The admin's monthly review of one staff member: a frozen copy of the rule-based
+    indicators, the admin's own notes and a status. Admin only; never shown to the staff member.
+    It is a record for the admin's decision, not an automatic judgement."""
+
+    class Status(models.TextChoices):
+        CONTINUE = "continue", "Continue"
+        NOTICE = "notice", "Put on notice"
+        RECOMMEND_END = "recommend_end", "Recommend ending the job"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="performance_reviews"
+    )
+    month = models.CharField(max_length=7)
+    status = models.CharField(max_length=14, choices=Status.choices, default=Status.CONTINUE)
+    notes = EncryptedTextField(context=REVIEW_NOTES_CONTEXT, blank=True, default="")
+    metrics = models.JSONField(default=dict)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-month", "user_id"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "month"], name="one_review_per_person_month")
+        ]
+
+    def __str__(self) -> str:
+        return f"Review of {self.user_id} for {self.month}"

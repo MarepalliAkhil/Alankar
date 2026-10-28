@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getStylistPay, listStylistPay, type PayTaskRow } from '../../api/ratingsAdmin';
+import PayrollRuns from './PayrollRuns';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Badge,
@@ -10,7 +11,9 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  TabPanel,
   Table,
+  Tabs,
   type BadgeTone,
   type Column,
 } from '../../components/ui';
@@ -61,8 +64,7 @@ const columns: Column<PayTaskRow>[] = [
 ];
 
 /** Admin: estimated stylist pay for a month, with the breakdown for every billed visit. */
-export default function PayrollPage() {
-  useDocumentTitle('Payroll');
+function StylistEstimate() {
   const [month, setMonth] = useState(thisMonth());
   const [open, setOpen] = useState('');
   const list = useQuery({
@@ -75,12 +77,11 @@ export default function PayrollPage() {
     enabled: Boolean(open),
   });
   return (
-    <div className="flex flex-col gap-lg pb-xl">
-      <PageHeader
-        eyebrow="Admin"
-        title="Payroll"
-        description="Stylist pay = task payout × rating multiplier + tips (tips are never multiplied). These are estimates worked out from billed visits."
-      />
+    <div className="flex flex-col gap-lg">
+      <p className="text-sm text-text-muted">
+        Stylist pay = task payout × rating multiplier + tips (tips are never multiplied). These are
+        estimates worked out from billed visits.
+      </p>
       <div className="max-w-xs">
         <Input
           label="Month"
@@ -224,6 +225,36 @@ export default function PayrollPage() {
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+type Tab = 'runs' | 'estimate';
+
+/** Admin: payroll runs (draft → approve → paid) and the live stylist pay estimate. */
+export default function PayrollPage() {
+  useDocumentTitle('Payroll');
+  const [tab, setTab] = useState<Tab>('runs');
+  return (
+    <div className="flex flex-col gap-lg pb-xl">
+      <PageHeader
+        eyebrow="Admin"
+        title="Payroll"
+        description="Run payroll for a month, adjust with a reason, approve to lock it, then mark it paid. Payment is simulated."
+      />
+      <Tabs
+        label="Payroll sections"
+        idPrefix="payroll"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: 'runs', label: 'Payroll runs' },
+          { id: 'estimate', label: 'Stylist pay estimate' },
+        ]}
+      />
+      <TabPanel idPrefix="payroll" id={tab}>
+        {tab === 'runs' ? <PayrollRuns /> : <StylistEstimate />}
+      </TabPanel>
     </div>
   );
 }
