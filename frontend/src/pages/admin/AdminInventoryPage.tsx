@@ -33,6 +33,7 @@ import {
   Table,
   TabPanel,
   Tabs,
+  Textarea,
   useToast,
   type TabItem,
 } from '../../components/ui';
@@ -90,6 +91,8 @@ interface ProductForm {
   low_stock_level: string;
   opening_stock: string;
   is_active: boolean;
+  description: string;
+  sold_online: boolean;
 }
 
 const blankProduct: ProductForm = {
@@ -101,6 +104,8 @@ const blankProduct: ProductForm = {
   low_stock_level: '5',
   opening_stock: '0',
   is_active: true,
+  description: '',
+  sold_online: true,
 };
 
 function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
@@ -134,6 +139,8 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
             low_stock_level: String(target.low_stock_level),
             opening_stock: '0',
             is_active: target.is_active,
+            description: target.description ?? '',
+            sold_online: target.sold_online ?? true,
           },
     );
   };
@@ -194,6 +201,8 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
       gst_percent: form.gst_percent.trim(),
       low_stock_level: low,
       is_active: form.is_active,
+      description: form.description.trim(),
+      sold_online: form.sold_online,
       ...(editing === 'new' ? { opening_stock: opening } : {}),
     });
   };
@@ -357,10 +366,22 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
               />
             )}
           </div>
+          <Textarea
+            label="Shop description (optional)"
+            hint="Shown on the online shop. Up to 600 characters."
+            maxLength={600}
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+          />
           <Checkbox
             label="Sold at the counter"
             checked={form.is_active}
             onChange={(e) => set('is_active', e.target.checked)}
+          />
+          <Checkbox
+            label="Sold in the online shop"
+            checked={form.sold_online}
+            onChange={(e) => set('sold_online', e.target.checked)}
           />
           {problem && (
             <p role="alert" className="text-sm font-medium text-danger-text">

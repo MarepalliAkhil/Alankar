@@ -1219,6 +1219,31 @@ message (verified / to run / walkthrough / limitations) has gone out.
   guarded against, since there is nothing to guard: revisit this once Part 4 lets one appointment
   mix a package-covered service with paid add-on products, at which point a package booking could
   have a non-zero balance and go through `awaiting_payment` like any other.
+- **Shop: delivery only, logged-in customers only.** Every order is delivered (no "collect at the
+  salon" option), so a full address and a 10-digit Indian mobile are required; the shop pages sit
+  in the customer portal (menu "Shop" and "My Orders"), not on the public site. Guests see nothing.
+- **Shop: the cart lives in the browser, prices never do.** The cart is only product ids and
+  quantities (localStorage, no personal data). Every price, the GST, the delivery charge and the
+  total are worked out by the server on `/api/my/shop/quote/` and again inside the order
+  transaction; whatever the page sends about money is ignored (tested).
+- **Shop: stock is taken when the order is placed, not when it is paid.** Placing an order writes
+  `order` stock movements in the same transaction (products locked in id order, so two checkouts
+  cannot deadlock or both take the last item -- tested with two threads). An unpaid order holds
+  the stock for `payment_hold_minutes` (default 30) and then expires, writing `order_return`
+  movements. A cancelled order also returns its stock the same way.
+- **Shop: refunds are automatic for cancelled orders.** A customer may cancel while the order is
+  waiting for payment or paid-but-not-packed; the admin may cancel any open order with a reason.
+  Both refund every successful payment straight away (simulated, `OrderRefund` records). This
+  differs from paid *visits*, where a salon cancellation waits for admin approval -- here the
+  admin is the one cancelling, so a second approval step would only repeat the same person.
+- **Shop: who moves an order along.** Receptionist and admin both mark orders packed -> shipped
+  -> delivered (one step at a time, no skipping, tested); only the admin cancels. A shipped order
+  can carry a short delivery note (courier and tracking number) the customer sees.
+- **Shop settings** (`SiteContent` key `shop`): `delivery_fee` (49), `free_delivery_over` (999),
+  `max_quantity_per_order` (10), `payment_hold_minutes` (30). Editable through the existing
+  settings mechanism; an admin UI for them comes with part 8.
+- **Products:** two new fields, `description` (shown in the shop) and `sold_online` (some products
+  stay counter-only), editable in Admin > Inventory.
 (further decisions are appended below as each part is built)
 
 ### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
@@ -1572,3 +1597,24 @@ or any further Task 8.5 work begins.
 - **Task 11 (UI redesign) is ON HOLD** until Task 8.5 and Task 10 pass on the owner's PC. The plan
   for it was agreed in outline (themes Midnight Studio / Sage Calm / Rose Glow, glass components,
   scroll-driven 3D hero, staff photo background) and will be restated before work starts.
+
+### Task 8.5 part 2: Shop and Orders (DONE, committed, verified in sandbox)
+Backend: new `shop` app (`Address`, `Order`, `OrderLine`, `OrderEvent`, `OrderPayment`,
+`OrderRefund`, `OrderSequence`; migrations `shop/0001`, `inventory/0005-0006`, plus new audit
+actions and a mail kind). Delivery mobile and address lines are AES-GCM encrypted at rest (tested
+against the raw database row). Endpoints: `/api/my/shop/products/`, `/api/my/shop/quote/`,
+`/api/my/shop/addresses/[<id>/]`, `/api/my/orders/[<id>/[pay|cancel]/]` (customer) and
+`/api/orders/[<id>/[advance|cancel]/]` (receptionist and admin; cancel is admin only). Every state
+change is audited (`order_placed`, `order_paid`, `order_advanced`, `order_cancelled`,
+`order_expired`) and the customer is emailed. Privacy: data export includes orders and saved
+addresses; anonymizing removes the addresses and blanks the delivery details on old orders; an
+open order blocks anonymizing. Policy: 15 new actions, customer menu "Shop" and "My Orders",
+receptionist/admin menu "Orders".
+Frontend: `ShopPage` (category chips, stock badges, quantity steppers, cart panel priced by the
+server, checkout with saved or new address and server field errors shown under the right input),
+`OrdersPage` and `OrderDetailPage` for the customer (pay with the simulated gateway, cancel,
+tracking timeline), and `OrdersPage`/`OrderDetailPage` for the desk (status chips with counts,
+search, date range, next-step button, delivery note, admin-only "Cancel with refund").
+Tests: `shop/tests/test_shop.py` (43: prices, delivery rules, bad carts, address validation and
+encryption, saved addresses and isolation, the whole lifecycle, expiry, cancel rules, staff steps,
+filters, role denials, guests, two concurrency tests, privacy) and `src/pages/shop.test.tsx` (10).

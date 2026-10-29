@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "marketing",
     "website",
     "wallet",
+    "shop",
     "waitlist",
     "chatbot",
 ]

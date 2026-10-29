@@ -131,6 +131,12 @@ def package_settings() -> dict:
 # Shop / order rules (admin-editable, Task 8.5). Stored under SiteContent key "shop".
 SHOP_DEFAULTS = {
     "max_quantity_per_order": 10,
+    # Delivery charge in rupees (incl. GST), waived when the items come to free_delivery_over or
+    # more. 0 / None turn either rule off.
+    "delivery_fee": 49,
+    "free_delivery_over": 999,
+    # An unpaid order holds its stock this long, then expires and the stock goes back.
+    "payment_hold_minutes": 30,
 }
 
 

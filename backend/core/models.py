@@ -19,6 +19,7 @@ class MailOutbox(models.Model):
         INVOICE = "invoice", "Invoice and receipt"
         MARKETING = "marketing", "Marketing campaign"
         GIFT_CARD = "gift_card", "Gift card"
+        ORDER = "order", "Shop order update"
         TEST = "test", "Test email"
 
     class Status(models.TextChoices):

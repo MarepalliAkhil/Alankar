@@ -30,6 +30,7 @@ def move(
     invoice=None,
     note: str = "",
     supplier=None,
+    order=None,
 ):
     """Writes one ledger row. The caller holds the product row lock (select_for_update)."""
     if delta < 0 and level(product) + delta < 0:
@@ -41,5 +42,6 @@ def move(
         actor=actor if getattr(actor, "is_authenticated", False) else None,
         invoice=invoice,
         supplier=supplier,
+        order=order,
         note=note[:200],
     )

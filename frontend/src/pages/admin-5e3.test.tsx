@@ -255,6 +255,8 @@ describe('purchase orders', () => {
           gst_percent: '18.00',
           low_stock_level: 2,
           is_active: true,
+          description: '',
+          sold_online: true,
           stock: 5,
           low: false,
         },

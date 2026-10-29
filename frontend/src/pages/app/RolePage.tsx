@@ -44,6 +44,11 @@ const MySchedulePage = lazy(() => import('../stylist/MySchedulePage'));
 const EarningsPage = lazy(() => import('../stylist/EarningsPage'));
 const ChatPage = lazy(() => import('../chat/ChatPage'));
 const ProfilePage = lazy(() => import('../customer/ProfilePage'));
+const ShopPage = lazy(() => import('../customer/ShopPage'));
+const MyOrdersPage = lazy(() => import('../customer/OrdersPage'));
+const MyOrderDetailPage = lazy(() => import('../customer/OrderDetailPage'));
+const OrdersPage = lazy(() => import('../desk/OrdersPage'));
+const OrderDetailPage = lazy(() => import('../desk/OrderDetailPage'));
 
 /** Picks the page for a policy path. Built pages are listed here; the rest are planned. */
 export default function RolePage({ path }: { path: string }) {
@@ -51,6 +56,8 @@ export default function RolePage({ path }: { path: string }) {
   if (!user) return null;
   const isDesk = user.role === 'receptionist' || user.role === 'admin';
   if (path === '/customers/:id' && isDesk) return <CustomerProfilePage />;
+  if (path === '/orders/:id' && isDesk) return <OrderDetailPage />;
+  if (path === '/customer/orders/:id' && user.role === 'customer') return <MyOrderDetailPage />;
   if (path === '/my-appointments/:id' && user.role === 'stylist') return <AppointmentDetailPage />;
   if (user.role === 'stylist' && (path === '/chat' || path === '/chat/:id')) {
     return <ChatPage base="/chat" />;
@@ -92,6 +99,9 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/customer/appointments' && user.role === 'customer') return <AppointmentsPage />;
   if (path === '/customer/invoices' && user.role === 'customer') return <InvoicesPage />;
   if (path === '/customer/profile' && user.role === 'customer') return <ProfilePage />;
+  if (path === '/customer/shop' && user.role === 'customer') return <ShopPage />;
+  if (path === '/customer/orders' && user.role === 'customer') return <MyOrdersPage />;
+  if (path === '/orders' && isDesk) return <OrdersPage />;
   if (path === '/schedule' && (user.role === 'receptionist' || user.role === 'admin')) {
     return <SchedulePage />;
   }

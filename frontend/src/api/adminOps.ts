@@ -11,6 +11,8 @@ export interface AdminProduct {
   gst_percent: string;
   low_stock_level: number;
   is_active: boolean;
+  description: string;
+  sold_online: boolean;
   stock: number;
   low: boolean;
 }
@@ -23,6 +25,8 @@ export interface ProductInput {
   gst_percent: string;
   low_stock_level: number;
   is_active: boolean;
+  description?: string;
+  sold_online?: boolean;
   opening_stock?: number;
 }
 

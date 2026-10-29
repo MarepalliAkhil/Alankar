@@ -9,6 +9,7 @@ from marketing.private_views import MyCouponsView
 from people.admin_urls import admin_patterns, payslip_patterns
 from people.stylist_urls import stylist_patterns
 from scheduling.urls import booking_patterns, desk_patterns, my_patterns
+from shop.urls import my_order_patterns, my_shop_patterns, order_patterns
 from wallet.urls import desk_wallet_patterns, my_waitlist_patterns, my_wallet_patterns
 
 urlpatterns = [
@@ -22,6 +23,9 @@ urlpatterns = [
     path("api/my/coupons/", MyCouponsView.as_view(), name="my-coupons"),
     path("api/my/wallet/", include(my_wallet_patterns)),
     path("api/my/waitlist/", include(my_waitlist_patterns)),
+    path("api/my/shop/", include(my_shop_patterns)),
+    path("api/my/orders/", include(my_order_patterns)),
+    path("api/orders/", include(order_patterns)),
     path("api/my/", include(my_patterns)),
     path("api/desk/wallet/", include(desk_wallet_patterns)),
     path("api/desk/", include(desk_patterns)),

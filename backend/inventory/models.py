@@ -42,6 +42,10 @@ class Product(models.Model):
     low_stock_level = models.PositiveIntegerField(default=5)
     is_active = models.BooleanField(default=True, db_index=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # Online shop (Task 8.5): a short description for the shop page, and whether the product is
+    # listed online at all (some products are counter-only).
+    description = models.TextField(max_length=600, blank=True)
+    sold_online = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["sort_order", "name"]
@@ -63,6 +67,8 @@ class StockMovement(models.Model):
         ADJUSTMENT = "adjustment", "Stock count adjustment"
         WASTAGE = "wastage", "Wastage (damaged, expired or used up)"
         RETURN = "return", "Returned by a customer (refund)"
+        ORDER = "order", "Sold online (held for an order)"
+        ORDER_RETURN = "order_return", "Online order cancelled or expired"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
@@ -70,6 +76,13 @@ class StockMovement(models.Model):
     reason = models.CharField(max_length=12, choices=Reason.choices)
     invoice = models.ForeignKey(
         "billing.Invoice",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="stock_movements",
+    )
+    order = models.ForeignKey(
+        "shop.Order",
         null=True,
         blank=True,
         on_delete=models.PROTECT,

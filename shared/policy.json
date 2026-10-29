@@ -174,7 +174,22 @@
     "chatbot.ask": "Ask AI Alankar Intelligence a question (guests and customers; staff accounts are refused)",
     "chatbot.insights.read": "Read the chatbot's unanswered questions (anonymous keys) and intent usage",
     "chatbot.insights.manage": "Turn an unanswered chatbot question into an FAQ, or dismiss it (audited)",
-    "chatbot.insights.test": "Try a question in the chatbot test box (guest context, nothing logged)"
+    "chatbot.insights.test": "Try a question in the chatbot test box (guest context, nothing logged)",
+    "my.shop.browse": "See the products sold online",
+    "my.shop.quote": "Price my cart (prices worked out by the server)",
+    "my.addresses.list": "See my saved delivery addresses",
+    "my.addresses.create": "Save a delivery address",
+    "my.addresses.update": "Change a saved delivery address",
+    "my.addresses.delete": "Remove a saved delivery address",
+    "my.orders.list": "See my online orders",
+    "my.orders.place": "Place an online order",
+    "my.orders.read": "See one of my orders and its tracking timeline",
+    "my.orders.pay": "Pay for my online order",
+    "my.orders.cancel": "Cancel my online order before it is packed",
+    "orders.list": "See online orders, with filters",
+    "orders.read": "See one online order with the delivery address",
+    "orders.advance": "Mark an online order packed, shipped or delivered",
+    "orders.cancel": "Cancel an online order with a reason (refunds what was paid)"
   },
   "public": {
     "api": [
@@ -267,11 +282,23 @@
         "my.waitlist.create",
         "my.waitlist.cancel",
         "my.waitlist.respond",
-        "my.coupons.read"
+        "my.coupons.read",
+        "my.shop.browse",
+        "my.shop.quote",
+        "my.addresses.list",
+        "my.addresses.create",
+        "my.addresses.update",
+        "my.addresses.delete",
+        "my.orders.list",
+        "my.orders.place",
+        "my.orders.read",
+        "my.orders.pay",
+        "my.orders.cancel"
       ],
       "routes": [
         "/customer/pay/:id",
-        "/customer/chat/:id"
+        "/customer/chat/:id",
+        "/customer/orders/:id"
       ],
       "menu": [
         {
@@ -312,6 +339,22 @@
           "path": "/customer/invoices",
           "description": "Receipts and invoices for your visits.",
           "task": "Task 2c",
+          "status": "available"
+        },
+        {
+          "id": "shop",
+          "label": "Shop",
+          "path": "/customer/shop",
+          "description": "Hair, skin and spa products delivered to your door: add to cart, pick an address, pay.",
+          "task": "Task 8e",
+          "status": "available"
+        },
+        {
+          "id": "orders",
+          "label": "My Orders",
+          "path": "/customer/orders",
+          "description": "Your shop orders: pay, cancel before packing, and track packed, shipped and delivered.",
+          "task": "Task 8e",
           "status": "available"
         },
         {
@@ -385,10 +428,14 @@
         "wallet.customer",
         "wallet.sell",
         "wallet.giftcheck",
-        "payslips.own"
+        "payslips.own",
+        "orders.list",
+        "orders.read",
+        "orders.advance"
       ],
       "routes": [
-        "/customers/:id"
+        "/customers/:id",
+        "/orders/:id"
       ],
       "menu": [
         {
@@ -429,6 +476,14 @@
           "path": "/pos",
           "description": "Bill checked-in visits: products, discount within your limit, loyalty points, tip and payment. Invoices and refund requests.",
           "task": "Task 3c",
+          "status": "available"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "path": "/orders",
+          "description": "Online shop orders: filter, open one, mark packed, shipped and delivered.",
+          "task": "Task 8e",
           "status": "available"
         },
         {
@@ -625,10 +680,15 @@
         "reviews.write",
         "chatbot.insights.read",
         "chatbot.insights.manage",
-        "chatbot.insights.test"
+        "chatbot.insights.test",
+        "orders.list",
+        "orders.read",
+        "orders.advance",
+        "orders.cancel"
       ],
       "routes": [
-        "/customers/:id"
+        "/customers/:id",
+        "/orders/:id"
       ],
       "menu": [
         {
@@ -717,6 +777,14 @@
           "path": "/pos",
           "description": "Bill visits, see all invoices, decide and issue refunds (with stock and loyalty reversal), and review cash closes.",
           "task": "Task 3c",
+          "status": "available"
+        },
+        {
+          "id": "orders",
+          "label": "Orders",
+          "path": "/orders",
+          "description": "Online shop orders: filter, open one, mark packed, shipped and delivered, or cancel with a refund.",
+          "task": "Task 8e",
           "status": "available"
         },
         {

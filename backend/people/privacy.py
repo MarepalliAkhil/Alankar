@@ -46,6 +46,11 @@ def blockers(user: User) -> list[str]:
         payment__appointment__customer=user, status=Refund.Status.PENDING_APPROVAL
     ).exists():
         out.append("A refund for this customer is waiting for a decision.")
+    from shop.models import Order
+    from shop.orders import OPEN as OPEN_ORDERS
+
+    if Order.objects.filter(customer=user, status__in=OPEN_ORDERS).exists():
+        out.append("The customer has a shop order that is not delivered or closed yet.")
     return out
 
 
@@ -109,6 +114,7 @@ def export_data(user: User) -> dict:
             for e in LoyaltyEntry.objects.filter(customer=user)
         ],
         "wallet": wallet_export(user),
+        **shop_export(user),
         "coupons": coupon_export(user),
         "ratings": [
             {"stars": r.stars, "comment": r.comment, "at": r.submitted_at.isoformat()}
@@ -150,6 +156,12 @@ def anonymize(user: User) -> None:
         recipient_name="", recipient_email="", message=""
     )
     Message.objects.filter(thread__customer=user).delete()
+    from shop.models import Address, Order
+
+    Address.objects.filter(customer=user).delete()
+    Order.objects.filter(customer=user).update(
+        ship_name=DELETED_NAME, ship_mobile="", ship_line1="", ship_line2="", ship_landmark=""
+    )
     Rating.objects.filter(customer=user).update(comment="")
     MailOutbox.objects.filter(to_email__iexact=old_email).update(
         to_email=placeholder, subject="[removed]", body="[removed]", link=""
@@ -175,6 +187,34 @@ def anonymize(user: User) -> None:
     user.is_active = False
     user.set_unusable_password()
     user.save()
+
+
+def shop_export(user: User) -> dict:
+    """Saved delivery addresses and online orders (Task 8.5)."""
+    from shop import orders
+    from shop.models import Address, Order
+
+    return {
+        "addresses": [
+            {k: v for k, v in orders.address_data(a).items() if k != "id"}
+            for a in Address.objects.filter(customer=user)
+        ],
+        "orders": [
+            {
+                "number": o.number,
+                "status": o.status,
+                "placed_at": o.created_at.isoformat(),
+                "total": str(o.total),
+                "items": [
+                    {"name": ln.name, "quantity": ln.quantity, "amount": str(ln.amount)}
+                    for ln in o.lines.all()
+                ],
+                "delivery_city": o.ship_city,
+                "delivery_pincode": o.ship_pincode,
+            }
+            for o in Order.objects.filter(customer=user).prefetch_related("lines")
+        ],
+    }
 
 
 def wallet_export(user: User) -> dict:

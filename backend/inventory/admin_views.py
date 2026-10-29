@@ -42,6 +42,8 @@ def product_row(product: Product) -> dict:
         "gst_percent": str(product.gst_percent),
         "low_stock_level": product.low_stock_level,
         "is_active": product.is_active,
+        "description": product.description,
+        "sold_online": product.sold_online,
         "stock": level,
         "low": level <= product.low_stock_level,
     }
@@ -71,6 +73,8 @@ class ProductSerializer(serializers.Serializer):
     )
     low_stock_level = serializers.IntegerField(min_value=0, max_value=100000)
     is_active = serializers.BooleanField()
+    description = serializers.CharField(max_length=600, required=False, allow_blank=True)
+    sold_online = serializers.BooleanField(required=False)
     opening_stock = serializers.IntegerField(min_value=0, max_value=100000, required=False)
 
     def validate_sku(self, value):
@@ -145,6 +149,8 @@ class ProductDetailView(APIView):
                 "gst_percent",
                 "low_stock_level",
                 "is_active",
+                "description",
+                "sold_online",
             ),
         )
         if changes:
