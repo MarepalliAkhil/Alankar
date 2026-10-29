@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Eye } from 'lucide-react';
 import { useState } from 'react';
 import { errorDetail } from '../../api/client';
-import { getGiftCard, listGiftCards, voidGiftCard, type GiftCardRow } from '../../api/wallet';
+import {
+  getGiftCard,
+  listGiftCards,
+  revealGiftCardCode,
+  voidGiftCard,
+  type GiftCardRow,
+} from '../../api/wallet';
 import { ReasonModal } from '../../components/admin/wallet/ReasonModal';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
@@ -33,6 +40,8 @@ export default function GiftCardsPage() {
   const [viewing, setViewing] = useState<string | null>(null);
   const [voiding, setVoiding] = useState<GiftCardRow | null>(null);
   const [problem, setProblem] = useState('');
+  const [revealedCode, setRevealedCode] = useState<string | null>(null);
+  const [revealProblem, setRevealProblem] = useState('');
   const detail = useQuery({
     queryKey: ['w-card', viewing],
     queryFn: () => getGiftCard(viewing as string),
@@ -47,6 +56,12 @@ export default function GiftCardsPage() {
       toast.show({ tone: 'success', title: 'Gift card cancelled' });
     },
     onError: (e) => setProblem(errorDetail(e) ?? 'Could not cancel the card.'),
+  });
+  const reveal = useMutation({
+    mutationFn: (id: string) => revealGiftCardCode(id),
+    onSuccess: (r) => setRevealedCode(r.code),
+    onError: (e) =>
+      setRevealProblem(errorDetail(e) ?? "This card's code was only shown once, when issued."),
   });
   return (
     <div className="flex flex-col gap-lg pb-xl">
@@ -92,7 +107,11 @@ export default function GiftCardsPage() {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => setViewing(c.id)}
+                      onClick={() => {
+                        setRevealedCode(null);
+                        setRevealProblem('');
+                        setViewing(c.id);
+                      }}
                     >
                       History
                     </Button>
@@ -117,7 +136,15 @@ export default function GiftCardsPage() {
         )}
       </Card>
       {viewing && (
-        <Modal open onClose={() => setViewing(null)} title="Gift card history">
+        <Modal
+          open
+          onClose={() => {
+            setViewing(null);
+            setRevealedCode(null);
+            setRevealProblem('');
+          }}
+          title="Gift card history"
+        >
           {detail.isPending ? (
             <LoadingState label="Loading history…" />
           ) : detail.isError ? (
@@ -127,7 +154,30 @@ export default function GiftCardsPage() {
             />
           ) : (
             <div className="flex flex-col gap-sm">
-              <p className="font-mono font-semibold text-text">{detail.data.masked}</p>
+              <div className="flex flex-wrap items-center gap-sm">
+                <p className="font-mono font-semibold text-text">
+                  {revealedCode ?? detail.data.masked}
+                </p>
+                {detail.data.code_available ? (
+                  !revealedCode && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setRevealProblem('');
+                        reveal.mutate(detail.data.id);
+                      }}
+                      disabled={reveal.isPending}
+                    >
+                      <Eye className="size-4" aria-hidden /> Reveal full code
+                    </Button>
+                  )
+                ) : (
+                  <span className="text-xs text-text-muted">Code was shown once, at purchase</span>
+                )}
+              </div>
+              {revealProblem && <p className="text-sm text-danger">{revealProblem}</p>}
               <ul className="flex flex-col gap-1 text-sm" aria-label="Card history">
                 {(detail.data.ledger ?? []).map((e) => (
                   <li key={e.id} className="flex flex-wrap justify-between gap-xs">

@@ -79,10 +79,12 @@ export interface PackageLedgerRow {
   reason: string;
   reason_label: string;
   invoice: string | null;
+  appointment: string | null;
   note: string;
   created_at: string;
   actor: string | null;
 }
+export type PackageCancelStatus = 'none' | 'pending' | 'cancelled';
 export interface PurchaseRow {
   id: string;
   name: string;
@@ -92,10 +94,40 @@ export interface PurchaseRow {
   sale_number: string;
   customer_name: string;
   customer_id: string;
+  last4: string;
+  masked: string;
+  code_available: boolean;
+  cancel_status: PackageCancelStatus;
   credits: PackageCreditRow[];
   remaining: number;
   refunded: Money;
   ledger?: PackageLedgerRow[];
+  pending_cancel_request?: { id: string; estimated_refund: Money } | null;
+}
+
+export interface PackageCancelEstimate {
+  estimated_refund: Money;
+  cancellation_fee_percent: string;
+  refund_window_days: number | null;
+  already_pending: boolean;
+}
+export interface PackageCancelRequestRow {
+  id: string;
+  purchase_id: string;
+  package_name: string;
+  customer_name: string;
+  customer_id: string;
+  reason: string;
+  remaining_sessions: number;
+  total_sessions: number;
+  amount_paid: Money;
+  estimated_refund: Money;
+  status: 'pending' | 'approved' | 'rejected';
+  decided_amount: Money | null;
+  decision_reason: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
 }
 
 export interface MembershipLedgerRow {
@@ -141,6 +173,7 @@ export interface GiftCardRow {
   expires_at: string;
   issued_at: string;
   recipient_name: string;
+  code_available: boolean;
   role?: 'bought' | 'received';
   buyer_name?: string;
   recipient_email?: string;
@@ -250,6 +283,30 @@ export interface CardCheck {
 export async function checkMyGiftCard(code: string): Promise<CardCheck> {
   return (await api.post<CardCheck>('/my/wallet/gift-cards/check/', { code })).data;
 }
+export async function revealMyGiftCardCode(id: string): Promise<{ code: string }> {
+  return (await api.post<{ code: string }>(`/my/wallet/gift-cards/${id}/reveal/`)).data;
+}
+
+export async function listMyPackages(): Promise<PurchaseRow[]> {
+  return (await api.get<PurchaseRow[]>('/my/wallet/packages/')).data;
+}
+export async function revealMyPackageCode(id: string): Promise<{ code: string }> {
+  return (await api.post<{ code: string }>(`/my/wallet/packages/${id}/reveal/`)).data;
+}
+export async function estimatePackageCancelRefund(id: string): Promise<PackageCancelEstimate> {
+  return (await api.get<PackageCancelEstimate>(`/my/wallet/packages/${id}/cancel-estimate/`)).data;
+}
+export async function requestPackageCancellation(
+  id: string,
+  reason: string,
+): Promise<{ id: string; status: string; estimated_refund: Money }> {
+  return (
+    await api.post<{ id: string; status: string; estimated_refund: Money }>(
+      `/my/wallet/packages/${id}/cancel-request/`,
+      { reason },
+    )
+  ).data;
+}
 
 export async function listMyWaitlist(): Promise<WaitlistRow[]> {
   return (await api.get<WaitlistRow[]>('/my/waitlist/')).data;
@@ -349,6 +406,30 @@ export async function getGiftCard(id: string): Promise<GiftCardRow> {
 }
 export async function voidGiftCard(id: string, reason: string) {
   return (await api.post(`${A}/gift-cards/${id}/void/`, { reason })).data;
+}
+export async function revealGiftCardCode(id: string): Promise<{ code: string }> {
+  return (await api.post<{ code: string }>(`${A}/gift-cards/${id}/reveal/`)).data;
+}
+export async function listPackageCancelRequests(): Promise<PackageCancelRequestRow[]> {
+  return (await api.get<PackageCancelRequestRow[]>(`${A}/package-cancel-requests/`)).data;
+}
+export async function approvePackageCancelRequest(
+  id: string,
+  input: { method: SellMethod; amount?: string; reason?: string },
+): Promise<PackageCancelRequestRow> {
+  return (
+    await api.post<PackageCancelRequestRow>(`${A}/package-cancel-requests/${id}/approve/`, input)
+  ).data;
+}
+export async function rejectPackageCancelRequest(
+  id: string,
+  reason: string,
+): Promise<PackageCancelRequestRow> {
+  return (
+    await api.post<PackageCancelRequestRow>(`${A}/package-cancel-requests/${id}/reject/`, {
+      reason,
+    })
+  ).data;
 }
 export async function listSales(kind?: string): Promise<SaleRow[]> {
   return (await api.get<SaleRow[]>(`${A}/sales/`, { params: kind ? { kind } : {} })).data;

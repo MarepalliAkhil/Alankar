@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => {
       testTimeout: 20000,
       css: false,
       restoreMocks: true,
+      // Browser tests (Playwright) run with `npm run e2e`, not here.
+      exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     },
   };
 });

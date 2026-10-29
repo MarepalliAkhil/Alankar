@@ -188,6 +188,16 @@ class Appointment(models.Model):
     price_total = models.DecimalField(max_digits=10, decimal_places=2)
     gst_amount = models.DecimalField(max_digits=10, decimal_places=2)
     amount_payable = models.DecimalField(max_digits=10, decimal_places=2)
+    # Task 8.5 part 5: a package code redeemed at booking makes the service line Rs 0. The
+    # session itself is tracked on wallet.PackageEntry (reason reserved/consumed/released); this
+    # FK is only so the appointment/request cards can show which package was used.
+    package_purchase = models.ForeignKey(
+        "wallet.PackagePurchase",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appointments",
+    )
 
     preferred_start = models.DateTimeField()
     preferred_stylist = models.ForeignKey(
@@ -250,6 +260,22 @@ class Appointment(models.Model):
         indexes = [
             models.Index(fields=["stylist", "start"]),
             models.Index(fields=["room", "start"]),
+            models.Index(fields=["customer", "-created_at"], name="appt_customer_recent_idx"),
+            models.Index(fields=["status", "start"], name="appt_status_start_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end__isnull=True)
+                | models.Q(start__isnull=True)
+                | models.Q(end__gt=models.F("start")),
+                name="appointment_ends_after_start",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(duration_minutes__gt=0), name="appointment_duration_positive"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_payable__gte=0), name="appointment_payable_not_negative"
+            ),
         ]
 
     def __str__(self) -> str:

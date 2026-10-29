@@ -173,6 +173,60 @@ def test_bad_rating_bands_are_refused(admin, bands):
     assert response.status_code == 400 and audits() == []
 
 
+def test_reads_the_current_package_settings(admin):
+    assert call(admin[0], "get", URL).json()["packages"] == {
+        "refund_window_days": None,
+        "cancellation_fee_percent": 0,
+        "refund_expired_packages": False,
+        "no_show_consumes_session": True,
+    }
+
+
+def test_package_cancellation_rules_are_used_by_the_refund_estimate(admin):
+    done = call(
+        admin[0],
+        "patch",
+        URL,
+        {
+            "packages": {
+                "refund_window_days": 30,
+                "cancellation_fee_percent": 10,
+                "refund_expired_packages": True,
+                "no_show_consumes_session": False,
+            }
+        },
+    )
+    assert done.status_code == 200, done.content
+    from website.content import package_settings
+
+    settings = package_settings()
+    assert settings["refund_window_days"] == 30
+    assert settings["cancellation_fee_percent"] == 10
+    assert settings["refund_expired_packages"] is True
+    assert settings["no_show_consumes_session"] is False
+    (entry,) = audits("packages")
+    assert entry.metadata["changes"]["refund_window_days"] == [None, 30]
+    assert entry.metadata["changes"]["cancellation_fee_percent"] == [0, 10]
+    # Clearing the window back to "no deadline" is a normal, auditable change too.
+    done = call(admin[0], "patch", URL, {"packages": {"refund_window_days": None}})
+    assert done.status_code == 200, done.content
+    assert package_settings()["refund_window_days"] is None
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"refund_window_days": 0},
+        {"refund_window_days": -5},
+        {"cancellation_fee_percent": -1},
+        {"cancellation_fee_percent": 101},
+    ],
+)
+def test_bad_package_settings_are_refused(admin, bad):
+    response = call(admin[0], "patch", URL, {"packages": bad})
+    assert response.status_code == 400 and audits("packages") == []
+
+
 @pytest.mark.parametrize("role", ["customer", "stylist", "receptionist"])
 @pytest.mark.parametrize("method", ["get", "patch"])
 def test_only_the_admin_reaches_the_settings(logged_in, role, method):

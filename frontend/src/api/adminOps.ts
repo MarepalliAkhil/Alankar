@@ -152,6 +152,13 @@ export interface BusinessSettings {
     flag_below: string;
     bands: { min_average: string; multiplier: string }[];
   };
+  packages: {
+    /** null = no deadline on a cancellation request. */
+    refund_window_days: number | null;
+    cancellation_fee_percent: number;
+    refund_expired_packages: boolean;
+    no_show_consumes_session: boolean;
+  };
 }
 
 export type SettingsPatch = Partial<{

@@ -286,7 +286,8 @@ def test_a_thread_closes_read_only_seven_days_after_the_last_completed_visit(
     finish_visit(appt_id, days_ago=6)
     assert api(customer[0], "post", url, {"text": "still open"}).status_code == 201
 
-    Appointment.objects.filter(pk=appt_id).update(end=timezone.now() - timedelta(days=8))
+    ended = timezone.now() - timedelta(days=8)
+    Appointment.objects.filter(pk=appt_id).update(start=ended - timedelta(minutes=30), end=ended)
     VisitCompletion.objects.filter(appointment_id=appt_id)  # (records are immutable; see below)
     from django.db import connection
 
@@ -497,7 +498,8 @@ def test_a_closed_thread_refuses_live_messages_but_still_opens(catalogue, custom
             "update scheduling_visitcompletion set completed_at = %s",
             [timezone.now() - timedelta(days=9)],
         )
-    Appointment.objects.filter(pk=appt_id).update(end=timezone.now() - timedelta(days=9))
+    ended = timezone.now() - timedelta(days=9)
+    Appointment.objects.filter(pk=appt_id).update(start=ended - timedelta(minutes=30), end=ended)
 
     async def scenario():
         c = communicator(thread.id, customer)

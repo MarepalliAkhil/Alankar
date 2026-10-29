@@ -16,6 +16,7 @@ from people.admin_views import WEEKDAYS, WeeklyHoursField
 from website.content import (
     booking_settings,
     content,
+    package_settings,
     pay_rules,
     pos_settings,
     security_settings,
@@ -129,6 +130,16 @@ class RatingSerializer(serializers.Serializer):
         return bands
 
 
+class PackageSettingsSerializer(serializers.Serializer):
+    # None = no deadline on a cancellation request.
+    refund_window_days = serializers.IntegerField(
+        min_value=1, max_value=3650, required=False, allow_null=True
+    )
+    cancellation_fee_percent = serializers.IntegerField(min_value=0, max_value=100, required=False)
+    refund_expired_packages = serializers.BooleanField(required=False)
+    no_show_consumes_session = serializers.BooleanField(required=False)
+
+
 class SettingsSerializer(serializers.Serializer):
     shop = ShopSerializer(required=False)
     hours = HoursSerializer(required=False)
@@ -136,6 +147,7 @@ class SettingsSerializer(serializers.Serializer):
     billing = BillingSerializer(required=False)
     security = SecuritySerializer(required=False)
     rating = RatingSerializer(required=False)
+    packages = PackageSettingsSerializer(required=False)
 
 
 def two(value) -> str:
@@ -162,6 +174,7 @@ def snapshot() -> dict:
         },
         "billing": {"discount_cap_percent": pos_settings()["discount_cap_percent"]},
         "security": security_settings(),
+        "packages": package_settings(),
         "rating": {
             "min_ratings": rules["min_ratings"],
             "flag_below": two(rules["flag_below"]),
@@ -221,6 +234,8 @@ class SettingsView(APIView):
                 save_key("pos", dict(data["billing"]))
             if "security" in data:
                 save_key("security", dict(data["security"]))
+            if "packages" in data:
+                save_key("packages", dict(data["packages"]))
             if "rating" in data:
                 rating = data["rating"]
                 updates: dict = {}

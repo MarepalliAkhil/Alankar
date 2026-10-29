@@ -16,3 +16,12 @@ staticfiles/
 *.tsbuildinfo
 .env.local
 .tmp-bundle/
+
+# Database backups (contain customer data: never commit)
+backend/backups/
+*.dump
+
+# Playwright output
+e2e-report/
+e2e-results/
+test-results/

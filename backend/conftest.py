@@ -3,6 +3,7 @@
 import pytest
 from django.core.cache import cache
 from django.test import Client
+from django.test.client import MULTIPART_CONTENT
 from django.utils import timezone
 
 from accounts.models import User
@@ -26,6 +27,36 @@ def _clear_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _empty_bodies_are_not_multipart(monkeypatch):
+    """The Django test client labels a body-less POST as multipart/form-data and sends a boundary.
+
+    The API accepts JSON only (see core/tests/test_security_headers.py), so a body-less call in a
+    test is sent the way the browser app sends it: no body. Real form/multipart bodies are still
+    sent unchanged and are refused with 415.
+    """
+    default_types = {"post": MULTIPART_CONTENT, "put": "application/octet-stream"}
+    default_types["patch"] = default_types["delete"] = "application/octet-stream"
+    for name, default in default_types.items():
+        original = getattr(Client, name)
+
+        def wrapper(
+            self,
+            path,
+            data=None,
+            content_type=default,
+            *args,
+            _orig=original,
+            _default=default,
+            **kw,
+        ):
+            if data in (None, "", {}) and content_type == _default:
+                return _orig(self, path, "", "application/json", *args, **kw)
+            return _orig(self, path, data, content_type, *args, **kw)
+
+        monkeypatch.setattr(Client, name, wrapper)
 
 
 @pytest.fixture

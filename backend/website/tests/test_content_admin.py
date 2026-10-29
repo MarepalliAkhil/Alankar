@@ -169,3 +169,23 @@ def test_the_list_shows_published_and_draft_side_by_side(admin):
     assert rows["about"]["has_draft"] and rows["about"]["draft"]["heading"] == "Our story"
     assert rows["about"]["published"]["heading"] != "Our story"
     assert rows["announcements"]["can_unpublish"] and not rows["hero"]["can_unpublish"]
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "javascript:alert(1)",
+        "JaVaScRiPt:alert(1)",
+        "data:text/html,<script>1</script>",
+        "//evil.example",
+    ],
+)
+def test_announcement_link_cannot_be_a_script_or_protocol_relative(admin, link):
+    body = {"items": [{"text": "Sale", "link": link}]}
+    assert call(admin[0], "put", f"{BASE}/announcements/", body).status_code == 400
+
+
+def test_announcement_link_allows_site_paths_and_https(admin):
+    for link in ("/salon", "https://example.com/offer"):
+        body = {"items": [{"text": "Sale", "link": link}]}
+        assert call(admin[0], "put", f"{BASE}/announcements/", body).status_code == 200

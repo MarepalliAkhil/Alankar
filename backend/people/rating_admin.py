@@ -33,8 +33,9 @@ def _average(stars: list[int]) -> Decimal | None:
 
 def _trend(rows: list[Rating], months: int = 6) -> list[dict]:
     grouped: dict[str, list[int]] = {}
+    tz = timezone.get_current_timezone()
     for r in rows:
-        grouped.setdefault(r.submitted_at.astimezone().strftime("%Y-%m"), []).append(r.stars)
+        grouped.setdefault(r.submitted_at.astimezone(tz).strftime("%Y-%m"), []).append(r.stars)
     return [
         {"month": m, "average": str(_average(v)), "count": len(v)}
         for m, v in sorted(grouped.items())[-months:]

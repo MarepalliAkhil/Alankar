@@ -1,6 +1,9 @@
 # Progress
 
 ## Status
+- Task 8 (8a security review, 8b data and reliability, 8c browser tests, 8d README and demo data): IMPLEMENTED in the
+  build sandbox, waiting for the owner's PC run (commands in "Task 8: owner run and walkthrough" at the end).
+  Not DONE until the owner says "passed". Next after that: Task 9 onward (see the task list).
 - Task 7 (AI Alankar Intelligence chatbot: 7a engine and data, 7b API and widget, 7c admin Chatbot insights and
   accuracy evaluation) and the follow-up (full "tell me about <service>" answers, seeded descriptions, admin
   "Services without description"): DONE. Verified on the owner's PC and pushed (2026-10-30). **Task 7: DONE.**
@@ -1041,3 +1044,520 @@ also exercised by me while building it (the list in test_details.py), so the new
 4. Ask "tell me about massage": it lists the massages and asks which one; click one of the suggestions.
 5. As admin open Services, clear the description of one service and save; open Chatbot insights: it appears under
    "Services without description". Ask the bot about it: a short answer from the summary. Add the description again.
+
+
+## Task 8a: security hardening (done in sandbox; see docs/SECURITY.md)
+Decisions: CSP for the API is `default-src 'none'`; the SPA CSP is a documented header for the web server (Vite dev needs inline scripts). Rate limits are in-process cache (single process) and documented as a limitation. Invite withdrawal on deactivate chosen over silent keep. Access tokens bound to the password hash.
+Found and fixed: forged X-Forwarded-For bypassing throttles; pending invites survived deactivation; `javascript:` banner links; non-race-safe reset/invite links; tokens alive after password change; missing CSP/no-store/limits/log redaction (details in docs/SECURITY.md).
+Tests added: `core/tests/test_security_headers.py`, `test_csrf_sweep.py`, `test_deploy_check.py`, `accounts/tests/test_hardening.py`, link tests in `website/tests/test_content_admin.py`.
+Not run in sandbox (no internet): `pip-audit`, `npm audit` -> `scripts\audit.cmd` (list results here after the PC run).
+
+
+## Task 8b: data and reliability (done in sandbox; see docs/OPERATIONS.md)
+Decisions: no database exclusion constraint for overlapping bookings (needs the `btree_gist` extension, which an ordinary DB user cannot install; row locks + `check_integrity` instead). Balances stay ledgers (sum of rows), so "never negative" is guaranteed by the row lock and checked by `check_integrity`, not by a column constraint. Restore always goes into a NEW database (never overwrites the live one). Background jobs are one command, `run_jobs`; it purges only expired tokens and sign-in attempts older than 90 days, never audit logs.
+Found and fixed: desk invoice list ran one extra query per invoice (refundable amount) and customer "my appointments" ran extra queries per row (chat thread, setting lookups) and "my invoices" did not load credits; all now constant-query.
+Added: 5 indexes, 11 check constraints (migrations `*_hardening_indexes_and_checks`), `run_jobs`, `backup_db`, `restore_db`, `check_integrity`.
+Tests: `billing/tests/test_concurrency_8b.py` (double checkout, double refund approval, refund over-request, last stock unit, overlapping confirm, double payment, last membership session), `core/tests/test_query_counts.py`, `test_db_constraints.py`, `test_jobs.py`, `test_backup.py`, `test_integrity.py`. Existing tests already cover gift card, package credit, waitlist accept and purchase-receive races.
+
+
+## Task 8c: browser tests (written and run in the sandbox; first PC run still needed)
+Decisions: the e2e suite uses its own throw-away database `alankar_e2e` (`e2e_prepare` refuses any name not ending `_e2e`, so it cannot touch real data), its own API on port 8001 and its own Vite on 5174. Rate limits are lifted only for that test server through env vars; no rule is weakened in code. The shop is opened 00:00-23:59 with zero booking lead time by the fixture, so same-day walk-ins work at any hour (exception: the last ~30 minutes before midnight). Dev tools only: `@playwright/test`, `@axe-core/playwright`.
+Files: `frontend/playwright.config.ts`, `frontend/e2e/{full-workflow,basic-a11y,mobile,axe}.e2e.ts`, `helpers.ts`, `pages.ts`; `backend/core/demo.py`; `backend/core/management/commands/e2e_prepare.py`; `scripts/e2e.cmd`, `scripts/e2e.sh`.
+Full workflow (4 browser contexts + a second customer): customer books -> desk confirms -> customer pays -> check-in refused on a non-today visit -> role-denial matrix (UI /403 pages and API 401/403) -> second customer gets 404 on someone else's booking/invoice -> desk walk-in + check-in -> stylist start/complete -> POS bill with retail item (INV number, Rs 420.00) -> double billing refused, stock 30 -> 29 -> customer rates 5 stars and sees the invoice -> admin sees audit log, ratings, reports, payroll -> customer cancels the paid future booking and a refund is processed -> logout makes /api/auth/me 401.
+Sandbox result: 15/15 workflow steps pass; 12/12 basic-a11y and phone-width (375 px) checks pass (run against the built app in the sandbox's own Chromium). Not runnable in the sandbox: the axe scan (package not installable offline) and the self-starting Vite/Django servers - both are in `npm run e2e` on the PC.
+
+
+## Task 8d: README, demo reset and demo story (done in sandbox)
+Added: `python manage.py reset_demo --yes` (`core/demo.py`, `core/demo_story.py`, `core/management/commands/reset_demo.py`), a complete `README.md`
+(Windows and Linux setup, settings table without secrets, tests, browser tests, demo logins, Mermaid diagram, security summary, limitations).
+The story: 49 days of history built through the real booking, checkout, rating, purchasing and payroll code with the clock set to each
+moment (so invoices, stock ledger, ratings, audit log and payslips agree and are correctly dated). In the sandbox run: 161 visits, 149 billed
+(about Rs 1.68 lakh), 130 rated, 7 cancelled, 2 no-shows, a supplier delivery, one breakage, products left at the low-stock level, last month's
+payroll approved and paid, one online request, one held slot and three scheduled bookings. `check_integrity` reports nothing wrong on it.
+Tests: `core/tests/test_demo.py` (refuses without `--yes`, refuses a non-demo database name, story is fictional, consistent and healthy).
+
+## Task 8: decisions
+- `reset_demo` wipes a whole database, so it needs `--yes` and a database name containing `demo` (or ending `_e2e`); any other name needs `--really-wipe <name>`. Chosen over a prompt because it must also work in scripts.
+- Demo emails: while the story is built, real SMTP is forced off, so nothing leaves the machine even if Gmail is configured. All demo addresses are `*@demo.example.com`.
+- Demo customers meera/vikram/anita/sameer can be asked to rate before booking online (real rule); divya and karthik are the "new" customers for trying online booking.
+- Browser tests use their own DB (`alankar_e2e`) and ports (8001, 5174); rate limits are raised by environment variables for that test server only, no rule is weakened in code.
+- Same-day e2e steps use an all-day shop fixture, so they are time-independent except in the last ~30 minutes before midnight.
+- No database exclusion constraint for overlapping bookings (needs `btree_gist`); row locks plus `check_integrity` instead.
+- Rate limits stay in-process (single process); Redis is a deployment task (Task 12).
+- Approved dev-only tools added: `@playwright/test`, `@axe-core/playwright` (frontend), `pip-audit` (backend dev requirements). Nothing is added to production dependencies.
+
+## Task 8: vulnerabilities and defects found and fixed (plain list)
+1. A forged `X-Forwarded-For` header bypassed every rate limit, including sign-in. Fixed (`NUM_PROXIES`, default 0).
+2. A staff invite stayed valid after the person was deactivated, so a deactivated invitee could still activate. Fixed: pending invites are withdrawn.
+3. A banner link could be `javascript:` (stored XSS). Fixed with strict link validation.
+4. Password reset and invite links could be used twice in a race. Fixed with row locks.
+5. Access tokens stayed valid up to 15 minutes after a password change. Fixed (token bound to the password hash).
+6. Missing: content security policy, no-store on API responses, request size limits; multipart parsing was on; logs could hold personal data. Fixed.
+7. Performance (not security): the desk invoice list, "my appointments" and "my invoices" ran extra queries per row. Fixed; query counts are tested.
+
+## Task 8: owner run and walkthrough (to verify on the PC)
+Commands (cmd.exe), after pulling the changes:
+```
+cd backend
+.venv\Scripts\activate
+pip install -r requirements-dev.txt
+python manage.py migrate
+pytest
+ruff check .
+ruff format --check .
+python manage.py deploy_check
+python manage.py run_jobs
+python manage.py check_integrity
+python manage.py backup_db
+cd ..\frontend
+npm install
+npx playwright install chromium
+npm test
+npm run lint
+npm run typecheck
+npm run format:check
+npm run build
+cd ..
+scripts\audit.cmd
+scripts\e2e.cmd
+```
+Expected: pytest all passed; `deploy_check` warns about debug/HTTPS only on a dev setup; `check_integrity` says "nothing wrong";
+`scripts\e2e.cmd` ends with `E2E PASSED` (workflow 15, accessibility, phone width). `scripts\audit.cmd`: copy any finding here.
+Demo: create an empty database called `salon_demo` (`SALON_DB_NAME=salon_demo` in `backend\.env`), run `python manage.py reset_demo --yes`, start both servers, then:
+1. Sign in as `owner@demo.example.com` (Admin tab, password `Demo-Pass-2026!`): Dashboard and Reports show seven weeks; Ratings shows Rahul highest, Kiran lowest; Payroll has last month paid; Inventory shows low-stock items; Audit log is dated across the weeks.
+2. Sign in as `reception@demo.example.com`: Appointments has a new online request and a booking awaiting payment; POS shows invoices.
+3. Sign in as `rahul@demo.example.com`: My day and the pay estimate for this month.
+4. Sign in as `karthik@demo.example.com`: book a service online; as `meera@demo.example.com` expect a "please rate your recent visit" prompt if a recent visit is unrated.
+
+
+## Task 8: first owner PC run (2026-10-28) and fixes made from it
+Backend: `migrate` applied 2 pending migrations cleanly; `ruff check`/`ruff format --check` clean. `pytest`: 1220 passed, 3 failed, all in `core/tests/test_backup.py`.
+- `test_backup_and_restore_round_trip` and `test_restore_refuses_the_live_database_and_existing_names` failed because `pg_dump`/`pg_restore` are not on the owner's PATH (Docker's Postgres *server* image doesn't ship the client tools on the host). Not a code bug: these two tests now `skipif` with a clear reason when the tools aren't found, instead of failing. Added the prerequisite to the README.
+- `test_password_is_never_in_the_command_line` failed with `KeyError: 'cmd'` because it only patched `subprocess.run`, not the pg_dump *lookup*; when pg_dump isn't installed, `backup.backup()` raises before subprocess is ever called, so the mock recorder never saw the call. Fixed: the test now also stubs `backup._tool`, so it exercises the same password-redaction path regardless of whether pg_dump is actually installed.
+`deploy_check`, `run_jobs`, `check_integrity` all behaved as documented (deploy_check correctly flags a dev `.env` as unsafe for production; check_integrity found nothing wrong). `backup_db` correctly refused with a clear message (no pg_dump on PATH).
+`scripts\audit.cmd` ran for the first time (needs internet, could not run in the sandbox) and found real, fixable issues — see docs/SECURITY.md "Dependency audit" for the full detail:
+- **Fixed:** `backend/requirements.txt` pinned Django and DRF below their fixed releases; raised to `Django==5.2.17`, `djangorestframework==3.17.2`. This could not be installed or tested in the build sandbox (no internet there) — **run `pip install -r requirements-dev.txt` then the full `pytest` suite before trusting it.**
+- **Left as a documented limitation:** `twisted`'s CVEs have no stable fixed release yet (only a release candidate); upgrading to an RC was judged riskier than the CVEs themselves, so it's left to float until a stable fix exists.
+- **Left as tracked follow-up work (owner's choice, asked and confirmed 2026-10-28):** `react-router`/`zod` (frontend, production) and `vitest`/`vite` (frontend, dev-only) all have audit findings whose fix is a breaking major-version upgrade. Not attempted in this session; needs its own task with real browser/UI testing, not a same-day patch.
+Frontend: `npm test` (vitest): 360 passed, 5 failed (`admin-6c`, `admin-growth`, `admin-ops`, `booking`, `desk` test files), each failing to find an expected element, alongside many background "AggregateError"/XHR console errors on unrelated tests. In my own sandbox, the identical code (no frontend source files changed in Task 8) runs this same suite at 365/365 passed with zero console errors — so this is very likely a Windows-only timing/network quirk (the suite already has a comment and a raised 15s `asyncUtilTimeout` for exactly this class of flakiness on slower/antivirus-scanned Windows machines) rather than a regression from Task 8. Not yet root-caused with certainty; owner asked to re-run `npm test` and report whether the same 5 tests fail every time (which would mean it's worth a deeper look) or it clears on a rerun (which would confirm it's a flake).
+`npx playwright install chromium` succeeded (one connection reset, auto-resumed). `npm install` and `ruff`/ESLint-equivalent checks on the backend/frontend all otherwise clean.
+Still pending from the owner: a run of `scripts\e2e.cmd` from the repository root (the first attempt used a relative path from inside `frontend`, which doesn't resolve — `scripts\` is a top-level folder, documented more clearly in the README now) and `python manage.py reset_demo --yes`.
+
+## Task 8: second owner PC run (2026-10-28)
+Frontend: `npm test` reran clean — **365 passed (365)**, including the 5 that failed on the first run. This confirms the first run's 5 failures were a Windows-only timing/network flake, not a Task 8 regression; no code change needed. `npm run lint`, `npm run typecheck`, `npm run build` all clean/succeeded (`tsc --noEmit && vite build`, 2704 modules). `npm run format:check` flagged one cosmetic warning, `.pytest_cache/README.md` (a Python test-cache file, not a real source file, inside the repo tree) — harmless, not fixed yet, candidate for a `.prettierignore` entry.
+
+`scripts\audit.cmd` ran from the repo root and found, beyond the Task 8a first-run findings:
+- **New finding, fixed:** djangorestframework 3.17.2 (the version just pinned from the first audit) itself has 3 CVEs (CVE-2026-114138/114136/114137), fixed in 3.18.2. `backend/requirements.txt` re-pinned to **djangorestframework==3.18.2**. Not installed or tested yet (no internet in the build sandbox) — **run `pip install -r requirements-dev.txt` then the full `pytest` suite again and confirm.** (Django==5.2.17 is unaffected and already confirmed working.)
+- `twisted` and the frontend `react-router`/`zod`/`vitest`/`vite` findings are unchanged from the first run — see docs/SECURITY.md, still a documented limitation / tracked follow-up respectively.
+
+`scripts\e2e.cmd` was run from inside `frontend` by mistake ("The system cannot find the path specified") — not a bug, `scripts\` is a top-level folder, not under `frontend`. Still pending: run it from the **repository root** (`cd ..` first, then `scripts\e2e.cmd`).
+
+## Task 8: third owner PC run (2026-10-29)
+Backend: `ruff format --check` clean (275 files). `deploy_check` correctly flagged the full list of production-unsafe dev settings (debug on, insecure cookies, no HTTPS/HSTS, dev tools/API docs on) plus Django's own `security.W004/W008/W012/W016/W018` — all expected on a local dev `.env`, not a bug. `run_jobs` and `check_integrity` clean. `backup_db` correctly refused (no pg_dump on PATH, documented limitation). Full `pytest`: **1221 passed, 2 skipped, 0 failed** — confirms djangorestframework 3.18.2 works with zero regressions (two harmless warnings: a Django "can't reach the `postgres` maintenance database" notice, and one test-teardown connection using a bad password from a different test — neither affects correctness).
+
+`scripts\audit.cmd` re-run from the repo root: **Django and djangorestframework now show zero findings** — the 3.18.2 re-pin is confirmed fixed. Only `twisted` (7 CVEs, no stable fix yet) and the frontend `react-router`/`zod`/`vitest`/`vite`/`tinypool` findings remain, both already documented limitations / tracked follow-up (owner's choice, Task 8a).
+
+`scripts\e2e.cmd` still failed with "The system cannot find the path specified" — run again from inside `frontend`. This is the same usage mistake as the second run, not a script bug. Still pending: run it from the **repository root**, e.g. `cd /d "<repo path>"` then `scripts\e2e.cmd` — not merely `cd ..` from inside `frontend` in a terminal that may have changed directory again.
+
+## Task 8: DONE (2026-10-29)
+`scripts\e2e.cmd` passed on the owner's PC (run from the repository root). Combined with the earlier confirmed `pytest` (1221 passed, 2 skipped), `npm test` (365 passed), clean lint/typecheck/build, and a clean `pip-audit`/`npm audit` for Django/DRF (only `twisted` and the frontend breaking-upgrade findings remain, both documented limitations/follow-up), Task 8 (8a security, 8b data/reliability, 8c Playwright e2e, 8d README/demo data) is verified end to end on the owner's machine and pushed to `main`.
+
+## Task 8.5: product shop, coupons, packages, memberships (IN PROGRESS, 2026-10-29)
+A large feature set, built one numbered part at a time, each committed on its own and verified in
+the sandbox before moving on (migrate, pytest, ruff, npm test/lint/typecheck as each part's files
+allow). This section is updated as each part lands; it is not DONE until every part is built, the
+owner's own PC run (pytest, npm test, lint/typecheck/build) is confirmed, and the final delivery
+message (verified / to run / walkthrough / limitations) has gone out.
+
+### Task 8.5: decisions
+- **Gift card (and package) code storage.** Gift cards previously stored only a one-way keyed
+  hash of the code — "shown once, never again" was a deliberate Task 5e-1 security choice, and
+  the plaintext was never kept for cards already issued. Task 8.5 asks the Wallet page to show
+  the full code again any time (Show/Hide). These two requirements conflict and the fix changes
+  the security model, so I asked rather than picking either side. **Decision (asked, confirmed
+  2026-10-29): add a reversible, AES-256-GCM encrypted copy of the code (same scheme already used
+  for phone numbers, notes and chat) alongside the existing hash, going forward only.** Cards
+  issued before this field existed show "code was only shown once, at purchase" and have no
+  Show/Hide button — there is nothing to decrypt for them, since no plaintext was ever stored.
+  New gift cards and the new package codes (part 5) both use this. The existing hash-based
+  lookup (`code_hash`) is untouched, so no already-issued gift card stops working.
+- **Package codes are a new namespace, not reused gift-card plaintext logic.** `wallet/codes.py`
+  holds the shared code-generation/mask helpers; `wallet/giftcards.py`'s own `code_hash` function
+  was deliberately left untouched (not refactored to take a "purpose" argument) so the hash of an
+  already-issued gift card code keeps resolving to the same row. Package code hashing is a
+  separate, purpose-scoped function in the same module — the two can never collide or be
+  looked up in the wrong table.
+- **Package session reservation, not immediate deduction.** The existing `PackageEntry.Reason`
+  only had purchased/used/restored/refunded, which assumes immediate, final deduction (POS). Task
+  8.5 part 5 needs a reserve-at-request, consume-on-confirm, release-on-reject/expiry/free-window-
+  cancel lifecycle for online booking, so I added `reserved`/`consumed`/`released` reasons and an
+  `appointment` FK, without touching the existing `used`/`restored` path POS already relies on.
+- **Package cancellation/refund is a new, separate flow from the existing admin "refund unused
+  sessions" button.** `selling.refund_package` (admin-only, immediate, refunds
+  sum(unit_value × remaining) per service) stays exactly as it is for the admin's quick-refund
+  case. Task 8.5's customer-initiated, pro-rata-of-amount-paid, approval-required cancellation
+  flow is new code (`PackageCancelRequest`) rather than a rewrite of the existing path, so nothing
+  that currently depends on `refund_package` changes behaviour.
+- **A package session consumed at confirm can still be released by a later free cancellation.**
+  `confirm()` consumes the reservation right away (so a package-redeemed booking, whose total is
+  always Rs. 0, goes straight to `scheduled` with nothing left to pay — see the next decision).
+  Consuming is not the same as "spent for good": a customer who then free-cancels within the
+  normal cancellation window should get the session back, exactly as a card payment is refunded
+  on the same free cancellation. The first version of `wallet/packagecodes.py` treated "consumed"
+  as a terminal state and made `release()` a no-op after it, which silently broke that refund for
+  three call sites that all rely on `release()` reversing a consumed session: `customer_cancel`
+  (free cancellation), and `desk_cancel`/`mark_no_show` when the admin's `no_show_consumes_session`
+  setting is off. Fixed before this was shipped, caught by a sandbox test that asserted the
+  (wrong) old behaviour and was corrected once the reasoning above was worked through. `release()`
+  now only treats an *already-released* reservation as a no-op (so it is still safe to call more
+  than once); `consume()` still refuses to run again after either a consume or a release.
+- **A package booking's total is always exactly Rs. 0, so it can never reach `awaiting_payment`.**
+  The data model is single-service-per-appointment today (Part 4, products added to a booking,
+  is not built yet), so redeeming a package code zeroes the whole appointment's price. This means
+  `confirm()` always takes its direct-to-`scheduled` branch for a package booking, and the
+  `payment_expired` / resend-payment-link paths can never apply to one. Noted rather than
+  guarded against, since there is nothing to guard: revisit this once Part 4 lets one appointment
+  mix a package-covered service with paid add-on products, at which point a package booking could
+  have a non-zero balance and go through `awaiting_payment` like any other.
+(further decisions are appended below as each part is built)
+
+### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
+See the decision above. Built: `code_encrypted` field on `GiftCard` (migration
+`wallet/0003_...`); customer `POST /api/my/wallet/gift-cards/<id>/reveal/`
+(`my.giftcards.reveal`); admin `POST /api/admin/gift-cards/<id>/reveal/` (`giftcards.reveal`,
+audited `gift_card_code_revealed` with the masked code only, never the full code, in the audit
+metadata); ledger of uses now included in `GET /api/my/wallet/`. Frontend: Wallet page gift card
+rows get Show/Hide + Copy + a History toggle; admin Gift Cards page's history modal gets a
+"Reveal full code" button, masked until clicked, hidden entirely for cards with no stored
+plaintext. Sandbox-verified: `wallet/tests/test_giftcards.py` (new reveal tests: owner, recipient,
+denied stranger, legacy-card 409, admin audit) and the full automated per-role policy sweep
+(`core/tests/test_sweep.py`) pass; frontend `wallet.test.tsx` (28 tests, including 5 new ones for
+Show/Hide/Copy/ledger/admin-reveal) pass; `ruff check`/`ruff format --check` on the whole backend
+and `tsc --noEmit`/`eslint` on the whole frontend are clean (only a pre-existing, unrelated
+sandbox gap remains: `recharts` has no type declarations in this sandbox's `node_modules`, which
+is a partial/offline npm install artifact here, not something this change touched — it does not
+reproduce with a real `npm install` on the owner's PC).
+
+### Task 8.5 part 5a: package-code redemption wired into booking (backend, DONE, committed,
+verified in sandbox)
+The booking-side half of Part 5 (code issuing + reserve/consume/release + the booking endpoint).
+Still to come for Part 5: the customer-initiated cancellation-request flow (`PackageCancelRequest`
+business logic, admin "Package requests" screen, admin settings UI), the customer-facing Packages
+page, and the package-code-entry step in the booking sheet's frontend.
+
+Built: `wallet/codes.py` (shared code-gen/hash/mask helpers, namespace-separate from
+`giftcards.py`, see the decision above); `wallet/packagecodes.py` (`issue_code`, rate-limited
+`find_for_service` — 5 wrong attempts per user / 10 per IP per 15 minutes, same shape as gift-card
+lockout, independently counted via `CodeAttempt.Kind.PACKAGE` — `reserve`, `consume`, `release`,
+`summary_for_appointment`); `PackageEntry.Reason.RESERVED/CONSUMED/RELEASED` and an
+`appointment` FK on `PackageEntry` and on `Appointment.package_purchase`
+(migrations `wallet/0003_...`, `scheduling/0006_appointment_package_purchase`);
+`selling.sell_package` now issues a code on every new purchase (migration-safe: existing
+purchases simply have no code until renewed/re-bought, matching the gift-card "legacy" case).
+`scheduling/booking.py`: `create_request(..., package_code=...)` looks the code up for the
+requested service, zeroes `price_total`/`gst_amount`/`amount_payable` when it resolves, and
+reserves the session inside the same atomic block as the appointment row; `confirm()` consumes
+it; `reject()`, `expire_due()` (payment-link expiry) and `customer_cancel()` (free cancellation)
+release it; `desk_cancel()` and `mark_no_show()` release it only when the admin's
+`package_settings()["no_show_consumes_session"]` is turned off (default: stays consumed).
+`BookingRequestView`/`BookingRequestSerializer` accept `package_code`; `package_used` (masked
+last-4, session label, reserved/consumed/released status — never the full code) is on every
+appointment/request card via `_AppointmentBase`.
+
+Sandbox-verified: `python3 manage.py makemigrations scheduling` / `migrate` apply cleanly;
+new `wallet/tests/test_packagecodes.py` (16 tests: valid redemption zeroes the price and reserves
+a session; the masked code never leaks the plaintext; a wrong code, another customer's code, a
+code for the wrong service, an expired package, and a package with no sessions left are all
+refused with the right status code (400 for "not valid at all", 409 for a real conflict the
+code's own customer is told about); repeated wrong codes are rate-limited (429) and lock out even
+the correct code until the window passes; confirm consumes and goes straight to `scheduled`;
+reject releases, and the same code can be redeemed again afterwards; a free cancellation after
+confirm releases the session (and a second release call does not double-credit it); a desk
+cancellation keeps the session by default and releases it when the admin setting is off;
+`consume`/`release` are safe no-ops on an appointment with no package reservation at all); the
+full `wallet/` suite (86 tests) and `scheduling/` suite (102 tests) pass; the automated per-role
+policy sweep (`core/tests/test_sweep.py`, `core/tests/test_policy.py`) passes; `ruff check`/
+`ruff format --check` on the whole backend are clean.
+
+### Task 8.5 part 5b: package cancellation requests (backend, DONE, committed, verified in
+sandbox)
+The customer-initiated, pro-rata-refund cancellation workflow from the decision above. Still to
+come for Part 5: the customer-facing Packages page and the admin "Package requests" screen
+(frontend), the package-code-entry step in the booking sheet (frontend), and an admin settings UI
+for the four `package_settings()` knobs (the knobs themselves already existed from part 5a).
+
+Built: `wallet/cancellation.py` (`estimate_refund`, `request_cancellation`,
+`approve_cancellation`, `reject_cancellation`) using the same pro-rata math as the existing admin
+quick-refund (`unit_value x remaining`, capped at what is left of the amount paid), minus an
+optional `cancellation_fee_percent`, and respecting `refund_window_days` (days since purchase) and
+`refund_expired_packages`. A pending request sets `PackagePurchase.cancel_status = pending`, which
+`packagecodes.find_for_service` already refused to redeem (part 5a) -- so a package mid-cancellation
+cannot be spent on a new booking. Rejecting clears it back to `none` (code works again); approving
+zeroes the remaining credits (new `REFUNDED` entries, same reason the existing admin quick-refund
+uses) and creates a `SaleRefund`, and sets `cancel_status = cancelled`. New `AuditLog.Action` values
+`package_cancel_requested/approved/rejected` (migration `accounts/0024_alter_auditlog_action`).
+Customer API: `GET/POST /api/my/wallet/packages/` (standalone packages list, each row carrying its
+code's `code_available`/`masked`, ledger, and any pending cancellation request),
+`POST .../<id>/reveal/` (Show/Hide, same pattern as gift cards), `GET .../<id>/cancel-estimate/`
+(the refund a cancellation would give right now, so the customer sees it before confirming),
+`POST .../<id>/cancel-request/`. Admin API: `GET /api/admin/package-cancel-requests/`,
+`POST .../<id>/approve/` (`method`, optional `amount` to approve a different figure, `reason`),
+`POST .../<id>/reject/` (`reason`). New policy actions: `my.packages.list/reveal/cancel_estimate/
+cancel_request` (customer role) and `packages.cancel_requests.read/decide` (admin role only --
+receptionist does not get these, matching the existing admin-only `wallet.refund`).
+
+Package purchases cannot yet be bought with a coupon (Part 3 is not built), so there is no coupon
+share to reverse in a cancellation yet -- noted in the module docstring to revisit then.
+
+Sandbox-verified: new `wallet/tests/test_package_cancellation.py` (16 tests: the estimate shown
+before confirming matches what approving at that figure actually refunds; the estimate correctly
+accounts for sessions already used and an admin-set cancellation fee; a second request while one
+is pending is refused (409), as is a fully-used package, an expired package by default, and a
+request outside an admin-set refund window; a pending request blocks the package's code at
+booking and a rejection un-blocks it; a stranger gets a plain 404 for someone else's package
+(estimate, request, both); the admin can approve at the estimate or at a different amount, cannot
+approve more than what is left of what was paid, cannot decide the same request twice, and
+non-admin roles are refused the admin endpoints outright); the full `wallet/` suite (102 tests,
+including the new file) and the automated per-role policy sweep both pass; `ruff check`/
+`ruff format --check` on the whole backend are clean.
+
+### Task 8.5 part 5c: customer Packages page and admin Package Requests screen (frontend, DONE,
+committed, verified in sandbox)
+Part 5's frontend half: the standalone customer Packages page and the admin cancellation-request
+decision screen from parts 5a/5b. Still open for Part 5: the package-code-entry step in the
+booking sheet (frontend) and an admin settings UI for the four `package_settings()` knobs (the
+booking integration itself has worked end-to-end since part 5a, just without a UI to type the
+code into yet -- the API already accepts `package_code` on a booking request).
+
+Built: `frontend/src/pages/customer/MyPackagesPage.tsx` (new customer menu item "Packages",
+`/customer/packages`) -- every package bought, each with its masked code (Show/Hide + Copy, same
+pattern as the gift card Wallet section), credits remaining, a usage ledger toggle, and (when
+eligible) a "Cancel for a refund" button that opens a modal showing the live estimate before the
+customer confirms a reason. `frontend/src/pages/admin/PackageRequestsPage.tsx` (new admin menu
+item "Package Requests", `/package-requests`, admin only -- matching the backend's admin-only
+`packages.cancel_requests.*` policy actions) -- pending requests with an Approve (money-back
+method, optionally a different amount than the estimate, optional note) or Reject (reason) action,
+and a Decided section showing the outcome. `frontend/src/api/wallet.ts` gained the matching
+request/response types and functions, and `PurchaseRow`/`PackageLedgerRow` now carry the
+`last4`/`masked`/`code_available`/`cancel_status`/`pending_cancel_request`/`appointment` fields the
+backend has sent since parts 1 and 5a (the existing combined Wallet page's package section does
+not read these yet -- it still only shows name/sessions/expiry, unchanged from Task 5e-1).
+
+Sandbox-verified: 8 new tests added to `frontend/src/pages/wallet.test.tsx` (a package's masked
+code with Show/Hide/Copy; a package with no stored code offers no Show-code button; the
+cancel-request modal shows the live estimate and submits a reason; a package already pending
+cancellation hides the Cancel button instead; the admin approves at the estimate, approves at a
+typed different amount, rejects with a reason, and a non-admin role is refused the page outright)
+-- the full suite (378 tests across 27 files) passes; `tsc --noEmit`, `eslint . --max-warnings 0`
+and `prettier --check` on the whole frontend are clean (the one remaining gap is the same
+pre-existing, unrelated `recharts` type-declaration sandbox quirk noted in Task 8 and part 1).
+One new sandbox-only gap surfaced while verifying this part: `npx vite build` itself fails here
+with `native parse not available in shim` from `@rollup/rollup-linux-x64-gnu` -- a native-binary
+limitation of this sandbox container, not something this change touched (`tsc --noEmit`, `eslint`
+and the full `vitest` suite all run and pass fine without needing that native binary). This needs
+confirming on the owner's PC alongside the rest of the "what you must run" commands below.
+
+Menu/route additions (policy.json, part of Part 8's scope but done now since they belong with
+their pages): customer menu item "Packages" (`/customer/packages`); admin menu item "Package
+Requests" (`/package-requests`). Both tagged `"task": "Task 8e"` -- the policy menu schema's task
+labels are validated against a `Task N[letter][-M]` shape (`frontend/src/policy/policy.test.ts`),
+which does not accept a literal "Task 8.5", so every Task 8.5 menu/route entry going forward is
+tagged "Task 8e" instead.
+
+### Task 8.5 part 5d: package-code-entry step in the booking sheet (frontend, DONE, committed,
+verified in sandbox) -- this finishes Part 5 except the admin settings UI for the four
+`package_settings()` knobs, which is still open.
+
+The last missing piece of the online-booking side of package redemption: a "4. Package code
+(optional)" field in `frontend/src/pages/customer/BookPage.tsx`'s booking sheet, between "Your
+details" and the price Summary card. The backend has accepted `package_code` on a booking request
+and zeroed the price for a valid one since part 5a; only the UI to type a code in was missing.
+
+Built: `package_code` added to `BookPage.tsx`'s zod schema (optional, max 32 chars so an obviously
+wrong paste is caught before a round trip) and local form state; a plain `Input` for it with a
+short explanatory line; a note inside the Summary card, shown only while the field is non-empty,
+saying the session will be used and nothing will be due if the code is accepted (there is no live
+price-preview call for this -- `GET /booking/slots/` only ever prices the service itself, so this
+is an honest "if it's valid" note, not a server-confirmed one; the real outcome is decided when the
+request is sent, same as every other server-side check on this form). `frontend/src/api/booking.ts`
+gained `package_code?: string` on `BookingRequestPayload` and the `PackageUsed`/`package_used`
+types the appointment serializers already return (`last4`, `masked`, `session_label`, `status`),
+so an appointment card can show which package covered it (not wired into the appointment-card UI
+yet -- the type is there for Part 6/7 follow-up, since no spec bullet asked for that card change
+specifically for Part 5).
+
+**Task 8.5 decision, recorded here per the standing rule (two reasonable designs would have
+changed what you see, and I judged this one so a real bug didn't ship):** writing the submit test
+for an already-used/expired package code surfaced that `scheduling/views.py`'s `booking_error()`
+maps a package-code conflict to the *same* HTTP 409 status as a just-taken time slot (both can be
+"this package is already being cancelled" vs "the slot you picked was just taken" -- unrelated
+reasons that happen to share a status code), and the booking sheet's existing error handling
+treated *any* 409 as "the slot was just taken", which would have cleared the customer's chosen time
+and shown a misleading "pick another time" toast for what is really a bad package code. Rather than
+weaken that slot-conflict handling (which is correct for its own case) or silently misreport
+package-code problems, I added a `field` attribute to the backend's `BookingError` (and
+`PackageCodeError` is now wrapped with `field="package_code"` in `scheduling/booking.py`'s
+`create_request()`), which `booking_error()` passes through as a `field` key in the JSON body
+alongside the existing `detail`/`code`/`slots` keys -- the HTTP status codes themselves are
+unchanged (still 400/409/429 exactly as `wallet/tests/test_packagecodes.py` already asserted), so
+no existing test's expectation needed to change. `frontend/src/api/booking.ts` gained
+`packageCodeFieldError(error)`, checked first in `BookPage.tsx`'s submit-error handler, before the
+slot-conflict branch; when it matches, the server's real message is shown under the Package code
+field instead, and the chosen time and suggested-slots state are left untouched.
+
+Sandbox-verified: 2 new tests in `frontend/src/pages/booking.test.tsx` ("sends a package code along
+with the request, and shows it will cover the price"; "shows a package code problem under the
+field, without treating it as a slot conflict" -- asserts the real server message appears, that
+neither the "Nearest free times" list nor the "That time was just taken" toast appears, and that
+the previously-picked slot button is still shown selected) -- full frontend suite now 380/380
+across 27 files; `tsc --noEmit`, `eslint . --max-warnings 0` and `prettier --check .` all clean
+(only the pre-existing unrelated `recharts` type-declaration gap remains, as before). Backend:
+`wallet/tests/test_packagecodes.py` (16 tests) still passes unchanged, confirming the `field`
+addition didn't touch any status code; full backend suite run app-by-app (`accounts`, `billing`,
+`chat`, `chatbot`, `core`, `inventory`, `people`, `scheduling`, `waitlist`, `wallet`, `website` --
+`marketing` has no tests) all pass except one pre-existing, date-dependent flake unrelated to this
+session's work: `people/tests/test_admin_team.py::test_a_stylists_weekly_hours_limit_the_slots_and_confirmation`
+computes "3 days from today" and asserts a fixture stylist's free hours reach 18:00; it fails on
+some days of the week depending on the shop's configured hours for that weekday. That file was last
+touched in the Task 5a commit (`862ff42`), long before this session, and nothing this session
+changed (`scheduling/booking.py`, `scheduling/views.py`, and the frontend booking files) touches
+stylist weekly-hours logic or that fixture -- noted here as a pre-existing gap to look at
+separately, not fixed as part of Task 8.5. `ruff check .` and `ruff format --check .` are clean
+across the whole backend.
+
+### Task 8.5 part 5e: admin settings UI for the four package-cancellation knobs (DONE, committed,
+verified in sandbox) -- this closes out Part 5 completely.
+
+The last open item from Part 5: an admin UI for `website.content.package_settings()`'s four knobs
+(`refund_window_days`, `cancellation_fee_percent`, `refund_expired_packages`,
+`no_show_consumes_session`), which parts 5b/5c already read and act on but had no settings-page
+section to change. Followed the existing Settings page's own pattern exactly (one `SiteContent`
+key per section, a dedicated serializer, a diffed audit entry) rather than inventing a new one.
+
+Backend: `website/settings_admin.py` gained `PackageSettingsSerializer` (an optional, nullable
+`refund_window_days` 1-3650; `cancellation_fee_percent` 0-100; the two booleans), added as a
+`packages` section to the existing `SettingsSerializer`/`snapshot()`/`patch()` -- stored the same
+way as every other section, under `SiteContent` key `"packages"` (the same key `package_settings()`
+already reads), diffed and audited the same way. No new policy action was needed: this rides on the
+existing `settings.business.read`/`settings.business.update` actions the Settings page already
+uses, so the automated allowed/denied sweep (`core/tests/test_sweep.py`) already covers role access
+to it without any change.
+
+Frontend: `frontend/src/api/adminOps.ts`'s `BusinessSettings` gained a `packages` field;
+`frontend/src/pages/admin/SettingsPage.tsx` gained a `PackagesSection` (a checkbox to turn the
+refund deadline on/off, with the day-count input only shown while it's on; the cancellation-fee
+percent; a checkbox to allow refunding an already-expired package; a checkbox for whether a
+no-show/late desk-cancellation still consumes the session), following the same `useSection()` /
+`Section` plumbing every other settings section already uses (own save button, own audited diff).
+
+Sandbox-verified: `website/tests/test_settings_admin.py` gained 3 tests (reads the package-setting
+defaults; sets all four, confirms `package_settings()` picks them up and the audit entry's
+before/after values, then clears the deadline back to "no limit" as its own auditable change;
+parametrized bad-value rejection for an out-of-range window or fee) -- all pass, plus the full
+`website`/`core` apps (role-denial sweep included); `ruff check .` / `ruff format --check .` clean
+across the whole backend. `frontend/src/pages/admin-ops.test.tsx` gained 2 tests (turns the
+deadline on, fills in all four fields, and asserts the exact payload sent; rejects a fee outside
+0-100 without calling the API) -- full frontend suite now 382/382 across 27 files; `tsc --noEmit`,
+`eslint . --max-warnings 0` and `prettier --check .` all clean (same pre-existing `recharts` gap
+only). **Part 5 (packages: codes at booking, cancellation requests, the customer/admin pages, and
+now these settings) is complete.**
+
+Sandbox note on how backend tests were run this session: this sandbox container had been recycled
+since the last session segment (a fresh container, same checked-out code) -- Django and the rest of
+the backend's installed packages were not on the default Python path, but a working install was
+still present at `/home/claude/env/site` (plus a compiled `argon2` extension at
+`/home/claude/env/shim`), and Postgres was already running on port 55432 against
+`/home/claude/env/pgdata` per `backend/.env`. Backend commands in this sandbox need
+`PYTHONPATH=/home/claude/env/site:/home/claude/env/shim` set (`pip install` itself is blocked by
+this sandbox's egress policy -- a 403 from the proxy, not a transient error -- so packages could
+not be reinstalled the normal way; this working install was the only route to a green backend
+suite here). This is a sandbox-environment detail, not anything the owner needs to replicate on
+their own PC, where a normal `pip install -r requirements.txt` continues to be correct.
+
+## Bugfix cycle: weekday-dependent test failure + DB password warning (owner-reported, pre-Task-10)
+
+The owner's PC (Windows, Python 3.11) failed one backend test and showed a Postgres warning during
+`pytest -q`. Root-caused and fixed both properly, per the owner's explicit step-by-step instructions
+(no loosening/skipping/deleting any assertion):
+
+**The reported failure** (`people/tests/test_admin_team.py::test_a_stylists_weekly_hours_limit_the_slots_and_confirmation`):
+hard-coded `max(hours(...)) >= 18`, assuming the shop is always open past 18:45 on `today + 3 days`.
+The shop's seeded hours close at 20:00 every day except Sunday (18:00); whenever "today" is a
+Thursday, `today+3` is a Sunday, and a 45-minute service's last start is 17:15 -- failing
+deterministically, not a flake, on exactly 1 weekday out of 7 (today, 2026-10-29, is a Thursday,
+which is why it failed on both the sandbox and the owner's PC). Proved with a 7-weekday parametrized
+harness (`unittest.mock.patch.object` on `timezone.localdate`/`now`) before touching anything.
+Fixed by making the test config-driven and weekday-agnostic: a `_pick_day(min_days_ahead, *, longest)`
+helper finds the week's actual longest-hours day instead of assuming `+3`, and a new
+`_expected_last_start_hour(day, duration_minutes)` helper computes the expected hour from the shop's
+real open/close/step settings instead of a hard-coded `18`. Added a second test,
+`test_the_shops_short_hours_day_limits_ravis_slots_too`, that deliberately exercises the shop's
+short day (Sunday) on purpose. Also checked the timezone hypothesis the owner raised (bare
+`.astimezone()` vs explicit current-timezone): found and fixed the one real occurrence, in
+`people/rating_admin.py`'s `_trend()`, to match the rest of the codebase's `astimezone(tz)` pattern --
+proved by direct comparison that this was not actually the cause of the reported failure, just a
+latent fragility worth fixing anyway.
+
+**Broader sweep** (as instructed, searching for the same pattern elsewhere): ran the entire backend
+suite across all 7 simulated weekdays via a temporary pytest plugin. First pass surfaced two more
+issues, both now resolved:
+- An apparent failure in `people/tests/test_stylist.py` at two offsets turned out to be a bug in the
+  *diagnostic harness itself*: it patched both `timezone.localdate` and `timezone.now`, but Django's
+  real `localdate()` already resolves through the module's `now()` internally, so the offset was
+  being applied twice to `localdate()` and once to `localtime()`/`now()`, producing an artificial
+  1-day skew between the two that doesn't exist in real code. Fixed by patching only `timezone.now`
+  (confirmed consistent at all 7 offsets afterwards); no test or production code needed changing.
+- A genuine second instance of the same class of bug, in
+  `accounts/tests/test_work_admin.py::test_the_receptionist_sees_corrected_by_admin_but_not_the_flags`:
+  books a session "yesterday" and reads it back filtered by `month={this_month()}` (today's month) --
+  which breaks whenever "today" is the 1st of a month, since "yesterday" then falls in the previous
+  month. Fixed by querying the month the session actually falls in (`day.strftime("%Y-%m")`) instead
+  of assuming it matches today's month; added
+  `test_my_hours_is_scoped_to_the_month_asked_for_even_across_a_month_boundary`, which exercises the
+  last day of a month on purpose, regardless of what day it actually is when the suite runs.
+
+Verified: the full backend suite (1268 tests after the two new regression tests) passes cleanly at
+all 7 simulated weekdays, with zero failures at every offset. The temporary diagnostic files
+(`_fake_today_conftest.py`, `_debug_myday.py`, `_diag_weekday.py`) were deleted; they were never part
+of the committed suite.
+
+**The DB warning** (`FATAL: password authentication failed for user "salon"` during test-database
+teardown, plus a `RuntimeWarning` about the `postgres` maintenance database): investigated via the
+owner's connected PC folder. Both `.env` and `backend\.env` on their machine already agree with each
+other (`SALON_DB_PASSWORD` matches in both), which rules out a simple file-mismatch and points to the
+well-known Docker Postgres gotcha instead: `POSTGRES_PASSWORD`/`POSTGRES_USER` are only applied the
+*first* time the image initializes an empty data volume, so if `salon-db-data` was created before the
+current password was set, the live role still holds the old one. Separately, `POSTGRES_DB=salon`
+means the image never created a `postgres` maintenance database, which is why Django's test runner's
+warning-then-fallback happens (harmless, cosmetic). Could not reach the owner's Docker daemon from
+this sandbox to directly confirm the live role's password (the remote-devices bridge is an isolated
+Linux VM without Docker), so this was documented as the most likely cause with an evidence-gathering
+diagnostic first, then the exact safe, non-destructive fix -- see the new **Troubleshooting** section
+in `README.md`. No `docker compose down -v`, no data touched; the fix only resets the role's password
+and grants `CREATEDB` via the container's trusted local socket.
+
+**Verification run (this sandbox, real date, no faked clock):**
+- `ruff check .`: All checks passed!
+- `ruff format --check .`: 280 files already formatted
+- Backend `pytest` (1268 tests): see below -- confirmed passing as this entry was written; 2 tests in
+  `core/tests/test_backup.py` are skipped when `pg_dump`/`pg_restore` are not on PATH (this sandbox
+  has them; the owner's Windows/Docker setup likely does not have the Postgres client tools on the
+  host PATH, which is exactly why their run showed "2 skipped").
+- Frontend `npm test`: 27 files, 382 tests, all passed.
+- Frontend `npm run lint`: clean (`eslint . --max-warnings 0`).
+- Frontend `npm run format:check`: clean.
+- Frontend `npm run typecheck` / `npm run build`: **could not be fully verified in this sandbox** --
+  `node_modules/recharts` here is a pre-existing sandbox stub (`"version": "0.0.0-sandbox-stub"`,
+  not the real `recharts@2.13.3`), which has no type declarations, so `tsc --noEmit` reports
+  `TS7016` on the two chart components (`BarChartView.tsx`, `LineChartView.tsx`) that import it.
+  This is an environment artifact (noted in an earlier session too), not a real type error --
+  neither chart component was touched this session. Run these two on your own PC, where `npm install`
+  pulls the real package, to get a trustworthy result:
+  ```bat
+  cd frontend
+  npm run typecheck
+  npm run build
+  ```
+
+Next: wait for the owner to confirm `pytest -q` and the DB fix both pass on their PC before Task 10
+or any further Task 8.5 work begins.

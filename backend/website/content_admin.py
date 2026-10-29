@@ -39,6 +39,10 @@ class ImageUrl(serializers.CharField):
         raise ValidationError("Use a full https:// link or a path that starts with /.")
 
 
+class SafeLink(ImageUrl):
+    """A link for a banner or button: a site path or http(s) address, never javascript: or data:."""
+
+
 class HeroSerializer(serializers.Serializer):
     headline = serializers.CharField(max_length=120)
     subtitle = serializers.CharField(max_length=300, allow_blank=True)
@@ -54,7 +58,7 @@ class AboutSerializer(serializers.Serializer):
 
 class AnnouncementItem(serializers.Serializer):
     text = serializers.CharField(max_length=200)
-    link = serializers.CharField(max_length=200, allow_blank=True, required=False)
+    link = SafeLink(max_length=200, allow_blank=True, required=False)
     starts = serializers.DateField(required=False, allow_null=True)
     ends = serializers.DateField(required=False, allow_null=True)
 

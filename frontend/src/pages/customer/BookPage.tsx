@@ -8,6 +8,7 @@ import {
   conflictSlots,
   getBookingOptions,
   getSlots,
+  packageCodeFieldError,
   type BookingRequestPayload,
   sendBookingRequest,
   type BookingOptions,
@@ -182,6 +183,7 @@ type FieldName =
   | 'contact_phone'
   | 'notes'
   | 'allergies'
+  | 'package_code'
   | 'consent';
 
 const schema = z.object({
@@ -192,6 +194,7 @@ const schema = z.object({
   contact_phone: z.string().refine(isIndianMobile, 'Enter a valid 10-digit mobile number.'),
   notes: z.string().max(500, 'Keep notes under 500 characters.'),
   allergies: z.string().max(500, 'Keep this under 500 characters.'),
+  package_code: z.string().trim().max(32, 'That code is too long.'),
   consent: z.literal(true, {
     errorMap: () => ({ message: 'Please accept the cancellation policy.' }),
   }),
@@ -214,6 +217,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
     contact_phone: contact.phone,
     notes: '',
     allergies: contact.allergies,
+    package_code: '',
     consent: false,
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
@@ -257,6 +261,11 @@ function BookingForm({ options }: { options: BookingOptions }) {
       navigate('/customer/appointments');
     },
     onError: (error) => {
+      const packageCodeIssue = packageCodeFieldError(error);
+      if (packageCodeIssue) {
+        setErrors((current) => ({ ...current, package_code: packageCodeIssue }));
+        return;
+      }
       const nearest = conflictSlots(error);
       if (nearest.length || classifyError(error) === 'conflict') {
         setSlot('');
@@ -320,6 +329,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
       contact_phone: parsed.data.contact_phone,
       notes: parsed.data.notes,
       allergies: parsed.data.allergies,
+      package_code: parsed.data.package_code || undefined,
       consent: true,
     });
   };
@@ -503,6 +513,22 @@ function BookingForm({ options }: { options: BookingOptions }) {
               error={errors.notes}
             />
           </Card>
+
+          <Card variant="plain" padding="lg" as="section" className="flex flex-col gap-md">
+            <h2 className="text-base font-semibold text-text">4. Package code (optional)</h2>
+            <p className="text-sm text-text-muted">
+              Have a package with sessions on it for this service? Enter its code to use one session
+              here instead of paying — no money is due if it's accepted.
+            </p>
+            <Input
+              label="Package code"
+              placeholder="e.g. 4F7K-9QRS-T2WX"
+              autoComplete="off"
+              value={form.package_code}
+              onChange={update('package_code')}
+              error={errors.package_code}
+            />
+          </Card>
         </div>
 
         <aside className="flex flex-col gap-md">
@@ -540,6 +566,12 @@ function BookingForm({ options }: { options: BookingOptions }) {
                 </div>
               )}
             </dl>
+            {form.package_code.trim() && (
+              <p className="rounded-nested bg-surface-muted p-sm text-xs text-text-muted">
+                If “{form.package_code.trim()}” is a valid package code for this service, one
+                session will be used and nothing will be due above.
+              </p>
+            )}
             <p className="text-xs text-text-muted">
               This is a request. We confirm the time and stylist, then email a payment link that is
               valid for up to {rules.hold_hours} hours. Free cancellation until{' '}

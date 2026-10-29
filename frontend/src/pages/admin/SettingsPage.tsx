@@ -61,6 +61,7 @@ export default function SettingsPage() {
           <BillingSection value={settings.data.billing} />
           <SecuritySection value={settings.data.security} />
           <RatingSection value={settings.data.rating} />
+          <PackagesSection value={settings.data.packages} />
         </>
       )}
     </div>
@@ -530,6 +531,83 @@ function RatingSection({ value }: { value: BusinessSettings['rating'] }) {
           </Button>
         </div>
       </fieldset>
+    </Section>
+  );
+}
+
+// -------------------------------------------------------------------------------- packages
+
+function PackagesSection({ value }: { value: BusinessSettings['packages'] }) {
+  const [hasDeadline, setHasDeadline] = useState(value.refund_window_days !== null);
+  const [windowDays, setWindowDays] = useState(
+    value.refund_window_days === null ? '30' : String(value.refund_window_days),
+  );
+  const [fee, setFee] = useState(String(value.cancellation_fee_percent));
+  const [refundExpired, setRefundExpired] = useState(value.refund_expired_packages);
+  const [noShowConsumes, setNoShowConsumes] = useState(value.no_show_consumes_session);
+  const { save, problem, setProblem } = useSection();
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    let days: number | null = null;
+    if (hasDeadline) {
+      days = wholeNumber(windowDays, 1, 3650);
+      if (days === null) {
+        return setProblem('Refund deadline: a whole number of days, 1 to 3650 (or turn it off).');
+      }
+    }
+    const feeNumber = wholeNumber(fee, 0, 100);
+    if (feeNumber === null) return setProblem('Cancellation fee: a whole number from 0 to 100.');
+    setProblem('');
+    save.mutate({
+      packages: {
+        refund_window_days: days,
+        cancellation_fee_percent: feeNumber,
+        refund_expired_packages: refundExpired,
+        no_show_consumes_session: noShowConsumes,
+      },
+    });
+  };
+  return (
+    <Section
+      id="packages"
+      title="Package cancellations"
+      description="How much a customer gets back when they ask to cancel a package for a pro-rata refund, and whether a missed or late-cancelled visit still uses up its session."
+      onSubmit={submit}
+      pending={save.isPending}
+      problem={problem}
+    >
+      <Checkbox
+        label="Only allow a cancellation request within a deadline after purchase"
+        checked={hasDeadline}
+        onChange={(e) => setHasDeadline(e.target.checked)}
+      />
+      {hasDeadline && (
+        <Input
+          label="Refund deadline (days after purchase)"
+          inputMode="numeric"
+          value={windowDays}
+          onChange={(e) => setWindowDays(e.target.value)}
+          className="max-w-xs"
+        />
+      )}
+      <Input
+        label="Cancellation fee (%)"
+        hint="Taken off the pro-rata refund estimate before it reaches the customer."
+        inputMode="numeric"
+        value={fee}
+        onChange={(e) => setFee(e.target.value)}
+        className="max-w-xs"
+      />
+      <Checkbox
+        label="Allow a refund request on a package that has already expired"
+        checked={refundExpired}
+        onChange={(e) => setRefundExpired(e.target.checked)}
+      />
+      <Checkbox
+        label="A no-show or a late desk-cancellation still uses up the session (turn off to give the session back instead)"
+        checked={noShowConsumes}
+        onChange={(e) => setNoShowConsumes(e.target.checked)}
+      />
     </Section>
   );
 }

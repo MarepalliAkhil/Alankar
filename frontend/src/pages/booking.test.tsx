@@ -162,6 +162,42 @@ describe('booking sheet', () => {
     expect(screen.getByText('That time was just taken')).toBeInTheDocument();
   });
 
+  it('sends a package code along with the request, and shows it will cover the price', async () => {
+    vi.mocked(bookingApi.sendBookingRequest).mockResolvedValue(appointment);
+    const user = userEvent.setup();
+    renderAt('/customer/book?service=womens-haircut');
+    await fillDetailsAndPickTime(user);
+    await user.type(screen.getByLabelText('Package code'), '4F7K-9QRS-T2WX');
+    expect(
+      await screen.findByText(/one session will be used and nothing will be due/i),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Send booking request' }));
+    await waitFor(() => expect(bookingApi.sendBookingRequest).toHaveBeenCalled());
+    expect(bookingApi.sendBookingRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ package_code: '4F7K-9QRS-T2WX' }),
+    );
+  });
+
+  it('shows a package code problem under the field, without treating it as a slot conflict', async () => {
+    vi.mocked(bookingApi.sendBookingRequest).mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: { detail: 'This package has expired.', field: 'package_code' },
+      },
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/book?service=womens-haircut');
+    await fillDetailsAndPickTime(user);
+    await user.type(screen.getByLabelText('Package code'), 'EXPIRED-CODE');
+    await user.click(screen.getByRole('button', { name: 'Send booking request' }));
+    expect(await screen.findByText('This package has expired.')).toBeInTheDocument();
+    expect(screen.queryByText('Nearest free times')).not.toBeInTheDocument();
+    expect(screen.queryByText('That time was just taken')).not.toBeInTheDocument();
+    // The chosen time is kept, not cleared, so the slot button still shows as selected.
+    expect(screen.getByRole('button', { name: /10:00/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('shows an empty state for a service that is not available', async () => {
     vi.mocked(bookingApi.getBookingOptions).mockRejectedValue({
       isAxiosError: true,

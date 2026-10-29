@@ -13,6 +13,8 @@ from django.db import models
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 
+from core.fields import EncryptedTextField
+
 ZERO = Decimal("0")
 
 
@@ -147,6 +149,11 @@ class PackagePurchase(models.Model):
     """What one customer bought. The terms are copied, so later edits to the package never change
     what they paid for."""
 
+    class CancelStatus(models.TextChoices):
+        NONE = "none", "No request"
+        PENDING = "pending", "Cancellation requested"
+        CANCELLED = "cancelled", "Cancelled (refunded)"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="package_purchases"
@@ -157,6 +164,17 @@ class PackagePurchase(models.Model):
     price_paid = models.DecimalField(max_digits=10, decimal_places=2)
     purchased_at = models.DateTimeField()
     expires_at = models.DateTimeField()
+    # Task 8.5: a long random code (same scheme as gift cards) so the customer can use a package
+    # by code at booking. code_hash is used to look the package up; code_encrypted lets the owner
+    # view the full code again (Show/Hide). Blank for rows created before this field existed.
+    code_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    code_encrypted = EncryptedTextField(
+        context="wallet.packagepurchase.code", blank=True, default=""
+    )
+    last4 = models.CharField(max_length=4, blank=True)
+    cancel_status = models.CharField(
+        max_length=10, choices=CancelStatus.choices, default=CancelStatus.NONE
+    )
 
     class Meta:
         ordering = ["-purchased_at"]
@@ -177,6 +195,11 @@ class PackageCredit(models.Model):
 
     class Meta:
         ordering = ["service_name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0), name="package_credit_quantity_positive"
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"PackageCredit {self.pk}"
@@ -194,6 +217,9 @@ class PackageEntry(Record):
         USED = "used", "Used at checkout"
         RESTORED = "restored", "Put back by the admin"
         REFUNDED = "refunded", "Refunded"
+        RESERVED = "reserved", "Held for a booking request"
+        CONSUMED = "consumed", "Booking confirmed (session kept)"
+        RELEASED = "released", "Returned (booking not confirmed)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     credit = models.ForeignKey(PackageCredit, on_delete=models.PROTECT, related_name="entries")
@@ -201,6 +227,9 @@ class PackageEntry(Record):
     reason = models.CharField(max_length=10, choices=Reason.choices)
     invoice = models.ForeignKey(
         "billing.Invoice", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    appointment = models.ForeignKey(
+        "scheduling.Appointment", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
@@ -330,6 +359,10 @@ class GiftCard(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code_hash = models.CharField(max_length=64, unique=True)
+    # Task 8.5: the full code, encrypted, so the owner/recipient can view it again (Show/Hide).
+    # Blank for cards issued before this field existed: the plaintext was never kept for those,
+    # so they keep showing "code was only shown once, at purchase" instead of Show/Hide.
+    code_encrypted = EncryptedTextField(context="wallet.giftcard.code", blank=True, default="")
     last4 = models.CharField(max_length=4)
     initial_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
@@ -346,6 +379,11 @@ class GiftCard(models.Model):
 
     class Meta:
         ordering = ["-issued_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(initial_amount__gt=0), name="giftcard_amount_positive"
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"GiftCard {self.pk}"
@@ -383,13 +421,65 @@ class GiftCardEntry(Record):
 
 
 class CodeAttempt(models.Model):
-    """A wrong gift-card code, kept to slow down guessing (per user and per IP)."""
+    """A wrong gift-card or package code, kept to slow down guessing (per user and per IP).
+    `kind` keeps the two kinds of code counted separately."""
+
+    class Kind(models.TextChoices):
+        GIFT_CARD = "gift_card", "Gift card"
+        PACKAGE = "package", "Package"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
     )
     ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.GIFT_CARD)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self) -> str:
-        return f"wrong code at {self.created_at:%Y-%m-%d %H:%M}"
+        return f"wrong {self.kind} code at {self.created_at:%Y-%m-%d %H:%M}"
+
+
+# --------------------------------------------------------------------------- package cancellation
+
+
+class PackageCancelRequest(models.Model):
+    """A customer's request to cancel a package for a pro-rata refund (Task 8.5)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    purchase = models.ForeignKey(
+        PackagePurchase, on_delete=models.PROTECT, related_name="cancel_requests"
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    reason = models.CharField(max_length=300)
+    remaining_sessions = models.PositiveSmallIntegerField()
+    total_sessions = models.PositiveSmallIntegerField()
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    estimated_refund = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    decision_reason = models.CharField(max_length=300, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purchase"],
+                condition=models.Q(status="pending"),
+                name="one_pending_cancel_request_per_package",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"PackageCancelRequest {self.pk}"

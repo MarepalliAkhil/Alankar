@@ -2,7 +2,7 @@
 Everything is admin-only and audited; approved days off and weekly hours really block booking."""
 
 import json
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 
 import pytest
 from django.test import Client
@@ -16,7 +16,7 @@ from people.models import DayOffRequest, StylistProfile
 from people.tests.test_stylist import asha, booked, catalogue, customer, desk, ravi  # noqa: F401
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus
-from scheduling.tests.test_booking import confirm, day_at, requested
+from scheduling.tests.test_booking import confirm, day_at, requested, send_request
 
 S = AppointmentStatus
 
@@ -155,32 +155,118 @@ def test_admin_links_an_account_to_an_existing_profile(admin, make_user, catalog
 
 # --------------------------------------------------------------------------- booking rules
 
+# Task 8.5 bugfix (reported on the owner's PC, 2026-10-29): this used to anchor "day" to
+# `timezone.localdate() + timedelta(days=3)` and then assert a hard-coded "closes at 18:00 or
+# later" expectation. That is only true on 6 days out of 7 -- the shop's own seeded weekly hours
+# close two hours earlier on Sunday (10:00-18:00 vs 10:00-20:00 every other day), so the test
+# failed deterministically, every single time, whenever "today" was a Thursday (today + 3 =
+# Sunday) -- which it was both in the sandbox and on the owner's PC when this was reported. It is
+# not a flake and not an environment difference: proven by walking all 7 possible "today" values
+# with the real shop-hours configuration (see docs/PROGRESS.md "Task 8.5: decisions" for the
+# per-weekday table). Fixed by no longer assuming which real-world weekday "today" is: the two
+# tests below each pick a day by the shop's own *configured* hours for that day (the longest day
+# of the week for the "normal" case, the shortest for the "short day" case) and derive every
+# expected hour from that configuration instead of a literal number.
 
-def next_weekday_key(days_ahead):
-    return booking.WEEKDAYS[(timezone.localdate() + timedelta(days=days_ahead)).weekday()]
+
+def _closing(weekly_hours: dict, weekday_index: int) -> float | None:
+    """Closing time of the given weekday (0=Monday) as a float hour (18:30 -> 18.5), or None if
+    the shop is closed that day."""
+    hours = weekly_hours.get(booking.WEEKDAYS[weekday_index])
+    if not hours:
+        return None
+    hour, minute = (int(p) for p in hours[1].split(":"))
+    return hour + minute / 60
+
+
+def _pick_day(min_days_ahead: int, *, longest: bool) -> date:
+    """The first day at least `min_days_ahead` out whose shop closing time is the week's latest
+    (longest=True) or earliest (longest=False), per the shop's own current weekly-hours setting --
+    so the test is correct on every real-world calendar date, not just the one it happened to be
+    written on."""
+    weekly = booking.booking_settings()["weekly_hours"]
+    closings = [c for c in (_closing(weekly, i) for i in range(7)) if c is not None]
+    assert closings, "The shop has no open days configured at all."
+    target_close = max(closings) if longest else min(closings)
+    day = timezone.localdate() + timedelta(days=min_days_ahead)
+    for _ in range(14):  # two full weeks is always enough to find a match
+        if _closing(weekly, day.weekday()) == target_close:
+            return day
+        day += timedelta(days=1)
+    raise AssertionError("No matching day found within two weeks.")
+
+
+def _expected_last_start_hour(day: date, duration_minutes: int) -> int:
+    """The last slot-grid start on `day` that still fits `duration_minutes` before closing,
+    computed directly from the shop's open/close/step settings -- independent of
+    `booking.grid_starts`, so this isn't just testing the production code against itself."""
+    settings = booking.booking_settings()
+    key = booking.WEEKDAYS[day.weekday()]
+    open_at, close_at = settings["weekly_hours"][key]
+    tz = timezone.get_current_timezone()
+    open_dt = datetime.combine(day, time.fromisoformat(open_at), tzinfo=tz)
+    close_dt = datetime.combine(day, time.fromisoformat(close_at), tzinfo=tz)
+    step = timedelta(minutes=settings["slot_step_minutes"])
+    duration = timedelta(minutes=duration_minutes)
+    steps = int((close_dt - duration - open_dt) // step)
+    assert steps >= 0, "The service does not fit inside this day's hours at all."
+    return (open_dt + steps * step).hour
 
 
 @pytest.mark.django_db
 def test_a_stylists_weekly_hours_limit_the_slots_and_confirmation(catalogue, customer, desk):
     asha = catalogue["asha"]
-    day = timezone.localdate() + timedelta(days=3)
-    key = next_weekday_key(3)
+    day = _pick_day(3, longest=True)
+    key = booking.WEEKDAYS[day.weekday()]
     asha.weekly_hours = {key: ["10:00", "13:00"]}
     asha.save()
-    hours = lambda s: {t.astimezone().hour for t, _ in booking.free_starts(day, 45, [s])}  # noqa: E731
-    assert hours(asha.id) and max(hours(asha.id)) <= 12  # nothing after 13:00 - 45 min
-    assert hours(catalogue["ravi"].id) and max(hours(catalogue["ravi"].id)) >= 18
+    tz = timezone.get_current_timezone()
 
-    late = requested(customer[0], catalogue, start=day_at(3, 16).isoformat())
-    refused = confirm(desk[0], late, asha, day_at(3, 16))
+    def hours(stylist_id):
+        return {t.astimezone(tz).hour for t, _ in booking.free_starts(day, 45, [stylist_id])}
+
+    assert hours(asha.id) and max(hours(asha.id)) <= 12  # nothing after 13:00 - 45 min
+    expected_ravi_last_hour = _expected_last_start_hour(day, 45)
+    ravi_hours = hours(catalogue["ravi"].id)
+    assert ravi_hours and max(ravi_hours) == expected_ravi_last_hour
+
+    days_ahead = (day - timezone.localdate()).days
+    late = requested(customer[0], catalogue, start=day_at(days_ahead, 16).isoformat())
+    refused = confirm(desk[0], late, asha, day_at(days_ahead, 16))
     assert refused.status_code == 400 and "not working" in refused.json()["detail"]
-    assert confirm(desk[0], late, catalogue["ravi"], day_at(3, 16)).status_code == 200
-    ok = requested(customer[0], catalogue, start=day_at(3, 11).isoformat())
-    assert confirm(desk[0], ok, asha, day_at(3, 11)).status_code == 200
+    assert confirm(desk[0], late, catalogue["ravi"], day_at(days_ahead, 16)).status_code == 200
+    ok = requested(customer[0], catalogue, start=day_at(days_ahead, 11).isoformat())
+    assert confirm(desk[0], ok, asha, day_at(days_ahead, 11)).status_code == 200
 
     asha.weekly_hours = {key: None}
     asha.save()
     assert booking.free_starts(day, 45, [asha.id]) == []
+
+
+@pytest.mark.django_db
+def test_the_shops_short_hours_day_limits_ravis_slots_too(catalogue, customer):
+    """Added alongside the bugfix above: the shop's shortest day (Sunday, by the current seeded
+    hours) on purpose, deliberately exercising the case the old test's hard-coded ">= 18"
+    assumption got wrong."""
+    day = _pick_day(3, longest=False)
+    hours = {
+        t.astimezone(timezone.get_current_timezone()).hour
+        for t, _ in booking.free_starts(day, 45, [catalogue["ravi"].id])
+    }
+    expected_last_hour = _expected_last_start_hour(day, 45)
+    assert hours and max(hours) == expected_last_hour
+    # The shop's current seed data makes Sunday the short day; if that ever changes, this still
+    # proves the short day is genuinely shorter than the long one rather than hard-coding "17".
+    assert expected_last_hour < _expected_last_start_hour(_pick_day(3, longest=True), 45)
+
+    days_ahead = (day - timezone.localdate()).days
+    # A time right at closing is refused on the short day, even though the same clock time
+    # would be well inside the longer days' hours.
+    _, close_at = booking.booking_settings()["weekly_hours"][booking.WEEKDAYS[day.weekday()]]
+    close_hour, close_minute = (int(p) for p in close_at.split(":"))
+    too_late = day_at(days_ahead, close_hour, close_minute)
+    refused = send_request(customer[0], catalogue, start=too_late.isoformat())
+    assert refused.status_code == 400
 
 
 # --------------------------------------------------------------------------- days off

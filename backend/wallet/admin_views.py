@@ -15,13 +15,14 @@ from accounts.models import AuditLog
 from scheduling.models import Service
 from waitlist import engine
 from waitlist.models import WaitlistEntry
-from wallet import data, giftcards, selling
+from wallet import cancellation, data, giftcards, selling
 from wallet.errors import WalletError
 from wallet.models import (
     GiftCard,
     Membership,
     MembershipPlan,
     Package,
+    PackageCancelRequest,
     PackageItem,
     PackagePurchase,
     Sale,
@@ -223,6 +224,93 @@ class AdminRestorePackageUseView(APIView):
         return Response(data.purchase_data(purchase, ledger=True))
 
 
+# ----------------------------------------------------------- package cancellation requests
+
+
+def _cancel_request_row(req: PackageCancelRequest) -> dict:
+    return {
+        "id": str(req.id),
+        "purchase_id": str(req.purchase_id),
+        "package_name": req.purchase.name,
+        "customer_name": req.customer.full_name,
+        "customer_id": str(req.customer_id),
+        "reason": req.reason,
+        "remaining_sessions": req.remaining_sessions,
+        "total_sessions": req.total_sessions,
+        "amount_paid": str(req.amount_paid),
+        "estimated_refund": str(req.estimated_refund),
+        "status": req.status,
+        "decided_amount": str(req.decided_amount) if req.decided_amount is not None else None,
+        "decision_reason": req.decision_reason,
+        "decided_by": req.decided_by.full_name if req.decided_by_id else None,
+        "decided_at": req.decided_at,
+        "created_at": req.created_at,
+    }
+
+
+class AdminPackageCancelRequestListView(APIView):
+    policy_action = "packages.cancel_requests.read"
+
+    @extend_schema(summary="Package cancellation requests", responses={200: None})
+    def get(self, request: Request) -> Response:
+        rows = PackageCancelRequest.objects.select_related("purchase", "customer", "decided_by")[
+            :PAGE
+        ]
+        return Response([_cancel_request_row(r) for r in rows])
+
+
+class ApproveCancelRequestSerializer(serializers.Serializer):
+    method = serializers.ChoiceField(choices=["cash", "card", "upi"])
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True
+    )
+    reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+
+
+class AdminPackageCancelApproveView(APIView):
+    policy_action = "packages.cancel_requests.decide"
+
+    @extend_schema(
+        summary="Approve a package cancellation (optionally at a different amount)",
+        request=ApproveCancelRequestSerializer,
+    )
+    def post(self, request: Request, pk) -> Response:
+        body = ApproveCancelRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            req = cancellation.approve_cancellation(
+                pk,
+                actor=request.user,
+                method=body.validated_data["method"],
+                amount=body.validated_data.get("amount"),
+                reason=body.validated_data["reason"],
+                request=request,
+            )
+        except WalletError as exc:
+            return error_response(exc)
+        return Response(_cancel_request_row(PackageCancelRequest.objects.get(pk=req.pk)))
+
+
+class RejectCancelRequestSerializer(serializers.Serializer):
+    reason = serializers.CharField(min_length=3, max_length=300, trim_whitespace=True)
+
+
+class AdminPackageCancelRejectView(APIView):
+    policy_action = "packages.cancel_requests.decide"
+
+    @extend_schema(summary="Reject a package cancellation", request=RejectCancelRequestSerializer)
+    def post(self, request: Request, pk) -> Response:
+        body = RejectCancelRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            req = cancellation.reject_cancellation(
+                pk, actor=request.user, reason=body.validated_data["reason"], request=request
+            )
+        except WalletError as exc:
+            return error_response(exc)
+        return Response(_cancel_request_row(PackageCancelRequest.objects.get(pk=req.pk)))
+
+
 # --------------------------------------------------------------------------- memberships
 
 
@@ -416,6 +504,33 @@ class AdminGiftCardDetailView(APIView):
 
 class VoidSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=300)
+
+
+class AdminGiftCardRevealView(APIView):
+    """Task 8.5: the admin list/detail only ever show the masked code. This decrypts the full
+    code on demand and writes an audit entry every time (who, when, which card)."""
+
+    policy_action = "giftcards.reveal"
+
+    @extend_schema(summary="Reveal a gift card's full code (audited)", responses={200: None})
+    def post(self, request: Request, pk) -> Response:
+        card = GiftCard.objects.filter(pk=pk).first()
+        if card is None:
+            raise Http404
+        code = giftcards.reveal(card)
+        audit(
+            AuditLog.Action.GIFT_CARD_CODE_REVEALED,
+            request=request,
+            actor=request.user,
+            card=giftcards.mask(card.last4),
+            found=code is not None,
+        )
+        if code is None:
+            return Response(
+                {"detail": "This card's code was only shown once, when it was issued."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response({"code": code})
 
 
 class AdminGiftCardVoidView(APIView):

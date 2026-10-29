@@ -319,3 +319,68 @@ def test_two_payments_at_once_never_overspend_one_card(catalogue, make_user):
     [t.join() for t in threads]
     card.refresh_from_db()
     assert sorted(results) == ["ok", "refused"] and card.balance == D("100")
+
+
+# --------------------------------------------------------------------------- Task 8.5: code reveal
+
+
+def test_owner_can_reveal_the_full_code_again_later(catalogue, customer):
+    client, user = customer
+    code = json_post(client, "/api/my/wallet/gift-cards/buy/", {"amount": "500"}).json()["code"]
+    card = GiftCard.objects.get(buyer=user)
+    wallet = client.get("/api/my/wallet/").json()
+    row = wallet["gift_cards"][0]
+    assert row["code_available"] is True and "code" not in row
+    r = json_post(client, f"/api/my/wallet/gift-cards/{card.pk}/reveal/")
+    assert r.status_code == 200 and r.json()["code"] == code
+
+
+def test_recipient_can_reveal_a_card_sent_to_them(catalogue, customer, make_user):
+    client, user = customer
+    code = json_post(
+        client,
+        "/api/my/wallet/gift-cards/buy/",
+        {"amount": "500", "recipient_email": "rec8.5@example.com"},
+    ).json()["code"]
+    card = GiftCard.objects.get(buyer=user)
+    rec = make_user(role="customer", email="rec8.5@example.com")
+    rec_client = Client()
+    login(rec_client, rec)
+    r = json_post(rec_client, f"/api/my/wallet/gift-cards/{card.pk}/reveal/")
+    assert r.status_code == 200 and r.json()["code"] == code
+
+
+def test_another_customer_cannot_reveal_someone_elses_card(catalogue, customer, make_user):
+    client, user = customer
+    json_post(client, "/api/my/wallet/gift-cards/buy/", {"amount": "500"})
+    card = GiftCard.objects.get(buyer=user)
+    stranger = make_user(role="customer", email="stranger8.5@example.com")
+    stranger_client = Client()
+    login(stranger_client, stranger)
+    r = json_post(stranger_client, f"/api/my/wallet/gift-cards/{card.pk}/reveal/")
+    assert r.status_code == 404
+
+
+def test_a_card_issued_before_the_field_existed_cannot_be_revealed(catalogue, customer):
+    client, user = customer
+    json_post(client, "/api/my/wallet/gift-cards/buy/", {"amount": "500"})
+    card = GiftCard.objects.get(buyer=user)
+    card.code_encrypted = ""
+    card.save(update_fields=["code_encrypted"])
+    wallet = client.get("/api/my/wallet/").json()
+    assert wallet["gift_cards"][0]["code_available"] is False
+    r = json_post(client, f"/api/my/wallet/gift-cards/{card.pk}/reveal/")
+    assert r.status_code == 409
+
+
+def test_admin_reveal_is_masked_until_revealed_and_is_audited(catalogue, desk, admin):
+    code = buy_at_desk(desk[0])["code"]
+    card = GiftCard.objects.order_by("issued_at").first()
+    detail = admin[0].get(f"/api/admin/gift-cards/{card.pk}/").json()
+    assert "code" not in detail and detail["masked"] == giftcards.mask(card.last4)
+    assert AuditLog.objects.filter(action="gift_card_code_revealed").count() == 0
+    r = json_post(admin[0], f"/api/admin/gift-cards/{card.pk}/reveal/")
+    assert r.status_code == 200 and r.json()["code"] == code
+    entry = AuditLog.objects.get(action="gift_card_code_revealed")
+    assert card.last4 in entry.metadata["card"]
+    assert code not in str(entry.metadata) and code.replace("-", "") not in str(entry.metadata)

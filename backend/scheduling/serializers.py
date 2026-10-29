@@ -36,6 +36,9 @@ class BookingRequestSerializer(serializers.Serializer):
     allergies = serializers.CharField(
         max_length=MAX_TEXT, required=False, allow_blank=True, default=""
     )
+    package_code = serializers.CharField(
+        max_length=60, required=False, allow_blank=True, default=""
+    )
     consent = serializers.BooleanField()
 
     def validate_contact_phone(self, value: str) -> str:
@@ -113,6 +116,7 @@ class _AppointmentBase(serializers.ModelSerializer):
     room_name = serializers.SerializerMethodField()
     division = serializers.CharField(source="service.category.division", read_only=True)
     service_slug = serializers.CharField(source="service.slug", read_only=True)
+    package_used = serializers.SerializerMethodField()
 
     def get_stylist_name(self, obj: Appointment) -> str | None:
         return obj.stylist.display_name if obj.stylist_id else None
@@ -122,6 +126,15 @@ class _AppointmentBase(serializers.ModelSerializer):
 
     def get_room_name(self, obj: Appointment) -> str | None:
         return obj.room.name if obj.room_id else None
+
+    def get_package_used(self, obj: Appointment) -> dict | None:
+        """Task 8.5: so the receptionist/admin never bill this line again. Never the full code
+        -- only the last four characters, same as everywhere else a package code is shown."""
+        if not obj.package_purchase_id:
+            return None
+        from wallet import packagecodes
+
+        return packagecodes.summary_for_appointment(obj)
 
 
 COMMON_FIELDS = [
@@ -149,6 +162,7 @@ COMMON_FIELDS = [
     "reschedule_preferred",
     "cancel_requested",
     "reject_reason",
+    "package_used",
     "created_at",
 ]
 
@@ -178,16 +192,21 @@ class CustomerAppointmentSerializer(_AppointmentBase):
 
         if not obj.stylist_id or obj.status not in ELIGIBLE:
             return None
+        known = self.context.get("threads")  # lists pass {stylist_id: thread_id} in one query
+        if known is not None and obj.stylist_id in known:
+            return str(known[obj.stylist_id])
         thread, _ = Thread.objects.get_or_create(
             customer_id=obj.customer_id, stylist_id=obj.stylist_id
         )
+        if known is not None:
+            known[obj.stylist_id] = thread.id
         return str(thread.id)
 
     def get_actions(self, obj: Appointment) -> list[str]:
-        return booking.customer_actions(obj)
+        return booking.customer_actions(obj, free_hours=self.context.get("free_cancel_hours"))
 
     def get_free_cancel_until(self, obj: Appointment):
-        value = booking.free_cancel_until(obj)
+        value = booking.free_cancel_until(obj, self.context.get("free_cancel_hours"))
         return value.isoformat() if value else None
 
     def get_amount_paid(self, obj: Appointment) -> str:

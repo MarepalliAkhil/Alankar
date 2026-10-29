@@ -70,6 +70,11 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0), name="payment_amount_not_negative"
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.reference} ({self.status})"
@@ -113,6 +118,10 @@ class Refund(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "created_at"], name="refund_status_idx")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="refund_amount_positive"),
+        ]
 
     def __str__(self) -> str:
         return f"Refund {self.amount} ({self.status})"
@@ -198,6 +207,12 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ["-issued_at"]
+        indexes = [models.Index(fields=["issued_at"], name="invoice_issued_idx")]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(total__gte=0), name="invoice_total_not_negative"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.number

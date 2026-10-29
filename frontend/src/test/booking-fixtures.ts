@@ -56,6 +56,7 @@ export const appointment: CustomerAppointment = {
   created_at: '2026-10-27T08:00:00Z',
   notes: '',
   allergies: '',
+  package_used: null,
   actions: ['cancel'],
   free_cancel_until: null,
   amount_paid: '0.00',

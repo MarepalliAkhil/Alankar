@@ -463,21 +463,23 @@ class PasswordResetConfirmView(AuthThrottleMixin, APIView):
     def post(self, request: Request) -> Response:
         serializer = SetPasswordWithTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reset = (
-            PasswordResetToken.objects.select_related("user")
-            .filter(
-                token_hash=hash_token(serializer.validated_data["token"]),
-                used_at__isnull=True,
-                expires_at__gt=timezone.now(),
-                user__is_active=True,
-            )
-            .first()
-        )
-        if reset is None:
-            return Response({"detail": RESET_INVALID}, status=status.HTTP_400_BAD_REQUEST)
-        user = reset.user
-        check_password_strength(serializer.validated_data["password"], user)
         with transaction.atomic():
+            # The row is locked, so two requests with the same link can not both succeed.
+            reset = (
+                PasswordResetToken.objects.select_for_update(of=("self",))
+                .select_related("user")
+                .filter(
+                    token_hash=hash_token(serializer.validated_data["token"]),
+                    used_at__isnull=True,
+                    expires_at__gt=timezone.now(),
+                    user__is_active=True,
+                )
+                .first()
+            )
+            if reset is None:
+                return Response({"detail": RESET_INVALID}, status=status.HTTP_400_BAD_REQUEST)
+            user = reset.user
+            check_password_strength(serializer.validated_data["password"], user)
             user.set_password(serializer.validated_data["password"])
             user.save(update_fields=["password"])
             PasswordResetToken.objects.filter(user=user, used_at__isnull=True).update(
@@ -489,16 +491,15 @@ class PasswordResetConfirmView(AuthThrottleMixin, APIView):
         return Response({"detail": "Your password has been changed. Please sign in."})
 
 
-def _valid_invite(token: str) -> StaffInvite | None:
-    return (
-        StaffInvite.objects.select_related("user")
-        .filter(
-            token_hash=hash_token(token),
-            accepted_at__isnull=True,
-            expires_at__gt=timezone.now(),
-        )
-        .first()
-    )
+def _valid_invite(token: str, *, lock: bool = False) -> StaffInvite | None:
+    rows = StaffInvite.objects.select_related("user")
+    if lock:
+        rows = rows.select_for_update(of=("self", "user"))
+    return rows.filter(
+        token_hash=hash_token(token),
+        accepted_at__isnull=True,
+        expires_at__gt=timezone.now(),
+    ).first()
 
 
 class InviteCheckView(APIView):
@@ -533,12 +534,12 @@ class InviteAcceptView(AuthThrottleMixin, APIView):
         require_links_enabled()
         serializer = SetPasswordWithTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        invite = _valid_invite(serializer.validated_data["token"])
-        if invite is None:
-            return Response({"detail": INVITE_INVALID}, status=status.HTTP_400_BAD_REQUEST)
-        user = invite.user
-        check_password_strength(serializer.validated_data["password"], user)
         with transaction.atomic():
+            invite = _valid_invite(serializer.validated_data["token"], lock=True)
+            if invite is None:
+                return Response({"detail": INVITE_INVALID}, status=status.HTTP_400_BAD_REQUEST)
+            user = invite.user
+            check_password_strength(serializer.validated_data["password"], user)
             user.set_password(serializer.validated_data["password"])
             user.is_active = True
             user.save(update_fields=["password", "is_active"])

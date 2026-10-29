@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from accounts.audit import audit
 from accounts.models import AuditLog, User
+from core.throttles import PUBLIC_WRITE_THROTTLES
 from marketing import campaigns, coupons
 from marketing.campaigns import audience, message_body, unsubscribe_token  # noqa: F401
 from marketing.models import Campaign, Coupon, CouponRedemption
@@ -459,6 +460,7 @@ class CampaignRunDueView(APIView):
 class UnsubscribeView(APIView):
     """Public: the link in every campaign email. Needs only the signed token."""
 
+    throttle_classes = PUBLIC_WRITE_THROTTLES
     policy_action = "public.unsubscribe"
     authentication_classes: list = []
 

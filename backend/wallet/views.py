@@ -11,13 +11,15 @@ from rest_framework.views import APIView
 
 from accounts.audit import audit, client_ip
 from accounts.models import AuditLog, User
+from core.throttles import BOOKING_THROTTLES
 from scheduling import booking
 from scheduling.models import Service, ServiceVariant
 from waitlist import engine
 from waitlist.models import WaitlistEntry, WaitlistOffer
-from wallet import data, giftcards, selling
+from wallet import cancellation, data, giftcards, packagecodes, selling
 from wallet.errors import WalletError
-from wallet.models import MembershipPlan, Package
+from wallet.models import MembershipPlan, Package, PackagePurchase
+from website.content import package_settings
 
 STATUS = {
     "not_found": status.HTTP_404_NOT_FOUND,
@@ -251,6 +253,139 @@ class MyCheckGiftCardView(APIView):
         return _check_card(request)
 
 
+def _my_giftcard_or_404(request: Request, pk):
+    card = giftcards.visible_to(request.user).select_related("sale").filter(pk=pk).first()
+    if card is None:
+        raise Http404
+    if not request.user.email_verified_at and card.buyer_id != request.user.pk:
+        raise Http404
+    return card
+
+
+class MyGiftCardRevealView(APIView):
+    """Task 8.5: show the full code again (not just the masked last 4) to its owner or the
+    recipient it was sent to. Never audited -- it is the customer's own card -- but cards issued
+    before this existed never kept a plaintext to show (`code_available` says so up front)."""
+
+    policy_action = "my.giftcards.reveal"
+
+    @extend_schema(summary="Reveal a gift card's full code", responses={200: None})
+    def post(self, request: Request, pk) -> Response:
+        card = _my_giftcard_or_404(request, pk)
+        code = giftcards.reveal(card)
+        if code is None:
+            return Response(
+                {"detail": "This card's code was only shown once, when it was issued."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response({"code": code})
+
+
+# --------------------------------------------------------------------------- packages (customer)
+
+
+def _my_package_or_404(request: Request, pk):
+    purchase = (
+        PackagePurchase.objects.filter(pk=pk, customer=request.user)
+        .select_related("sale", "customer")
+        .prefetch_related("credits__entries", "sale__refunds")
+        .first()
+    )
+    if purchase is None:
+        raise Http404
+    return purchase
+
+
+class MyPackagesView(APIView):
+    """A standalone Packages page: every package the customer has bought, each with its own
+    Show/Hide code, ledger and (if eligible) a cancellation request."""
+
+    policy_action = "my.packages.list"
+
+    @extend_schema(summary="My packages", responses={200: None})
+    def get(self, request: Request) -> Response:
+        purchases = (
+            PackagePurchase.objects.filter(customer=request.user)
+            .select_related("sale", "customer")
+            .prefetch_related("credits__entries", "sale__refunds", "cancel_requests")
+        )
+        rows = []
+        for p in purchases:
+            row = data.purchase_data(p, ledger=True)
+            pending = next(
+                (r for r in p.cancel_requests.all() if r.status == "pending"),
+                None,
+            )
+            row["pending_cancel_request"] = (
+                {"id": str(pending.id), "estimated_refund": str(pending.estimated_refund)}
+                if pending
+                else None
+            )
+            rows.append(row)
+        return Response(rows)
+
+
+class MyPackageRevealCodeView(APIView):
+    policy_action = "my.packages.reveal"
+
+    @extend_schema(summary="Reveal a package's full code", responses={200: None})
+    def post(self, request: Request, pk) -> Response:
+        purchase = _my_package_or_404(request, pk)
+        code = packagecodes.reveal(purchase)
+        if code is None:
+            return Response(
+                {"detail": "This package's code was only shown once, when it was bought."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response({"code": code})
+
+
+class MyPackageCancelEstimateView(APIView):
+    """What a cancellation would refund right now, shown before the customer confirms."""
+
+    policy_action = "my.packages.cancel_estimate"
+
+    @extend_schema(summary="Estimate a package cancellation refund", responses={200: None})
+    def get(self, request: Request, pk) -> Response:
+        purchase = _my_package_or_404(request, pk)
+        settings_ = package_settings()
+        return Response(
+            {
+                "estimated_refund": str(cancellation.estimate_refund(purchase)),
+                "cancellation_fee_percent": str(settings_["cancellation_fee_percent"]),
+                "refund_window_days": settings_["refund_window_days"],
+                "already_pending": purchase.cancel_status != PackagePurchase.CancelStatus.NONE,
+            }
+        )
+
+
+class CancelRequestSerializer(serializers.Serializer):
+    reason = serializers.CharField(min_length=3, max_length=300, trim_whitespace=True)
+
+
+class MyPackageCancelRequestView(APIView):
+    policy_action = "my.packages.cancel_request"
+
+    @extend_schema(summary="Ask to cancel a package for a refund", request=CancelRequestSerializer)
+    def post(self, request: Request, pk) -> Response:
+        body = CancelRequestSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            req = cancellation.request_cancellation(
+                pk, customer=request.user, reason=body.validated_data["reason"], request=request
+            )
+        except WalletError as exc:
+            return error_response(exc)
+        return Response(
+            {
+                "id": str(req.id),
+                "status": req.status,
+                "estimated_refund": str(req.estimated_refund),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 # --------------------------------------------------------------------------- waitlist (customer)
 
 
@@ -303,6 +438,7 @@ class WaitlistJoinSerializer(serializers.Serializer):
 
 
 class MyWaitlistView(APIView):
+    throttle_classes = BOOKING_THROTTLES
     policy_actions = {"GET": "my.waitlist.list", "POST": "my.waitlist.create"}
 
     @extend_schema(summary="My waitlist entries", responses={200: None})

@@ -77,6 +77,10 @@ def purchase_data(pp: PackagePurchase, *, ledger: bool = False) -> dict:
         "sale_number": pp.sale.number,
         "customer_name": pp.customer.full_name,
         "customer_id": str(pp.customer_id),
+        "last4": pp.last4,
+        "masked": giftcards.mask(pp.last4) if pp.last4 else "",
+        "code_available": bool(pp.code_encrypted),
+        "cancel_status": pp.cancel_status,
         "credits": [
             {
                 "id": str(c.id),
@@ -99,12 +103,13 @@ def purchase_data(pp: PackagePurchase, *, ledger: bool = False) -> dict:
                 "reason": e.reason,
                 "reason_label": e.get_reason_display(),
                 "invoice": e.invoice.number if e.invoice_id else None,
+                "appointment": str(e.appointment_id) if e.appointment_id else None,
                 "note": e.note,
                 "created_at": e.created_at,
                 "actor": e.actor.full_name if e.actor_id else None,
             }
             for c in credits
-            for e in c.entries.select_related("invoice", "actor")
+            for e in c.entries.select_related("invoice", "actor", "appointment")
         ]
         data["ledger"].sort(key=lambda r: r["created_at"])
     return data
@@ -162,6 +167,9 @@ def card_data(card: GiftCard, *, viewer=None, ledger: bool = False, admin: bool 
         "expires_at": card.expires_at,
         "issued_at": card.issued_at,
         "recipient_name": card.recipient_name,
+        # Whether the full code can ever be shown again (cards issued before Task 8.5 never
+        # kept the plaintext, so they stay "shown once" forever).
+        "code_available": bool(card.code_encrypted),
     }
     if viewer is not None:
         data["role"] = "bought" if card.buyer_id == viewer.pk else "received"
@@ -217,12 +225,12 @@ def customer_wallet(user) -> dict:
         customer=user,
         status__in=[Membership.Status.ACTIVE, Membership.Status.CANCELLED],
     ).first()
-    cards = giftcards.visible_to(user).select_related("sale")
+    cards = giftcards.visible_to(user).select_related("sale").prefetch_related("entries")
     if not user.email_verified_at:
         cards = cards.filter(buyer=user)
     return {
-        "packages": [purchase_data(p) for p in purchases],
-        "membership": membership_data(membership) if membership else None,
-        "gift_cards": [card_data(c, viewer=user) for c in cards],
+        "packages": [purchase_data(p, ledger=True) for p in purchases],
+        "membership": membership_data(membership, ledger=True) if membership else None,
+        "gift_cards": [card_data(c, viewer=user, ledger=True) for c in cards],
         "sessions_total": credits.total_remaining(user),
     }

@@ -208,6 +208,14 @@ def void(card: GiftCard, *, actor, reason: str) -> GiftCard:
     return card
 
 
+def reveal(card: GiftCard) -> str | None:
+    """The full code, if it was kept (cards issued before Task 8.5 only ever had a hash stored,
+    so there is nothing to decrypt for those)."""
+    if not card.code_encrypted:
+        return None
+    return card.code_encrypted
+
+
 def visible_to(user):
     """Cards the user may see in lists: ones they bought, and ones sent to their email."""
     from django.db.models import Q

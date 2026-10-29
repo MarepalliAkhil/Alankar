@@ -37,7 +37,7 @@ from scheduling.models import (
     ServiceAddon,
     ServiceVariant,
 )
-from wallet import giftcards
+from wallet import giftcards, packagecodes
 from website.content import booking_settings
 
 S = AppointmentStatus
@@ -46,13 +46,26 @@ PAISA = Decimal("0.01")
 
 
 class BookingError(Exception):
-    """A rule was broken. `code` lets the API pick the HTTP status (400 or 409)."""
+    """A rule was broken. `code` lets the API pick the HTTP status (400 or 409).
 
-    def __init__(self, message: str, code: str = "invalid", slots: list[datetime] | None = None):
+    `field` optionally names the form field this error is really about (for example
+    "package_code"), so the API can tell the frontend not to treat it as a slot-time conflict
+    even when the HTTP status happens to be 409 for other reasons (an already-used/expired
+    package code uses the same "conflict" status as a just-taken slot).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "invalid",
+        slots: list[datetime] | None = None,
+        field: str = "",
+    ):
         super().__init__(message)
         self.message = message
         self.code = code
         self.slots = slots or []
+        self.field = field
 
 
 # --------------------------------------------------------------------------- prices
@@ -401,6 +414,7 @@ def expire_due(now: datetime | None = None) -> int:
             appt.payment_links.filter(status=PaymentLink.Status.ACTIVE).update(
                 status=PaymentLink.Status.EXPIRED
             )
+            packagecodes.release(appt, note="Payment link expired")
             record(appt, "payment_expired", from_status=S.AWAITING_PAYMENT)
             email_customer(
                 appt,
@@ -430,6 +444,9 @@ def create_request(
     contact: dict,
     notes: str,
     allergies: str,
+    package_code: str = "",
+    ip: str | None = None,
+    request=None,
 ) -> Appointment:
     expire_due()
     if not otp.email_verified_or_not_required(customer):
@@ -456,6 +473,18 @@ def create_request(
                 code="conflict",
                 slots=nearest_slots(start, q.duration_minutes, candidates),
             )
+    package_purchase = None
+    credit = None
+    if package_code:
+        try:
+            package_purchase, credit = packagecodes.find_for_service(
+                package_code, customer=customer, service=service, ip=ip, request=request
+            )
+        except packagecodes.PackageCodeError as exc:
+            raise BookingError(exc.message, code=exc.code, field="package_code") from exc
+    price_total, gst_amount, amount_payable = q.price_total, q.gst_amount, q.amount_payable
+    if package_purchase is not None:
+        price_total = gst_amount = amount_payable = Decimal("0")
     with transaction.atomic():
         appt = Appointment.objects.create(
             customer=customer,
@@ -465,9 +494,9 @@ def create_request(
             variant_label=q.variant.label if q.variant else "",
             addon_labels=[a.label for a in q.addons],
             duration_minutes=q.duration_minutes,
-            price_total=q.price_total,
-            gst_amount=q.gst_amount,
-            amount_payable=q.amount_payable,
+            price_total=price_total,
+            gst_amount=gst_amount,
+            amount_payable=amount_payable,
             preferred_start=start,
             preferred_stylist=stylist,
             contact_name=contact["name"],
@@ -476,8 +505,11 @@ def create_request(
             notes=notes,
             allergies=allergies,
             policy_accepted_at=timezone.now(),
+            package_purchase=package_purchase,
         )
         appt.addons.set(q.addons)
+        if credit is not None:
+            packagecodes.reserve(credit, appointment=appt, actor=customer)
         record(appt, "requested", actor=customer)
         email_customer(
             appt,
@@ -597,6 +629,7 @@ def confirm(
         appt.stylist, appt.room, appt.start, appt.end = stylist, room, start, end
         appt.confirmed_by = actor
         appt.reject_reason = ""
+        packagecodes.consume(appt, actor=actor)
         if appt.amount_payable <= 0:
             appt.status = S.SCHEDULED
             appt.awaiting_payment_until = None
@@ -694,6 +727,10 @@ def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
         appt.payment_links.filter(status=PaymentLink.Status.ACTIVE).update(
             status=PaymentLink.Status.CANCELLED
         )
+        from website.content import package_settings
+
+        if not package_settings()["no_show_consumes_session"]:
+            packagecodes.release(appt, note=f"Cancelled by the salon: {reason}", actor=actor)
         pending = _request_refunds(appt, f"Cancelled by the salon: {reason}")
         record(appt, "cancelled_by_salon", actor=actor, from_status=previous, note=reason)
         intro = f"We are sorry: your booking was cancelled by the salon.\nReason: {reason}"
@@ -716,6 +753,10 @@ def mark_no_show(appt_id, *, actor) -> Appointment:
         appt.cancel_requested = False
         appt.reschedule_requested = False
         appt.save()
+        from website.content import package_settings
+
+        if not package_settings()["no_show_consumes_session"]:
+            packagecodes.release(appt, note="No-show (admin setting)", actor=actor)
         pending = _request_refunds(appt, "No-show: admin to decide on the online payment")
         record(appt, "no_show", actor=actor, from_status=S.SCHEDULED)
         intro = "We missed you at your appointment, so it was marked as a no-show."
@@ -867,6 +908,7 @@ def reject(appt_id, *, actor, reason: str) -> Appointment:
         appt.status = S.REJECTED
         appt.reject_reason = reason
         appt.save(update_fields=["status", "reject_reason", "updated_at"])
+        packagecodes.release(appt, note="Booking request rejected", actor=actor)
         record(appt, "rejected", actor=actor, from_status=previous, note=reason)
         email_customer(
             appt,
@@ -1017,13 +1059,16 @@ def paid_amount(appt: Appointment) -> Decimal:
     )
 
 
-def free_cancel_until(appt: Appointment) -> datetime | None:
+def free_cancel_until(appt: Appointment, free_hours=None) -> datetime | None:
+    """`free_hours` lets a list read the setting once instead of once per appointment."""
     if appt.start is None:
         return None
-    return appt.start - timedelta(hours=booking_settings()["free_cancel_hours"])
+    if free_hours is None:
+        free_hours = booking_settings()["free_cancel_hours"]
+    return appt.start - timedelta(hours=free_hours)
 
 
-def customer_actions(appt: Appointment, now: datetime | None = None) -> list[str]:
+def customer_actions(appt: Appointment, now: datetime | None = None, free_hours=None) -> list[str]:
     """Buttons the customer may use on this appointment card right now."""
     now = now or timezone.now()
     actions: list[str] = []
@@ -1033,7 +1078,7 @@ def customer_actions(appt: Appointment, now: datetime | None = None) -> list[str
     if status == S.AWAITING_PAYMENT:
         actions += ["pay", "resend_link"]
     if status == S.SCHEDULED:
-        deadline = free_cancel_until(appt)
+        deadline = free_cancel_until(appt, free_hours)
         if deadline and now <= deadline:
             actions.append("cancel")
         elif not appt.cancel_requested:
@@ -1078,6 +1123,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
                 payment, payment.amount, actor=customer, note="Free cancellation"
             )
             refunded += payment.amount
+        packagecodes.release(appt, note="Free cancellation by the customer", actor=customer)
         record(appt, "cancelled", actor=customer, from_status=previous, note=reason)
         intro = "Your booking has been cancelled."
         if refunded:

@@ -40,6 +40,7 @@ class MailOutbox(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["to_email", "-created_at"], name="mail_to_recent_idx")]
 
     def __str__(self) -> str:
         return f"{self.subject} -> {self.to_email}"

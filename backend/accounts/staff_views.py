@@ -170,6 +170,20 @@ class StaffDeactivateView(APIView):
     @extend_schema(summary="Deactivate a staff account", request=None, responses=StaffSerializer)
     def post(self, request: Request, pk) -> Response:
         member = _staff_member(pk)
+        if not member.has_usable_password():
+            # Someone who never accepted the invite: withdraw the invite so its link stops working
+            # (the account is already inactive, so without this the link would still activate it).
+            withdrawn = StaffInvite.objects.filter(
+                user=member, accepted_at__isnull=True, expires_at__gt=timezone.now()
+            ).update(expires_at=timezone.now())
+            if withdrawn:
+                audit(
+                    AuditLog.Action.STAFF_DEACTIVATED,
+                    request=request,
+                    actor=request.user,
+                    target=member,
+                    invite_withdrawn=True,
+                )
         if member.is_active:
             member.is_active = False
             member.save(update_fields=["is_active"])

@@ -109,3 +109,31 @@ def security_settings() -> dict:
         # How many minutes after the shift start (or the booked time) still count as on time.
         "late_grace_minutes": 10 if grace is None else grace,
     }
+
+
+# Package cancellation/refund rules (admin-editable, Task 8.5). Stored under SiteContent key
+# "packages".
+PACKAGE_DEFAULTS = {
+    # None = no deadline. Otherwise, days after purchase after which a cancellation request is
+    # refused.
+    "refund_window_days": None,
+    "cancellation_fee_percent": 0,
+    "refund_expired_packages": False,
+    "no_show_consumes_session": True,
+}
+
+
+def package_settings() -> dict:
+    stored = content("packages", {}) or {}
+    return {**PACKAGE_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}
+
+
+# Shop / order rules (admin-editable, Task 8.5). Stored under SiteContent key "shop".
+SHOP_DEFAULTS = {
+    "max_quantity_per_order": 10,
+}
+
+
+def shop_settings() -> dict:
+    stored = content("shop", {}) or {}
+    return {**SHOP_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}

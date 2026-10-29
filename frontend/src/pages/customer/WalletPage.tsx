@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Gift } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Gift } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { genericErrorMessage } from '../../api/auth-messages';
 import {
@@ -11,6 +11,7 @@ import {
   getMyWallet,
   joinMembership,
   renewMembership,
+  revealMyGiftCardCode,
   type GiftCardRow,
   type MyWallet,
 } from '../../api/wallet';
@@ -341,20 +342,7 @@ function GiftCardsSection({ wallet }: { wallet: MyWallet }) {
       ) : (
         <ul className="mt-sm flex flex-col gap-sm">
           {wallet.gift_cards.map((c) => (
-            <li key={c.id} className="rounded-nested border border-border p-md">
-              <div className="flex flex-wrap items-center gap-xs">
-                <p className="font-mono font-semibold text-text">{c.masked}</p>
-                <Badge tone={cardState(c) === 'Active' ? 'success' : 'neutral'}>
-                  {cardState(c)}
-                </Badge>
-                <span className="text-sm text-text-muted">
-                  {c.role === 'received' ? 'Received' : 'Bought'}
-                </span>
-              </div>
-              <p className="text-sm text-text-muted">
-                {formatINRExact(c.usable_balance)} to spend · expires {formatDateTime(c.expires_at)}
-              </p>
-            </li>
+            <GiftCardCard key={c.id} card={c} />
           ))}
         </ul>
       )}
@@ -402,6 +390,105 @@ function GiftCardsSection({ wallet }: { wallet: MyWallet }) {
         </Modal>
       )}
     </Card>
+  );
+}
+
+/** One gift card: masked by default, with Show/Hide + Copy for the full code and a usage ledger. */
+function GiftCardCard({ card: c }: { card: GiftCardRow }) {
+  const toast = useToast();
+  const [code, setCode] = useState<string | null>(null);
+  const [showLedger, setShowLedger] = useState(false);
+  const reveal = useMutation({
+    mutationFn: () => revealMyGiftCardCode(c.id),
+    onSuccess: (r) => setCode(r.code),
+    onError: (error: unknown) =>
+      toast.show({
+        tone: 'danger',
+        title: "Can't show the code",
+        description: genericErrorMessage(
+          error,
+          'This card’s code was only shown once, when it was issued.',
+        ),
+      }),
+  });
+  return (
+    <li className="rounded-nested border border-border p-md">
+      <div className="flex flex-wrap items-center gap-xs">
+        <p className="font-mono font-semibold text-text" data-testid="giftcard-code-display">
+          {code ?? c.masked}
+        </p>
+        <Badge tone={cardState(c) === 'Active' ? 'success' : 'neutral'}>{cardState(c)}</Badge>
+        <span className="text-sm text-text-muted">
+          {c.role === 'received' ? 'Received' : 'Bought'}
+        </span>
+      </div>
+      <p className="text-sm text-text-muted">
+        {formatINRExact(c.usable_balance)} to spend · expires {formatDateTime(c.expires_at)}
+      </p>
+      <div className="mt-xs flex flex-wrap items-center gap-xs">
+        {c.code_available ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => (code ? setCode(null) : reveal.mutate())}
+            disabled={reveal.isPending}
+          >
+            {code ? (
+              <>
+                <EyeOff className="size-4" aria-hidden /> Hide code
+              </>
+            ) : (
+              <>
+                <Eye className="size-4" aria-hidden /> Show code
+              </>
+            )}
+          </Button>
+        ) : (
+          <span className="text-xs text-text-muted">Code was shown once, at purchase</span>
+        )}
+        {code && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void navigator.clipboard?.writeText(code ?? '')}
+          >
+            <Copy className="size-4" aria-hidden /> Copy
+          </Button>
+        )}
+        <Button type="button" variant="ghost" size="sm" onClick={() => setShowLedger((v) => !v)}>
+          {showLedger ? (
+            <>
+              <ChevronUp className="size-4" aria-hidden /> Hide history
+            </>
+          ) : (
+            <>
+              <ChevronDown className="size-4" aria-hidden /> History
+            </>
+          )}
+        </Button>
+      </div>
+      {showLedger && (
+        <ul className="mt-sm flex flex-col gap-xs border-t border-border pt-sm">
+          {(c.ledger ?? []).length === 0 ? (
+            <li className="text-xs text-text-muted">No activity yet.</li>
+          ) : (
+            c.ledger!.map((e) => (
+              <li key={e.id} className="flex flex-wrap justify-between gap-xs text-xs">
+                <span className="text-text">
+                  {e.reason_label}
+                  {e.note ? ` — ${e.note}` : ''}
+                </span>
+                <span className="text-text-muted">
+                  {formatINRExact(e.delta)} · {formatDateTime(e.created_at)}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </li>
   );
 }
 

@@ -112,6 +112,12 @@ const settings: opsApi.BusinessSettings = {
       { min_average: '0.00', multiplier: '0.80' },
     ],
   },
+  packages: {
+    refund_window_days: null,
+    cancellation_fee_percent: 0,
+    refund_expired_packages: false,
+    no_show_consumes_session: true,
+  },
 };
 
 const close: opsApi.CashCloseRow = {
@@ -327,6 +333,57 @@ describe('settings', () => {
     await user.type(idle, '2');
     await user.click(screen.getByRole('button', { name: 'Save security' }));
     expect(await screen.findByText(/5 to 120/)).toBeInTheDocument();
+    expect(opsApi.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('turns on a package refund deadline and saves the cancellation rules', async () => {
+    const user = userEvent.setup();
+    vi.mocked(opsApi.saveSettings).mockResolvedValue({
+      ...settings,
+      packages: {
+        refund_window_days: 30,
+        cancellation_fee_percent: 10,
+        refund_expired_packages: true,
+        no_show_consumes_session: false,
+      },
+    });
+    renderAt('/settings');
+    await user.click(
+      await screen.findByLabelText(
+        'Only allow a cancellation request within a deadline after purchase',
+      ),
+    );
+    const windowInput = screen.getByLabelText(/Refund deadline/);
+    await user.clear(windowInput);
+    await user.type(windowInput, '30');
+    const fee = screen.getByLabelText(/Cancellation fee/);
+    await user.clear(fee);
+    await user.type(fee, '10');
+    await user.click(screen.getByLabelText(/refund request on a package that has already expired/));
+    await user.click(screen.getByLabelText(/no-show or a late desk-cancellation/));
+    await user.click(screen.getByRole('button', { name: 'Save package cancellations' }));
+    await waitFor(() =>
+      expect(opsApi.saveSettings).toHaveBeenCalledWith({
+        packages: {
+          refund_window_days: 30,
+          cancellation_fee_percent: 10,
+          refund_expired_packages: true,
+          no_show_consumes_session: false,
+        },
+      }),
+    );
+  });
+
+  it('rejects a cancellation fee outside 0 to 100', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings');
+    const fee = await screen.findByLabelText(/Cancellation fee/);
+    await user.clear(fee);
+    await user.type(fee, '150');
+    await user.click(screen.getByRole('button', { name: 'Save package cancellations' }));
+    expect(
+      await screen.findByText('Cancellation fee: a whole number from 0 to 100.'),
+    ).toBeInTheDocument();
     expect(opsApi.saveSettings).not.toHaveBeenCalled();
   });
 });

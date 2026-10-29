@@ -45,6 +45,11 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["sort_order", "name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(unit_price__gte=0), name="product_price_not_negative"
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -81,6 +86,7 @@ class StockMovement(models.Model):
 
     class Meta:
         ordering = ["created_at", "id"]
+        indexes = [models.Index(fields=["product", "created_at"], name="stock_product_time_idx")]
         constraints = [
             models.CheckConstraint(condition=~models.Q(delta=0), name="stock_movement_not_zero")
         ]

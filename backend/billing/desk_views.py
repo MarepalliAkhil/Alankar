@@ -97,7 +97,7 @@ def invoice_data(invoice: Invoice, detail: bool = False) -> dict:
         "issued_at": invoice.issued_at,
         "total": money_str(invoice.total),
         "tip_amount": money_str(invoice.tip_amount),
-        "refundable": money_str(refunds.refundable(invoice)),
+        "refundable": money_str(refunds.refundable_loaded(invoice)),
         "service_changes": invoice.service_changes,
     }
     if not detail:
@@ -316,7 +316,7 @@ class PosQueueView(APIView):
 
     @extend_schema(summary="Visits waiting at the counter and recent invoices")
     def get(self, request: Request) -> Response:
-        recent = Invoice.objects.select_related("appointment").order_by("-issued_at")[:20]
+        recent = invoice_queryset().order_by("-issued_at")[:20]
         return Response(
             {
                 "ready": [visit_card(a) for a in checkout.ready_visits()],
@@ -409,7 +409,7 @@ class PosCheckoutView(APIView):
 
 def invoice_queryset():
     return Invoice.objects.select_related("appointment__stylist").prefetch_related(
-        "items", "payments", "refunds__payment__appointment", "refunds__requested_by"
+        "items", "credits", "payments", "refunds__payment__appointment", "refunds__requested_by"
     )
 
 

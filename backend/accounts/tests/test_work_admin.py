@@ -295,6 +295,9 @@ def test_only_receptionists_can_be_looked_up(admin, make_user):
 def test_the_receptionist_sees_corrected_by_admin_but_not_the_flags(desk, admin):
     client, user = desk
     sign_in_again(user)
+    # "Yesterday" may fall in the previous calendar month (e.g. when today is the 1st), so
+    # the my-hours lookup below must ask for the month the session actually falls in, not
+    # necessarily today's month -- otherwise this test is flaky depending on the date it runs.
     day = timezone.localdate() - timedelta(days=1)
     s = session(user, at(day, 9), at(day, 17))
     post(
@@ -306,7 +309,24 @@ def test_the_receptionist_sees_corrected_by_admin_but_not_the_flags(desk, admin)
             "reason": "Left at four",
         },
     )
-    mine = client.get(f"/api/desk/my-hours/?month={this_month()}").json()
+    mine = client.get(f"/api/desk/my-hours/?month={day.strftime('%Y-%m')}").json()
     row = next(x for x in mine["sessions"] if x["id"] == str(s.id))
     assert row["corrected"] is True and row["correction_reason"] == "Left at four"
     assert "flags" not in row and "corrected_by" not in row
+
+
+def test_my_hours_is_scoped_to_the_month_asked_for_even_across_a_month_boundary(desk):
+    """A session on the last day of a month must show up under that month, and not bleed into
+    the next month's totals -- the scenario that bit test_the_receptionist_sees_corrected_by_
+    admin_but_not_the_flags above whenever it happened to run on the 1st of a month."""
+    client, user = desk
+    sign_in_again(user)
+    first_of_this_month = timezone.localdate().replace(day=1)
+    last_of_previous_month = first_of_this_month - timedelta(days=1)
+    s = session(user, at(last_of_previous_month, 9), at(last_of_previous_month, 17))
+    previous = client.get(
+        f"/api/desk/my-hours/?month={last_of_previous_month.strftime('%Y-%m')}"
+    ).json()
+    assert any(x["id"] == str(s.id) for x in previous["sessions"])
+    current = client.get(f"/api/desk/my-hours/?month={this_month()}").json()
+    assert all(x["id"] != str(s.id) for x in current["sessions"])

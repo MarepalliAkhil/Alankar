@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -120,7 +121,25 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["core.permissions.PolicyPermission"],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_THROTTLE_RATES": {"auth": env("SALON_AUTH_RATE", "20/min")},
+    # JSON only: the API has no file upload (images are links), so multipart and form bodies are
+    # refused with 415 instead of being parsed.
+    # Number of reverse proxies in front of the app (0 = none: use the socket address and ignore
+    # X-Forwarded-For, which a client can forge to dodge rate limits).
+    "NUM_PROXIES": int(env("SALON_NUM_PROXIES", "0")),
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    # A general ceiling per client on top of the stricter scopes below. Counted in the cache, per
+    # signed-in user or per IP address (guests). Raise or lower with the SALON_*_RATE variables.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": env("SALON_ANON_RATE", "240/min"),
+        "user": env("SALON_USER_RATE", "600/min"),
+        "auth": env("SALON_AUTH_RATE", "20/min"),
+        "booking": env("SALON_BOOKING_RATE", "20/min"),
+        "public_write": env("SALON_PUBLIC_WRITE_RATE", "20/min"),
+    },
 }
 
 # Role policy (single source of truth shared with the frontend).
@@ -184,11 +203,19 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "SIGNING_KEY": SECRET_KEY,
+    # Tokens carry a fingerprint of the password hash: changing or resetting a password makes every
+    # access token issued before it stop working at once (not only after 15 minutes).
+    "CHECK_REVOKE_TOKEN": True,
+    "REVOKE_TOKEN_CLAIM": "hash_password",
 }
 
 SALON_API_DOCS = env_bool("SALON_API_DOCS", DEBUG)
 
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# W021 (HSTS preload) is a one-way commitment to browser preload lists, so it stays optional:
+# set SALON_HSTS_PRELOAD=true only when you mean it. Everything else in `check --deploy` applies.
+SILENCED_SYSTEM_CHECKS = ["security.W021"]
 
 SPECTACULAR_SETTINGS = {
     "TITLE": f"{brand.PLATFORM_NAME} API",
@@ -208,13 +235,22 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+# The SPA reads the csrftoken cookie and echoes it in a header, so it must not be httpOnly.
+CSRF_COOKIE_HTTPONLY = False
+# Requests larger than 1 MB (JSON only) are refused.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1_000_000
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = env_bool("SALON_SSL_REDIRECT", True)
-    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    SECURE_HSTS_SECONDS = int(env("SALON_HSTS_SECONDS", str(60 * 60 * 24 * 365)))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = env_bool("SALON_HSTS_PRELOAD", False)
+# Behind a reverse proxy that terminates HTTPS and sets X-Forwarded-Proto (set this only then).
+if env_bool("SALON_BEHIND_PROXY", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Channels (WebSockets for Stylist Chat later). In-memory layer for development.
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
@@ -222,6 +258,11 @@ CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "filters": {"redact": {"()": "core.logging_filters.RedactFilter"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "filters": ["redact"]}},
+    "loggers": {
+        # runserver / dev server access lines carry the query string; redact them too
+        "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
     "root": {"handlers": ["console"], "level": "INFO"},
 }

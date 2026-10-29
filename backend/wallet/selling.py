@@ -160,6 +160,9 @@ def sell_package(package_id, customer, *, channel, method="", succeed=True, acto
                 reason=PackageEntry.Reason.PURCHASED,
                 actor=actor if getattr(actor, "pk", None) else None,
             )
+        from wallet import packagecodes
+
+        packagecodes.issue_code(purchase)
         _receipt(sale, customer.email, customer.full_name,
                  f" It is valid until {purchase.expires_at:%d %b %Y}.")  # fmt: skip
     return purchase
@@ -463,6 +466,7 @@ def sell_gift_card(
         normalized = giftcards.normalize(code)
         card = GiftCard.objects.create(
             code_hash=giftcards.code_hash(normalized),
+            code_encrypted=code,
             last4=normalized[-4:],
             initial_amount=amount,
             expires_at=now + timedelta(days=giftcards.VALID_DAYS),

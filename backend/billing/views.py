@@ -14,7 +14,7 @@ def own_invoices(request: Request):
     return (
         Invoice.objects.filter(customer=request.user)
         .select_related("appointment__stylist")
-        .prefetch_related("items")
+        .prefetch_related("items", "credits")
     )
 
 

@@ -133,6 +133,14 @@ def _expire_windows(now) -> None:
     WaitlistEntry.objects.filter(status=E_.WAITING, window_end__lte=now).update(status=E_.EXPIRED)
 
 
+def expire_waiting(now=None) -> int:
+    """Marks waiting entries whose date window has passed as expired. Safe to repeat."""
+    now = now or timezone.now()
+    return WaitlistEntry.objects.filter(status=E_.WAITING, window_end__lte=now).update(
+        status=E_.EXPIRED
+    )
+
+
 def _contact(entry: WaitlistEntry) -> tuple[str, str]:
     return entry.customer.full_name, entry.customer.email
 

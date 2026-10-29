@@ -19,6 +19,8 @@ from rest_framework.views import APIView
 from accounts.audit import audit, client_ip
 from accounts.models import AuditLog
 from billing.models import Payment
+from chat.models import Thread
+from core.throttles import BOOKING_THROTTLES
 from people import desk as customer_desk
 from people import ratings
 from people.models import CustomerProfile, DayOffRequest, StylistProfile
@@ -70,6 +72,8 @@ def booking_error(exc: booking.BookingError) -> Response:
     elif exc.code == "ratings_pending":
         code = status.HTTP_403_FORBIDDEN
         body["code"] = "ratings_pending"
+    if exc.field:
+        body["field"] = exc.field
     return Response(body, status=code)
 
 
@@ -180,6 +184,7 @@ class SlotsView(APIView):
 
 
 class BookingRequestView(APIView):
+    throttle_classes = BOOKING_THROTTLES
     policy_action = "booking.create"
 
     @extend_schema(
@@ -215,6 +220,9 @@ class BookingRequestView(APIView):
                 },
                 notes=data["notes"],
                 allergies=data["allergies"],
+                package_code=data.get("package_code", ""),
+                ip=client_ip(request),
+                request=request,
             )
         except booking.BookingError as exc:
             return booking_error(exc)
@@ -242,7 +250,17 @@ class MyAppointmentListView(APIView):
     def get(self, request: Request) -> Response:
         booking.expire_due()
         appts = appointment_queryset().filter(customer=request.user)
-        return Response(CustomerAppointmentSerializer(appts, many=True).data)
+        threads = dict(Thread.objects.filter(customer=request.user).values_list("stylist_id", "id"))
+        return Response(
+            CustomerAppointmentSerializer(
+                appts,
+                many=True,
+                context={
+                    "threads": threads,
+                    "free_cancel_hours": booking_settings()["free_cancel_hours"],
+                },
+            ).data
+        )
 
 
 class MyAppointmentDetailView(APIView):

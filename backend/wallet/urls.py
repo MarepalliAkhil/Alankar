@@ -12,6 +12,23 @@ my_wallet_patterns = [
     path("memberships/cancel/", v.MyCancelMembershipView.as_view(), name="my-membership-cancel"),
     path("gift-cards/buy/", v.MyBuyGiftCardView.as_view(), name="my-giftcard-buy"),
     path("gift-cards/check/", v.MyCheckGiftCardView.as_view(), name="my-giftcard-check"),
+    path(
+        "gift-cards/<uuid:pk>/reveal/", v.MyGiftCardRevealView.as_view(), name="my-giftcard-reveal"
+    ),
+    path("packages/", v.MyPackagesView.as_view(), name="my-packages"),
+    path(
+        "packages/<uuid:pk>/reveal/", v.MyPackageRevealCodeView.as_view(), name="my-package-reveal"
+    ),
+    path(
+        "packages/<uuid:pk>/cancel-estimate/",
+        v.MyPackageCancelEstimateView.as_view(),
+        name="my-package-cancel-estimate",
+    ),
+    path(
+        "packages/<uuid:pk>/cancel-request/",
+        v.MyPackageCancelRequestView.as_view(),
+        name="my-package-cancel-request",
+    ),
 ]
 my_waitlist_patterns = [
     path("", v.MyWaitlistView.as_view(), name="my-waitlist"),
@@ -55,6 +72,26 @@ admin_wallet_patterns = [
     path("gift-cards/<uuid:pk>/", a.AdminGiftCardDetailView.as_view(), name="admin-giftcard"),
     path(
         "gift-cards/<uuid:pk>/void/", a.AdminGiftCardVoidView.as_view(), name="admin-giftcard-void"
+    ),
+    path(
+        "gift-cards/<uuid:pk>/reveal/",
+        a.AdminGiftCardRevealView.as_view(),
+        name="admin-giftcard-reveal",
+    ),
+    path(
+        "package-cancel-requests/",
+        a.AdminPackageCancelRequestListView.as_view(),
+        name="admin-package-cancel-requests",
+    ),
+    path(
+        "package-cancel-requests/<uuid:pk>/approve/",
+        a.AdminPackageCancelApproveView.as_view(),
+        name="admin-package-cancel-approve",
+    ),
+    path(
+        "package-cancel-requests/<uuid:pk>/reject/",
+        a.AdminPackageCancelRejectView.as_view(),
+        name="admin-package-cancel-reject",
     ),
     path("sales/", a.AdminSaleListView.as_view(), name="admin-sales"),
     path("waitlist/", a.AdminWaitlistView.as_view(), name="admin-waitlist"),

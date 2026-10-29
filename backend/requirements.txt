@@ -1,6 +1,12 @@
 # Runtime dependencies (stack locked in CLAUDE.md section 2)
-Django>=5.1,<5.2
-djangorestframework>=3.15,<3.17
+# Django and DRF are pinned to these exact versions (Task 8a dependency audit, 2026-10-28,
+# DRF re-pinned 2026-10-28 after the owner's first audit run found 3 more CVEs fixed in 3.18.2):
+# the previous ranges excluded the releases that fix known CVEs.
+# Django==5.2.17 was already installed and tested on the owner's PC (1221 passed, 2 skipped).
+# djangorestframework==3.18.2 has NOT been tested yet -- run `pytest` after upgrading
+# and confirm before relying on this.
+Django==5.2.17
+djangorestframework==3.18.2
 djangorestframework-simplejwt>=5.3,<6
 channels>=4.1,<5
 daphne>=4.1,<5

@@ -54,7 +54,18 @@ export interface BookingRequestPayload {
   contact_phone: string;
   notes: string;
   allergies: string;
+  package_code?: string;
   consent: boolean;
+}
+
+export interface PackageUsed {
+  purchase_id: string;
+  purchase_name: string;
+  last4: string;
+  masked: string;
+  service_name: string;
+  session_label: string;
+  status: 'reserved' | 'consumed' | 'released';
 }
 
 export type CustomerAction =
@@ -88,6 +99,7 @@ interface AppointmentBase {
   created_at: string;
   notes: string;
   allergies: string;
+  package_used: PackageUsed | null;
 }
 
 export interface CustomerAppointment extends AppointmentBase {
@@ -174,6 +186,17 @@ export function conflictSlots(error: unknown): string[] {
   const data = (error as { response?: { status?: number; data?: { slots?: unknown } } })?.response;
   if (data?.status !== 409 || !Array.isArray(data.data?.slots)) return [];
   return data.data.slots.filter((slot): slot is string => typeof slot === 'string');
+}
+
+/** The server marks a package-code problem with `field: "package_code"` even when its HTTP
+ * status is 409 (an already-used/expired code) or 429 (rate-limited), so it isn't mistaken for a
+ * just-taken time slot. Returns the message to show under the code field, if that is what
+ * happened. */
+export function packageCodeFieldError(error: unknown): string | undefined {
+  const data = (error as { response?: { data?: { field?: unknown; detail?: unknown } } })?.response
+    ?.data;
+  if (data?.field !== 'package_code') return undefined;
+  return typeof data.detail === 'string' ? data.detail : 'That package code could not be used.';
 }
 
 // ----------------------------------------------------------------------------- profile

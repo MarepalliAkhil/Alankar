@@ -31,6 +31,18 @@ def refundable(invoice: Invoice) -> Decimal:
     return taken - used.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
 
 
+def refundable_loaded(invoice: Invoice) -> Decimal:
+    """Same as refundable() but uses refunds already loaded with prefetch_related (no query).
+
+    For lists only. Anything that changes money uses refundable() inside the row lock.
+    """
+    taken = invoice.prepaid_amount + invoice.balance_paid
+    used = sum(
+        (r.amount for r in invoice.refunds.all() if r.status != Refund.Status.REJECTED), ZERO
+    )
+    return taken - used
+
+
 def _source_payment(invoice: Invoice) -> Payment:
     payment = (
         Payment.objects.filter(appointment=invoice.appointment, status=Payment.Status.SUCCEEDED)

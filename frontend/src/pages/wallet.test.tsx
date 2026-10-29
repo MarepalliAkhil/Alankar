@@ -66,6 +66,11 @@ vi.mock('../api/wallet', () => ({
   cancelMembership: vi.fn(),
   buyGiftCard: vi.fn(),
   checkMyGiftCard: vi.fn(),
+  revealMyGiftCardCode: vi.fn(),
+  listMyPackages: vi.fn(),
+  revealMyPackageCode: vi.fn(),
+  estimatePackageCancelRefund: vi.fn(),
+  requestPackageCancellation: vi.fn(),
   listMyWaitlist: vi.fn(),
   joinWaitlist: vi.fn(),
   leaveWaitlist: vi.fn(),
@@ -89,6 +94,10 @@ vi.mock('../api/wallet', () => ({
   listGiftCards: vi.fn(),
   getGiftCard: vi.fn(),
   voidGiftCard: vi.fn(),
+  revealGiftCardCode: vi.fn(),
+  listPackageCancelRequests: vi.fn(),
+  approvePackageCancelRequest: vi.fn(),
+  rejectPackageCancelRequest: vi.fn(),
   listSales: vi.fn(),
   listAdminWaitlist: vi.fn(),
   adminCancelWaitlist: vi.fn(),
@@ -132,6 +141,7 @@ const card: walletApi.GiftCardRow = {
   expires_at: '2027-10-01T00:00:00Z',
   issued_at: '2026-10-01T00:00:00Z',
   recipient_name: '',
+  code_available: true,
   buyer_name: 'Priya',
   sale_number: 'SAL-2026-00001',
   channel: 'online',
@@ -152,6 +162,10 @@ const purchase: walletApi.PurchaseRow = {
   sale_number: 'SAL-2026-00002',
   customer_name: 'Priya Customer',
   customer_id: 'c1',
+  last4: 'QRST',
+  masked: '•••• QRST',
+  code_available: true,
+  cancel_status: 'none',
   credits: [
     { id: 'cr1', service_name: 'Haircut', quantity: 3, remaining: 2, unit_value: '250.00' },
   ],
@@ -165,11 +179,30 @@ const purchase: walletApi.PurchaseRow = {
       reason: 'used',
       reason_label: 'Used',
       invoice: 'INV-2026-00007',
+      appointment: null,
       note: '',
       created_at: '2026-10-22T10:00:00Z',
       actor: 'Rita',
     },
   ],
+};
+const cancelRequest: walletApi.PackageCancelRequestRow = {
+  id: 'cr-1',
+  purchase_id: 'pu1',
+  package_name: 'Cut x3',
+  customer_name: 'Priya Customer',
+  customer_id: 'c1',
+  reason: 'Moving to another city',
+  remaining_sessions: 2,
+  total_sessions: 3,
+  amount_paid: '750.00',
+  estimated_refund: '500.00',
+  status: 'pending',
+  decided_amount: null,
+  decision_reason: '',
+  decided_by: null,
+  decided_at: null,
+  created_at: '2026-10-25T10:00:00Z',
 };
 
 beforeEach(() => {
@@ -181,6 +214,8 @@ beforeEach(() => {
   vi.mocked(walletApi.getMyWallet).mockResolvedValue(wallet);
   vi.mocked(walletApi.listMyWaitlist).mockResolvedValue([]);
   vi.mocked(walletApi.getMyCoupons).mockResolvedValue([]);
+  vi.mocked(walletApi.listMyPackages).mockResolvedValue([]);
+  vi.mocked(walletApi.listPackageCancelRequests).mockResolvedValue([]);
   vi.mocked(walletApi.getDeskCatalogue).mockResolvedValue(wallet.catalogue);
 });
 
@@ -217,6 +252,68 @@ describe('customer wallet', () => {
     expect(await screen.findByTestId('gift-code')).toHaveTextContent('ABCDE-FGHJK-LMNPQ-RSTUV');
     await userEvent.click(screen.getByRole('button', { name: 'I have saved it' }));
     expect(screen.queryByTestId('gift-code')).not.toBeInTheDocument();
+  });
+
+  it('shows and hides a gift card code already on the wallet, and can copy it', async () => {
+    vi.mocked(walletApi.revealMyGiftCardCode).mockResolvedValue({
+      code: 'ABCDE-FGHJK-LMNPQ-RSTUV',
+    });
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderAt('/customer/wallet');
+    await user.click(await screen.findByRole('button', { name: /Show code/ }));
+    expect(walletApi.revealMyGiftCardCode).toHaveBeenCalledWith('g1');
+    expect(await screen.findByText('ABCDE-FGHJK-LMNPQ-RSTUV')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Copy/ }));
+    expect(writeText).toHaveBeenCalledWith('ABCDE-FGHJK-LMNPQ-RSTUV');
+    await user.click(screen.getByRole('button', { name: /Hide code/ }));
+    expect(screen.queryByText('ABCDE-FGHJK-LMNPQ-RSTUV')).not.toBeInTheDocument();
+    expect(screen.getByText('•••• ABCD')).toBeInTheDocument();
+  });
+
+  it('a card whose code was never kept offers no Show code button', async () => {
+    vi.mocked(walletApi.getMyWallet).mockResolvedValue({
+      ...wallet,
+      gift_cards: [{ ...card, code_available: false }],
+    });
+    renderAt('/customer/wallet');
+    expect(await screen.findByText('•••• ABCD')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show code/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/shown once, at purchase/)).toBeInTheDocument();
+  });
+
+  it('shows the gift card usage ledger on request', async () => {
+    vi.mocked(walletApi.getMyWallet).mockResolvedValue({
+      ...wallet,
+      gift_cards: [
+        {
+          ...card,
+          ledger: [
+            {
+              id: 'e1',
+              delta: '1000.00',
+              reason: 'purchased',
+              reason_label: 'Bought',
+              note: '',
+              created_at: '2026-10-01T00:00:00Z',
+            },
+            {
+              id: 'e2',
+              delta: '-300.00',
+              reason: 'redeemed',
+              reason_label: 'Used to pay',
+              note: '',
+              created_at: '2026-10-05T00:00:00Z',
+            },
+          ],
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/wallet');
+    await user.click(await screen.findByRole('button', { name: /History/ }));
+    expect(await screen.findAllByText('Bought')).toHaveLength(2);
+    expect(screen.getByText('Used to pay')).toBeInTheDocument();
   });
 
   it('refuses a gift card amount outside the allowed range without calling the server', async () => {
@@ -466,6 +563,34 @@ describe('admin: packages, gift cards and waitlist', () => {
     await waitFor(() => expect(walletApi.voidGiftCard).toHaveBeenCalledWith('g1', 'lost'));
   });
 
+  it('reveals a gift card code only on request, and audits it server-side', async () => {
+    vi.mocked(walletApi.getGiftCard).mockResolvedValue({ ...card, code_available: true });
+    vi.mocked(walletApi.revealGiftCardCode).mockResolvedValue({ code: 'ABCDE-FGHJK-LMNPQ-RSTUV' });
+    const user = userEvent.setup();
+    renderAt('/gift-cards');
+    await user.click(await screen.findByRole('button', { name: 'History' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Gift card history' });
+    expect(within(dialog).getByText('•••• ABCD')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /Reveal full code/ }));
+    expect(walletApi.revealGiftCardCode).toHaveBeenCalledWith('g1');
+    expect(await within(dialog).findByText('ABCDE-FGHJK-LMNPQ-RSTUV')).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: /Reveal full code/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('a card with no stored code offers no reveal button in the history', async () => {
+    vi.mocked(walletApi.getGiftCard).mockResolvedValue({ ...card, code_available: false });
+    const user = userEvent.setup();
+    renderAt('/gift-cards');
+    await user.click(await screen.findByRole('button', { name: 'History' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Gift card history' });
+    expect(
+      within(dialog).queryByRole('button', { name: /Reveal full code/ }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/shown once, at purchase/)).toBeInTheDocument();
+  });
+
   it('shows an empty waitlist', async () => {
     renderAt('/waitlist');
     expect(await screen.findByText('Nobody here')).toBeInTheDocument();
@@ -656,5 +781,155 @@ describe('online payment with a gift card', () => {
         amount: '100',
       }),
     );
+  });
+});
+
+describe('customer packages page', () => {
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue(userFor('customer'));
+  });
+
+  it('lists a package with its masked code, sessions left and a show/hide code', async () => {
+    vi.mocked(walletApi.listMyPackages).mockResolvedValue([purchase]);
+    vi.mocked(walletApi.revealMyPackageCode).mockResolvedValue({
+      code: 'ABCDE-FGHJK-LMNPQ-RSTUV',
+    });
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderAt('/customer/packages');
+    expect(await screen.findByText('Cut x3')).toBeInTheDocument();
+    expect(screen.getByText(/2 of 3 Haircut/)).toBeInTheDocument();
+    expect(screen.getByText('•••• QRST')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Show code/ }));
+    expect(walletApi.revealMyPackageCode).toHaveBeenCalledWith('pu1');
+    expect(await screen.findByText('ABCDE-FGHJK-LMNPQ-RSTUV')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Copy/ }));
+    expect(writeText).toHaveBeenCalledWith('ABCDE-FGHJK-LMNPQ-RSTUV');
+  });
+
+  it('a package whose code was never kept offers no Show code button', async () => {
+    vi.mocked(walletApi.listMyPackages).mockResolvedValue([{ ...purchase, code_available: false }]);
+    renderAt('/customer/packages');
+    expect(await screen.findByText('Cut x3')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show code/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/shown once, at purchase/)).toBeInTheDocument();
+  });
+
+  it('shows the estimate then sends a cancellation request with a reason', async () => {
+    vi.mocked(walletApi.listMyPackages).mockResolvedValue([purchase]);
+    vi.mocked(walletApi.estimatePackageCancelRefund).mockResolvedValue({
+      estimated_refund: '500.00',
+      cancellation_fee_percent: '0',
+      refund_window_days: null,
+      already_pending: false,
+    });
+    vi.mocked(walletApi.requestPackageCancellation).mockResolvedValue({
+      id: 'cr-2',
+      status: 'pending',
+      estimated_refund: '500.00',
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/packages');
+    await user.click(await screen.findByRole('button', { name: 'Cancel for a refund' }));
+    const dialog = await screen.findByRole('dialog', { name: /Cancel Cut x3/ });
+    expect(within(dialog).getByText(/500\.00/)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText(/Why are you cancelling/), 'Moving away');
+    await user.click(within(dialog).getByRole('button', { name: 'Request cancellation' }));
+    await waitFor(() =>
+      expect(walletApi.requestPackageCancellation).toHaveBeenCalledWith('pu1', 'Moving away'),
+    );
+  });
+
+  it('a package already pending cancellation has no Cancel button', async () => {
+    vi.mocked(walletApi.listMyPackages).mockResolvedValue([
+      {
+        ...purchase,
+        cancel_status: 'pending',
+        pending_cancel_request: { id: 'cr-1', estimated_refund: '500.00' },
+      },
+    ]);
+    renderAt('/customer/packages');
+    expect(await screen.findByText(/Refund request pending/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel for a refund' })).not.toBeInTheDocument();
+  });
+});
+
+describe('admin: package cancellation requests', () => {
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue(userFor('admin'));
+  });
+
+  it('lists a pending request and approves it at the estimated amount', async () => {
+    vi.mocked(walletApi.listPackageCancelRequests).mockResolvedValue([cancelRequest]);
+    vi.mocked(walletApi.approvePackageCancelRequest).mockResolvedValue({
+      ...cancelRequest,
+      status: 'approved',
+      decided_amount: '500.00',
+    });
+    const user = userEvent.setup();
+    renderAt('/package-requests');
+    expect(await screen.findByText('Cut x3')).toBeInTheDocument();
+    expect(screen.getByText(/2 of 3 sessions left/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+    const dialog = await screen.findByRole('dialog', { name: /Approve Cut x3/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
+    await waitFor(() =>
+      expect(walletApi.approvePackageCancelRequest).toHaveBeenCalledWith('cr-1', {
+        method: 'cash',
+        amount: undefined,
+        reason: '',
+      }),
+    );
+  });
+
+  it('can approve at a different amount', async () => {
+    vi.mocked(walletApi.listPackageCancelRequests).mockResolvedValue([cancelRequest]);
+    vi.mocked(walletApi.approvePackageCancelRequest).mockResolvedValue({
+      ...cancelRequest,
+      status: 'approved',
+      decided_amount: '400.00',
+    });
+    const user = userEvent.setup();
+    renderAt('/package-requests');
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    const dialog = await screen.findByRole('dialog', { name: /Approve Cut x3/ });
+    await user.click(within(dialog).getByLabelText(/Use the estimated amount/));
+    await user.clear(within(dialog).getByLabelText(/Refund amount/));
+    await user.type(within(dialog).getByLabelText(/Refund amount/), '400');
+    await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
+    await waitFor(() =>
+      expect(walletApi.approvePackageCancelRequest).toHaveBeenCalledWith('cr-1', {
+        method: 'cash',
+        amount: '400',
+        reason: '',
+      }),
+    );
+  });
+
+  it('rejects a request with a reason', async () => {
+    vi.mocked(walletApi.listPackageCancelRequests).mockResolvedValue([cancelRequest]);
+    vi.mocked(walletApi.rejectPackageCancelRequest).mockResolvedValue({
+      ...cancelRequest,
+      status: 'rejected',
+      decision_reason: 'Still has validity left',
+    });
+    const user = userEvent.setup();
+    renderAt('/package-requests');
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    const dialog = await screen.findByRole('dialog', { name: /Reject Cut x3/ });
+    await user.type(within(dialog).getByLabelText('Reason'), 'Still has validity left');
+    await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
+    await waitFor(() =>
+      expect(walletApi.rejectPackageCancelRequest).toHaveBeenCalledWith(
+        'cr-1',
+        'Still has validity left',
+      ),
+    );
+  });
+
+  it('a non-admin role is refused the page', async () => {
+    vi.mocked(getSession).mockResolvedValue(userFor('receptionist'));
+    renderAt('/package-requests');
+    expect(await screen.findByText(/not allowed|isn.t available|403|cannot/i)).toBeInTheDocument();
   });
 });
