@@ -218,7 +218,7 @@ class CouponDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             coupon = serializer.save()
-            used = CouponRedemption.objects.filter(coupon=coupon).count()
+            used = CouponRedemption.objects.filter(coupon=coupon, released_at__isnull=True).count()
             after = coupon_row(coupon, used)
             diff = {k: [before[k], after[k]] for k in COUPON_FIELDS if before[k] != after[k]}
             if diff:

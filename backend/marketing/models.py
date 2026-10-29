@@ -58,9 +58,32 @@ class CouponRedemption(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     coupon = models.ForeignKey(Coupon, on_delete=models.PROTECT, related_name="redemptions")
+    # Where the coupon was used: a bill at the counter, an online booking payment (linked to the
+    # visit's invoice later, at checkout) or a shop order (Task 8.5).
     invoice = models.OneToOneField(
-        "billing.Invoice", on_delete=models.PROTECT, related_name="coupon_redemption"
+        "billing.Invoice",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="coupon_redemption",
     )
+    appointment = models.ForeignKey(
+        "scheduling.Appointment",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="coupon_redemptions",
+    )
+    order = models.ForeignKey(
+        "shop.Order",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="coupon_redemptions",
+    )
+    # Set when the booking or order it paid for was cancelled: the use is given back and no
+    # longer counts against the coupon's limits. The row itself stays.
+    released_at = models.DateTimeField(null=True, blank=True)
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
     )

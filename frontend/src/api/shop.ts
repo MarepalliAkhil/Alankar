@@ -41,6 +41,11 @@ export interface Quote {
   lines: QuoteLine[];
   items_total: Money;
   gst_included: Money;
+  coupon_code: string;
+  coupon_amount: Money;
+  member_plan: string;
+  member_percent: Money;
+  member_amount: Money;
   discount: Money;
   delivery_fee: Money;
   total: Money;
@@ -98,9 +103,14 @@ export interface Order {
   items_total: Money;
   gst_included: Money;
   discount: Money;
+  coupon_code: string;
+  coupon_amount: Money;
+  member_plan: string;
+  member_amount: Money;
   delivery_fee: Money;
   total: Money;
   paid: Money;
+  gift_card_paid: Money;
   refunded: Money;
   tracking_note: string;
   cancel_reason: string;
@@ -117,6 +127,7 @@ export interface PlaceOrderInput {
   address_id?: string;
   address?: AddressInput;
   save_address?: boolean;
+  coupon?: string;
 }
 
 // ---------------------------------------------------------------- customer
@@ -129,8 +140,8 @@ export async function getShopProducts(): Promise<{
   return data;
 }
 
-export async function quoteCart(items: CartItem[]): Promise<Quote> {
-  const { data } = await api.post<Quote>('/my/shop/quote/', { items });
+export async function quoteCart(items: CartItem[], coupon = ''): Promise<Quote> {
+  const { data } = await api.post<Quote>('/my/shop/quote/', coupon ? { items, coupon } : { items });
   return data;
 }
 
@@ -168,8 +179,17 @@ export async function placeOrder(input: PlaceOrderInput): Promise<Order> {
   return data;
 }
 
-export async function payOrder(id: string, outcome: 'success' | 'fail'): Promise<Order> {
-  const { data } = await api.post<Order>(`/my/orders/${id}/pay/`, { outcome });
+export async function payOrder(
+  id: string,
+  outcome: 'success' | 'fail',
+  gift?: { code: string; amount?: string },
+): Promise<Order> {
+  const { data } = await api.post<Order>(`/my/orders/${id}/pay/`, {
+    outcome,
+    ...(gift?.code
+      ? { gift_card_code: gift.code, ...(gift.amount ? { gift_card_amount: gift.amount } : {}) }
+      : {}),
+  });
   return data;
 }
 

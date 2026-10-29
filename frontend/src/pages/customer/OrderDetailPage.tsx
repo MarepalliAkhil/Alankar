@@ -16,6 +16,7 @@ import {
   ButtonLink,
   Card,
   ErrorState,
+  Input,
   LoadingState,
   Modal,
   Textarea,
@@ -32,6 +33,8 @@ export default function OrderDetailPage() {
   const queryClient = useQueryClient();
   const order = useQuery({ queryKey: ['my-order', id], queryFn: () => getMyOrder(id) });
   const [cancelling, setCancelling] = useState(false);
+  const [giftCode, setGiftCode] = useState('');
+  const [giftAmount, setGiftAmount] = useState('');
 
   const refresh = (o: Order) => {
     queryClient.setQueryData(['my-order', id], o);
@@ -39,7 +42,10 @@ export default function OrderDetailPage() {
   };
 
   const pay = useMutation({
-    mutationFn: (outcome: 'success' | 'fail') => payOrder(id, outcome),
+    mutationFn: (outcome: 'success' | 'fail') =>
+      giftCode.trim()
+        ? payOrder(id, outcome, { code: giftCode.trim(), amount: giftAmount.trim() })
+        : payOrder(id, outcome),
     onSuccess: (o) => {
       refresh(o);
       toast.show({
@@ -94,6 +100,21 @@ export default function OrderDetailPage() {
             {o.pay_until && ` by ${formatDateTime(o.pay_until)}`} to confirm your order. Your items
             are held until then.
           </p>
+          <div className="grid gap-sm sm:grid-cols-2">
+            <Input
+              label="Gift card code (optional)"
+              hint="Used first; the rest is paid below."
+              autoComplete="off"
+              value={giftCode}
+              onChange={(e) => setGiftCode(e.target.value)}
+            />
+            <Input
+              label="Amount from the gift card (₹, optional)"
+              inputMode="decimal"
+              value={giftAmount}
+              onChange={(e) => setGiftAmount(e.target.value)}
+            />
+          </div>
           <p className="text-xs text-text-muted">
             This is a test payment page: no card details are asked for.
           </p>

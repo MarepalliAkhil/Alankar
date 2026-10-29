@@ -31,11 +31,15 @@ export default function PayPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState('');
   const payment = useQuery({
-    queryKey: ['payment', id, link],
-    queryFn: () => getPayment(id, link),
+    queryKey: ['payment', id, link, coupon],
+    queryFn: () => (coupon ? getPayment(id, link, coupon) : getPayment(id, link)),
     retry: false,
+    placeholderData: (previous) => previous,
   });
+  const couponOk = Boolean(coupon) && !payment.data?.coupon_error;
 
   const [giftCode, setGiftCode] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
@@ -61,6 +65,7 @@ export default function PayPage() {
         outcome,
         link,
         giftCode.trim() ? { code: giftCode.trim(), amount: giftAmount.trim() } : null,
+        ...(couponOk ? [coupon] : []),
       ),
     onSuccess: () => {
       toast.show({
@@ -100,7 +105,8 @@ export default function PayPage() {
         />
       );
     }
-    const { state, amount, expires_at: expires, appointment } = payment.data;
+    const { state, amount: listed, expires_at: expires, appointment, quote } = payment.data;
+    const amount = quote?.total ?? listed;
     const back = (
       <Link
         to="/customer/appointments"
@@ -164,8 +170,57 @@ export default function PayPage() {
         <div className="rounded-nested bg-primary-soft p-md">
           <p className="text-xs text-text-muted">Amount due (incl. GST)</p>
           <p className="text-2xl font-semibold text-text">{formatINR(amount)}</p>
+          {quote && Number(quote.discount) > 0 && (
+            <dl className="mt-xs flex flex-col gap-1 text-xs text-text-muted">
+              <div className="flex justify-between">
+                <dt>Price</dt>
+                <dd>{formatINRExact(quote.items_total)}</dd>
+              </div>
+              {Number(quote.coupon_amount) > 0 && (
+                <div className="flex justify-between">
+                  <dt>Coupon {quote.coupon_code}</dt>
+                  <dd>- {formatINRExact(quote.coupon_amount)}</dd>
+                </div>
+              )}
+              {Number(quote.member_amount) > 0 && (
+                <div className="flex justify-between">
+                  <dt>
+                    {quote.member_plan} membership ({Number(quote.member_percent)}%)
+                  </dt>
+                  <dd>- {formatINRExact(quote.member_amount)}</dd>
+                </div>
+              )}
+            </dl>
+          )}
           {expires && (
             <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
+          <div className="flex flex-wrap items-end gap-sm">
+            <div className="min-w-0 flex-1">
+              <Input
+                label="Coupon code (optional)"
+                autoComplete="off"
+                value={couponInput}
+                error={coupon ? payment.data.coupon_error || undefined : undefined}
+                onChange={(e) => setCouponInput(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={couponInput.trim() === '' || payment.isFetching}
+              onClick={() => setCoupon(couponInput.trim().toUpperCase())}
+            >
+              Apply
+            </Button>
+          </div>
+          {couponOk && (
+            <p role="status" className="text-sm text-text">
+              Coupon {coupon} applied.
+            </p>
           )}
         </div>
         <div className="flex flex-col gap-xs rounded-nested border border-border p-md">

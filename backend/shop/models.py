@@ -103,6 +103,14 @@ class Order(models.Model):
     items_total = models.DecimalField(max_digits=10, decimal_places=2)
     gst_included = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
+    # The parts of `discount` (Task 8.5 part 3): the coupon first, then the membership.
+    coupon = models.ForeignKey(
+        "marketing.Coupon", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    coupon_code = models.CharField(max_length=24, blank=True)
+    coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
+    member_plan = models.CharField(max_length=80, blank=True)
+    member_amount = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     pay_until = models.DateTimeField(null=True, blank=True)

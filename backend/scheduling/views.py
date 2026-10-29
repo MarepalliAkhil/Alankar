@@ -334,11 +334,21 @@ class PaymentView(APIView):
             state = "expired"
         elif appt.status != S.AWAITING_PAYMENT and booking.paid_amount(appt) > 0:
             state = "paid"
+        quote, coupon_error = None, ""
+        if link is not None:
+            code = request.query_params.get("coupon", "")[:40]
+            try:
+                quote = booking.payment_breakdown(appt, link, coupon_code=code).data()
+            except booking.BookingError as exc:
+                coupon_error = exc.message
+                quote = booking.payment_breakdown(appt, link).data()
         return Response(
             {
                 "state": state,
                 "amount": str(link.amount) if link else str(appt.amount_payable),
                 "expires_at": link.expires_at.isoformat() if link else None,
+                "quote": quote,
+                "coupon_error": coupon_error,
                 "appointment": CustomerAppointmentSerializer(appt).data,
             }
         )
@@ -356,6 +366,7 @@ class PaymentView(APIView):
                 succeed=body.validated_data["outcome"] == "success",
                 gift_code=body.validated_data.get("gift_card_code") or "",
                 gift_amount=body.validated_data.get("gift_card_amount"),
+                coupon_code=body.validated_data.get("coupon") or "",
                 ip=client_ip(request),
                 request=request,
             )

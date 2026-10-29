@@ -1244,6 +1244,26 @@ message (verified / to run / walkthrough / limitations) has gone out.
   settings mechanism; an admin UI for them comes with part 8.
 - **Products:** two new fields, `description` (shown in the shop) and `sold_online` (some products
   stay counter-only), editable in Admin > Inventory.
+- **One online money engine, in the specified order** (`billing/online.py`): items -> coupon ->
+  membership -> package -> delivery -> gift card last. It is used by the shop (quote, order) and
+  the online booking payment. The counter (POS) keeps its existing order (membership, manual
+  discount, coupon) so no existing bill changes; the two only differ for a flat coupon combined
+  with a membership.
+- **A coupon used when paying for a booking online is carried to checkout.** The visit remembers
+  the coupon and the membership amount taken off online; at the counter the service line is
+  billed at exactly that, so the online payment covers it and nothing more is asked. Typing a
+  different coupon at the counter is refused ("one coupon per bill"); products added at the
+  counter are not discounted by the online coupon. The redemption row is linked to the invoice.
+- **Coupon uses are given back when the booking or order is cancelled** (free customer
+  cancellation, salon cancellation, order cancellation or order payment expiry). The redemption
+  row stays as a record with `released_at` set and no longer counts toward the coupon's limits.
+- **Membership discount now applies to online booking payments.** Members pay the discounted
+  amount online; checkout already applied the same discount, so the bill still balances.
+- **Delivery charge is decided on the item total before discounts** (so a coupon never makes an
+  order lose free delivery).
+- **Gift cards pay shop orders too**, at the payment step (used first, the rest through the
+  simulated gateway; if the gateway part fails, nothing is taken from the card). A cancelled order
+  puts the gift-card part back on the card.
 (further decisions are appended below as each part is built)
 
 ### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
@@ -1618,3 +1638,19 @@ search, date range, next-step button, delivery note, admin-only "Cancel with ref
 Tests: `shop/tests/test_shop.py` (43: prices, delivery rules, bad carts, address validation and
 encryption, saved addresses and isolation, the whole lifecycle, expiry, cancel rules, staff steps,
 filters, role denials, guests, two concurrency tests, privacy) and `src/pages/shop.test.tsx` (10).
+
+### Task 8.5 part 3: coupons and the online money engine (DONE, committed, verified in sandbox)
+`billing/online.py` (pure calculation, fixed order, server-side coupon checks via the existing
+`marketing/coupons.py` rules). Shop: `/api/my/shop/quote/` and `/api/my/orders/` accept `coupon`
+(row-locked when the order is placed so two orders cannot both take its last use, tested with two
+threads); orders store coupon and membership amounts; `/pay/` accepts a gift card. Booking:
+`GET /api/my/appointments/<id>/payment/?coupon=` returns the step-by-step quote (or the coupon's
+problem), `POST` pays with it; checkout carries the coupon over. Migrations: `marketing`
+(redemption may point to an appointment or an order, `released_at`), `scheduling`
+(`prepay_coupon*`), `shop` (coupon and membership fields), `wallet` (gift card entry for an order
+payment). Frontend: coupon box and coupon/membership lines on the checkout summary and on the
+booking payment page; gift card fields on the order payment card.
+Tests: `billing/tests/test_online_pricing.py` (28: fixed-number engine cases for every step and
+combination, every coupon rule, private coupons, shop and booking flows, carry-over to checkout,
+coupon given back on cancel, gift card part payment and refund, two concurrency tests), plus 4 new
+frontend tests (`shop.test.tsx`, `booking.test.tsx`).

@@ -172,6 +172,7 @@ def _build(
     membership=None,
     use_session=False,
     package_credit=None,
+    carried=None,
 ) -> Totals:
     cap = max_discount_percent(actor)
     if discount_percent < 0 or discount_percent > cap:
@@ -200,7 +201,21 @@ def _build(
             )
         )
     coupon_amount = ZERO
-    if coupon is not None:
+    coupon_applies = (lambda ln: coupons.eligible(ln, coupon)) if coupon else (lambda ln: True)
+    if carried is not None:
+        # A coupon used when the visit was paid online (Task 8.5): the service line is billed at
+        # what was agreed online, so the online payment covers it exactly. Products added at the
+        # counter are not discounted by it.
+        coupon = carried.coupon
+        member_on_service = ZERO
+        if membership is not None and not use_session:
+            member_on_service = money(amount * membership.discount_percent / 100)
+        coupon_amount = max(
+            ZERO, appt.prepay_coupon_amount + appt.prepay_member_amount - member_on_service
+        )
+        coupon_amount = min(coupon_amount, amount - member_on_service)
+        coupon_applies = lambda ln: ln.kind == "service"  # noqa: E731
+    elif coupon is not None:
         coupon_amount = coupons.amount_for(coupon, lines, discount_percent)
         total_percent = (
             (coupon_amount + sum((ln.amount for ln in lines), ZERO) * discount_percent / 100)
@@ -238,13 +253,47 @@ def _build(
         points_available=points_balance(appt.customer),
         rules=pos_settings(),
         coupon_amount=coupon_amount,
-        coupon_applies=(lambda ln: coupons.eligible(ln, coupon)) if coupon else (lambda ln: True),
+        coupon_applies=coupon_applies,
         member_percent=membership.discount_percent if membership else Decimal("0"),
         member_applies=member_applies,
         credit_cap=credit_cap,
     )
     t.coupon_code = coupon.code if coupon else ""
     return t
+
+
+def _carried(appt: Appointment) -> CouponRedemption | None:
+    """The coupon this visit used when it was paid online, not yet on an invoice."""
+    return (
+        CouponRedemption.objects.filter(
+            appointment=appt, invoice__isnull=True, released_at__isnull=True
+        )
+        .select_related("coupon")
+        .first()
+    )
+
+
+def _coupon_for(appt: Appointment, data: dict, *, discount, lock: bool):
+    """(coupon, carried): a coupon typed at the counter, or the one used online."""
+    carried = _carried(appt)
+    if carried is None:
+        return (
+            _coupon(
+                data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=lock
+            ),
+            None,
+        )
+    typed = coupons.normalize(data.get("coupon") or "")
+    if typed and typed != carried.coupon.code:
+        raise CheckoutError(
+            f"This visit already used coupon {carried.coupon.code} when it was paid online. "
+            "One coupon per bill."
+        )
+    if discount > 0 and not carried.coupon.stackable:
+        raise CheckoutError(
+            f"{carried.coupon.code} (used online) cannot be combined with another discount."
+        )
+    return None, carried
 
 
 def _options(data: dict):
@@ -304,9 +353,7 @@ def quote(appt_id, data: dict, *, actor) -> dict:
         raise CheckoutError("This visit has already been billed.", code="conflict")
     discount, _, redeem, tip = _options(data)
     rows = _products(data.get("products"), lock=False)
-    coupon = _coupon(
-        data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=False
-    )
+    coupon, carried = _coupon_for(appt, data, discount=discount, lock=False)
     membership, use_session, credit = _wallet_choice(appt, data, lock=False)
     totals = _build(
         appt,
@@ -318,6 +365,7 @@ def quote(appt_id, data: dict, *, actor) -> dict:
         membership=membership,
         use_session=use_session,
         package_credit=credit,
+        carried=carried,
     )
     return {
         "totals": totals,
@@ -389,9 +437,7 @@ def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
             raise CheckoutError("The visit has no stylist assigned.")
         rows = _products(data.get("products"), lock=True)
         # The coupon row is locked so two counters cannot both use its last redemption.
-        coupon = _coupon(
-            data.get("coupon"), customer=appt.customer, discount_percent=discount, lock=True
-        )
+        coupon, carried = _coupon_for(appt, data, discount=discount, lock=True)
         membership, use_session, credit = _wallet_choice(appt, data, lock=True)
         t = _build(
             appt,
@@ -403,6 +449,7 @@ def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
             membership=membership,
             use_session=use_session,
             package_credit=credit,
+            carried=carried,
         )
         payments = _validate_payments(data.get("payments"), t.payable_now + tip)
 
@@ -460,7 +507,10 @@ def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
                     actor=actor,
                     invoice=invoice,
                 )
-        if coupon is not None:
+        if carried is not None:
+            # Records are not edited through save(); this only links the online use to the bill.
+            CouponRedemption.objects.filter(pk=carried.pk).update(invoice=invoice)
+        elif coupon is not None:
             CouponRedemption.objects.create(
                 coupon=coupon, invoice=invoice, customer=appt.customer, amount=t.coupon_amount
             )

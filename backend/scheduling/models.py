@@ -191,6 +191,13 @@ class Appointment(models.Model):
     # Task 8.5 part 5: a package code redeemed at booking makes the service line Rs 0. The
     # session itself is tracked on wallet.PackageEntry (reason reserved/consumed/released); this
     # FK is only so the appointment/request cards can show which package was used.
+    # Task 8.5 part 3: a coupon and membership discount taken off the online payment. Checkout
+    # carries them over so the bill matches what was paid.
+    prepay_coupon = models.ForeignKey(
+        "marketing.Coupon", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    prepay_coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    prepay_member_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     package_purchase = models.ForeignKey(
         "wallet.PackagePurchase",
         null=True,

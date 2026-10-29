@@ -407,6 +407,10 @@ class GiftCardEntry(Record):
     payment = models.ForeignKey(
         "billing.Payment", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
+    # A shop order paid (or refunded) with the card (Task 8.5).
+    order_payment = models.ForeignKey(
+        "shop.OrderPayment", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

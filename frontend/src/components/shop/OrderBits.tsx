@@ -80,7 +80,12 @@ export function OrderLines({ order }: { order: Order }) {
       </ul>
       <dl className="mt-xs flex flex-col gap-1 border-t border-border pt-xs text-sm">
         <Row label="Items (incl. GST)" value={order.items_total} />
-        {Number(order.discount) > 0 && <Row label="Discount" value={`-${order.discount}`} />}
+        {Number(order.coupon_amount) > 0 && (
+          <Row label={`Coupon ${order.coupon_code}`} value={`-${order.coupon_amount}`} />
+        )}
+        {Number(order.member_amount) > 0 && (
+          <Row label={`${order.member_plan} membership`} value={`-${order.member_amount}`} />
+        )}
         <Row label="Delivery" value={order.delivery_fee} free={Number(order.delivery_fee) === 0} />
         <div className="flex justify-between font-semibold text-text">
           <dt>Total</dt>
@@ -88,6 +93,8 @@ export function OrderLines({ order }: { order: Order }) {
         </div>
         <p className="text-xs text-text-muted">
           Includes GST of {formatINRExact(order.gst_included)}.
+          {Number(order.gift_card_paid) > 0 &&
+            ` ${formatINRExact(order.gift_card_paid)} paid by gift card.`}
           {Number(order.refunded) > 0 && ` Refunded ${formatINRExact(order.refunded)}.`}
         </p>
       </dl>

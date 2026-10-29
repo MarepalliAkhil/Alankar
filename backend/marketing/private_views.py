@@ -41,7 +41,9 @@ def row(coupon: Coupon, used: int, *, admin: bool) -> dict:
 
 def usage(coupons) -> dict:
     counted = (
-        CouponRedemption.objects.filter(coupon__in=coupons).values("coupon").annotate(n=Count("id"))
+        CouponRedemption.objects.filter(coupon__in=coupons, released_at__isnull=True)
+        .values("coupon")
+        .annotate(n=Count("id"))
     )
     return {r["coupon"]: r["n"] for r in counted}
 

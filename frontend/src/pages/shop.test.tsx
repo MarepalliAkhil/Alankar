@@ -87,6 +87,11 @@ const quote: shopApi.Quote = {
   ],
   items_total: '450.00',
   gst_included: '68.64',
+  coupon_code: '',
+  coupon_amount: '0.00',
+  member_plan: '',
+  member_percent: '0',
+  member_amount: '0.00',
   discount: '0.00',
   delivery_fee: '49.00',
   total: '499.00',
@@ -101,9 +106,14 @@ const order: shopApi.Order = {
   items_total: '450.00',
   gst_included: '68.64',
   discount: '0.00',
+  coupon_code: '',
+  coupon_amount: '0.00',
+  member_plan: '',
+  member_amount: '0.00',
   delivery_fee: '49.00',
   total: '499.00',
   paid: '0.00',
+  gift_card_paid: '0.00',
   refunded: '0.00',
   tracking_note: '',
   cancel_reason: '',
@@ -301,6 +311,81 @@ describe('customer shop', () => {
       expect(shopApi.cancelMyOrder).toHaveBeenCalledWith('o1', 'Changed my mind'),
     );
     expect(await screen.findByText(/was refunded/)).toBeInTheDocument();
+  });
+
+  it('applies a coupon at checkout and sends it with the order', async () => {
+    vi.mocked(shopApi.quoteCart).mockImplementation(async (_items, coupon) =>
+      coupon
+        ? {
+            ...quote,
+            coupon_code: 'SAVE10',
+            coupon_amount: '45.00',
+            member_plan: 'Gold',
+            member_amount: '40.50',
+            discount: '85.50',
+            total: '413.50',
+          }
+        : quote,
+    );
+    vi.mocked(shopApi.listAddresses).mockResolvedValue([
+      { id: 'a1', label: 'Home', is_default: true, ...order.address },
+    ]);
+    vi.mocked(shopApi.placeOrder).mockResolvedValue(order);
+    cart.add('p1');
+    const user = userEvent.setup();
+    renderAt('/customer/shop');
+    await user.click(await screen.findByRole('button', { name: 'Checkout' }));
+    await user.type(await screen.findByLabelText('Coupon code'), 'save10');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    const summary = screen.getByRole('region', { name: 'Order summary' });
+    expect(await within(summary).findByText('Coupon SAVE10')).toBeInTheDocument();
+    expect(within(summary).getByText('Gold membership')).toBeInTheDocument();
+    expect(within(summary).getByText('₹413.50')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Place order' }));
+    await waitFor(() =>
+      expect(shopApi.placeOrder).toHaveBeenCalledWith({
+        items: [{ product: 'p1', quantity: 1 }],
+        address_id: 'a1',
+        coupon: 'SAVE10',
+      }),
+    );
+  });
+
+  it('shows why a coupon cannot be used and keeps the normal price', async () => {
+    vi.mocked(shopApi.quoteCart).mockImplementation(async (_items, coupon) => {
+      if (coupon) {
+        throw {
+          isAxiosError: true,
+          response: { status: 400, data: { detail: 'NOPE has expired.', field: 'coupon' } },
+        };
+      }
+      return quote;
+    });
+    cart.add('p1');
+    const user = userEvent.setup();
+    renderAt('/customer/shop');
+    await user.click(await screen.findByRole('button', { name: 'Checkout' }));
+    await user.type(await screen.findByLabelText('Coupon code'), 'NOPE');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('NOPE has expired.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Coupon code')).toHaveAttribute('aria-invalid', 'true');
+    expect(
+      within(screen.getByRole('region', { name: 'Order summary' })).getByText('₹499.00'),
+    ).toBeInTheDocument();
+  });
+
+  it('pays part of an order with a gift card', async () => {
+    vi.mocked(shopApi.payOrder).mockResolvedValue({ ...paid, gift_card_paid: '300.00' });
+    const user = userEvent.setup();
+    renderAt('/customer/orders/o1');
+    await user.type(await screen.findByLabelText(/Gift card code/), 'ABCDE-FGHJK-LMNPQ-RSTUV');
+    await user.type(screen.getByLabelText(/Amount from the gift card/), '300');
+    await user.click(screen.getByRole('button', { name: 'Pay ₹499.00' }));
+    expect(shopApi.payOrder).toHaveBeenCalledWith('o1', 'success', {
+      code: 'ABCDE-FGHJK-LMNPQ-RSTUV',
+      amount: '300',
+    });
+    expect(await screen.findByText(/₹300.00 paid by gift card/)).toBeInTheDocument();
   });
 
   it('lists my orders as cards', async () => {

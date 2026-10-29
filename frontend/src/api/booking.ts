@@ -115,7 +115,21 @@ export interface PaymentState {
   state: 'due' | 'replaced' | 'expired' | 'paid' | 'none';
   amount: string;
   expires_at: string | null;
+  /** Task 8.5: the online price step by step (coupon, then membership). */
+  quote?: PaymentQuote | null;
+  coupon_error?: string;
   appointment: CustomerAppointment;
+}
+
+export interface PaymentQuote {
+  items_total: string;
+  coupon_code: string;
+  coupon_amount: string;
+  member_plan: string;
+  member_percent: string;
+  member_amount: string;
+  discount: string;
+  total: string;
 }
 
 export async function getBookingOptions(service: string): Promise<BookingOptions> {
@@ -155,9 +169,13 @@ export async function actOnAppointment(
   return data;
 }
 
-export async function getPayment(id: string, link?: string | null): Promise<PaymentState> {
+export async function getPayment(
+  id: string,
+  link?: string | null,
+  coupon?: string,
+): Promise<PaymentState> {
   const { data } = await api.get<PaymentState>(`/my/appointments/${id}/payment/`, {
-    params: link ? { link } : {},
+    params: { ...(link ? { link } : {}), ...(coupon ? { coupon } : {}) },
   });
   return data;
 }
@@ -167,12 +185,14 @@ export async function payAppointment(
   outcome: 'success' | 'fail',
   link?: string | null,
   gift?: { code: string; amount?: string } | null,
+  coupon?: string,
 ): Promise<{ appointment: CustomerAppointment }> {
   const { data } = await api.post<{ appointment: CustomerAppointment }>(
     `/my/appointments/${id}/payment/`,
     {
       outcome,
       link: link ?? '',
+      ...(coupon ? { coupon } : {}),
       ...(gift?.code
         ? { gift_card_code: gift.code, ...(gift.amount ? { gift_card_amount: gift.amount } : {}) }
         : {}),

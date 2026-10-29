@@ -72,7 +72,7 @@ def check_usable(coupon: Coupon, customer, manual_percent: Decimal) -> None:
         raise CheckoutError(f"{coupon.code} has expired.")
     if manual_percent > 0 and not coupon.stackable:
         raise CheckoutError(f"{coupon.code} cannot be used together with another discount.")
-    used = CouponRedemption.objects.filter(coupon=coupon)
+    used = CouponRedemption.objects.filter(coupon=coupon, released_at__isnull=True)
     if coupon.total_limit is not None and used.count() >= coupon.total_limit:
         raise CheckoutError(f"{coupon.code} has been fully used.")
     if customer is not None and used.filter(customer=customer).count() >= coupon.per_customer_limit:
@@ -81,6 +81,8 @@ def check_usable(coupon: Coupon, customer, manual_percent: Decimal) -> None:
 
 def usage(coupons) -> dict:
     rows = (
-        CouponRedemption.objects.filter(coupon__in=coupons).values("coupon").annotate(n=Count("id"))
+        CouponRedemption.objects.filter(coupon__in=coupons, released_at__isnull=True)
+        .values("coupon")
+        .annotate(n=Count("id"))
     )
     return {str(r["coupon"]): r["n"] for r in rows}

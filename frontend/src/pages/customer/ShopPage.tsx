@@ -12,6 +12,7 @@ import {
   type Address,
   type AddressInput,
   type DeliveryRules,
+  type Quote,
   type ShopProduct,
 } from '../../api/shop';
 import { PageHeader } from '../../components/layout/PageContainer';
@@ -191,11 +192,11 @@ function QuantityStepper({
   );
 }
 
-function useQuote() {
+function useQuote(coupon = '') {
   const items = useCart();
   return useQuery({
-    queryKey: ['shop-quote', items],
-    queryFn: () => quoteCart(items),
+    queryKey: ['shop-quote', items, coupon],
+    queryFn: () => (coupon ? quoteCart(items, coupon) : quoteCart(items)),
     enabled: items.length > 0,
     retry: false,
   });
@@ -259,7 +260,16 @@ function Totals({
   quote,
   delivery,
 }: {
-  quote: { items_total: string; delivery_fee: string; discount: string; total: string };
+  quote: Pick<
+    Quote,
+    | 'items_total'
+    | 'delivery_fee'
+    | 'total'
+    | 'coupon_code'
+    | 'coupon_amount'
+    | 'member_plan'
+    | 'member_amount'
+  >;
   delivery: DeliveryRules;
 }) {
   const gap =
@@ -272,10 +282,16 @@ function Totals({
         <dt>Items (incl. GST)</dt>
         <dd>{formatINRExact(quote.items_total)}</dd>
       </div>
-      {Number(quote.discount) > 0 && (
+      {Number(quote.coupon_amount) > 0 && (
         <div className="flex justify-between text-text-muted">
-          <dt>Discount</dt>
-          <dd>- {formatINRExact(quote.discount)}</dd>
+          <dt>Coupon {quote.coupon_code}</dt>
+          <dd>- {formatINRExact(quote.coupon_amount)}</dd>
+        </div>
+      )}
+      {Number(quote.member_amount) > 0 && (
+        <div className="flex justify-between text-text-muted">
+          <dt>{quote.member_plan} membership</dt>
+          <dd>- {formatINRExact(quote.member_amount)}</dd>
         </div>
       )}
       <div className="flex justify-between text-text-muted">
@@ -328,7 +344,21 @@ function Checkout({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const items = useCart();
-  const quote = useQuote();
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const quote = useQuote(coupon);
+  const tryCoupon = useMutation({
+    mutationFn: (code: string) => quoteCart(items, code),
+    onSuccess: (q) => {
+      setCoupon(q.coupon_code);
+      setCouponError('');
+    },
+    onError: (error: unknown) =>
+      setCouponError(
+        shopFieldError(error)?.message ?? genericErrorMessage(error, 'That coupon cannot be used.'),
+      ),
+  });
   const addresses = useQuery({ queryKey: ['my-addresses'], queryFn: listAddresses });
   const [picked, setPicked] = useState<string | 'new' | null>(null);
   const [form, setForm] = useState<AddressInput>(EMPTY_ADDRESS);
@@ -343,8 +373,8 @@ function Checkout({
     mutationFn: () =>
       placeOrder(
         choice === 'new'
-          ? { items, address: form, save_address: saveIt }
-          : { items, address_id: choice },
+          ? { items, address: form, save_address: saveIt, ...(coupon ? { coupon } : {}) }
+          : { items, address_id: choice, ...(coupon ? { coupon } : {}) },
       ),
     onSuccess: (order) => {
       cart.clear();
@@ -362,6 +392,9 @@ function Checkout({
       if (issue && issue.field in EMPTY_ADDRESS) {
         setErrors({ [issue.field]: issue.message });
         setProblem('');
+      } else if (issue?.field === 'coupon') {
+        setCoupon('');
+        setCouponError(issue.message);
       } else {
         setProblem(genericErrorMessage(error, 'We could not place your order.'));
       }
@@ -483,8 +516,44 @@ function Checkout({
             <Totals quote={quote.data} delivery={delivery} />
           </>
         )}
+        <div className="flex items-end gap-xs">
+          <div className="min-w-0 flex-1">
+            <Input
+              label="Coupon code"
+              autoComplete="off"
+              value={couponInput}
+              error={couponError || undefined}
+              onChange={(e) => setCouponInput(e.target.value)}
+            />
+          </div>
+          {coupon ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setCoupon('');
+                setCouponInput('');
+              }}
+            >
+              Remove
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              loading={tryCoupon.isPending}
+              disabled={!couponInput.trim()}
+              onClick={() => tryCoupon.mutate(couponInput.trim())}
+            >
+              Apply
+            </Button>
+          )}
+        </div>
         <p className="text-xs text-text-muted">
-          Your items are held for {delivery.payment_hold_minutes} minutes while you pay.
+          Your items are held for {delivery.payment_hold_minutes} minutes while you pay. A gift card
+          can be used on the payment step.
         </p>
         {problem && (
           <p role="alert" className="text-sm font-medium text-danger-text">

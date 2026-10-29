@@ -107,6 +107,7 @@ class PaySerializer(serializers.Serializer):
     gift_card_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True, min_value=0
     )
+    coupon = serializers.CharField(max_length=40, required=False, allow_blank=True)
 
 
 class _AppointmentBase(serializers.ModelSerializer):

@@ -130,7 +130,9 @@ def check_usable(card: GiftCard) -> Decimal:
     return balance
 
 
-def redeem(card_id, amount, *, payment: Payment, actor=None) -> GiftCardEntry:
+def redeem(
+    card_id, amount, *, payment: Payment | None = None, order_payment=None, actor=None
+) -> GiftCardEntry:
     """Takes `amount` from the card. The card row is locked, so two payments at the same moment
     can never spend the same rupees, and the balance never goes below zero."""
     amount = money(amount)
@@ -146,7 +148,38 @@ def redeem(card_id, amount, *, payment: Payment, actor=None) -> GiftCardEntry:
             delta=-amount,
             reason=GiftCardEntry.Reason.REDEEMED,
             payment=payment,
+            order_payment=order_payment,
             actor=actor if getattr(actor, "pk", None) else None,
+        )
+
+
+def refund_order_payment(order_payment, *, actor=None, note: str = "") -> GiftCardEntry | None:
+    """A shop order paid with a gift card was cancelled: the rupees go back on that card."""
+    used = (
+        GiftCardEntry.objects.filter(
+            order_payment=order_payment, reason=GiftCardEntry.Reason.REDEEMED
+        )
+        .select_related("card")
+        .first()
+    )
+    if used is None:
+        return None
+    with transaction.atomic():
+        card = GiftCard.objects.select_for_update().get(pk=used.card_id)
+        if GiftCardEntry.objects.filter(
+            order_payment=order_payment, reason=GiftCardEntry.Reason.REFUNDED
+        ).exists():
+            return None
+        if is_expired(card):
+            card.expires_at = timezone.now() + timedelta(days=30)
+            card.save(update_fields=["expires_at"])
+        return GiftCardEntry.objects.create(
+            card=card,
+            delta=-used.delta,
+            reason=GiftCardEntry.Reason.REFUNDED,
+            order_payment=order_payment,
+            actor=actor if getattr(actor, "pk", None) else None,
+            note=note[:300],
         )
 
 

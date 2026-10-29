@@ -16,12 +16,14 @@ from django.utils import timezone
 
 from accounts.audit import audit
 from accounts.models import AuditLog
-from billing import tender
+from billing import online, tender
+from billing.pos import CheckoutError
 from core import brand, crypto
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
 from inventory import stock
 from inventory.models import Product, StockMovement
+from marketing.models import CouponRedemption
 from shop.models import (
     Address,
     Order,
@@ -32,6 +34,7 @@ from shop.models import (
     OrderSequence,
     OrderStatus,
 )
+from wallet import giftcards
 from website.content import shop_settings
 
 S = OrderStatus
@@ -115,11 +118,15 @@ class PricedLine:
 @dataclass
 class Quote:
     lines: list[PricedLine] = field(default_factory=list)
-    items_total: Decimal = ZERO
-    gst_included: Decimal = ZERO
-    discount: Decimal = ZERO
-    delivery_fee: Decimal = ZERO
-    total: Decimal = ZERO
+    breakdown: online.Breakdown | None = None
+
+    @property
+    def items_total(self) -> Decimal:
+        return self.breakdown.items_total
+
+    @property
+    def total(self) -> Decimal:
+        return self.breakdown.total
 
     def data(self) -> dict:
         return {
@@ -133,11 +140,7 @@ class Quote:
                 }
                 for ln in self.lines
             ],
-            "items_total": str(money(self.items_total)),
-            "gst_included": str(money(self.gst_included)),
-            "discount": str(money(self.discount)),
-            "delivery_fee": str(money(self.delivery_fee)),
-            "total": str(money(self.total)),
+            **self.breakdown.data(),
         }
 
 
@@ -195,27 +198,46 @@ def delivery_fee_for(items_total: Decimal) -> Decimal:
     return fee
 
 
-def price(items, *, lock: bool = False) -> Quote:
+def price(
+    items, *, customer=None, coupon_code: str = "", lock: bool = False, coupon_lock: bool = False
+) -> Quote:
+    """Prices a cart with the online engine: items, coupon, membership, delivery (in that order).
+    The gift card is not part of the price; it is used when paying."""
     wanted = _wanted(items)
     products = _products(wanted, lock=lock)
     quote = Quote()
     for pid, qty in wanted.items():
         p = products[pid]
-        amount = money(p.unit_price * qty)
         quote.lines.append(
             PricedLine(
                 product=p,
                 quantity=qty,
                 unit_price=p.unit_price,
                 gst_percent=p.gst_percent,
-                amount=amount,
+                amount=money(p.unit_price * qty),
             )
         )
     quote.lines.sort(key=lambda ln: ln.product.name)
-    quote.items_total = sum((ln.amount for ln in quote.lines), ZERO)
-    quote.gst_included = sum((ln.gst for ln in quote.lines), ZERO)
-    quote.delivery_fee = delivery_fee_for(quote.items_total)
-    quote.total = max(quote.items_total - quote.discount, ZERO) + quote.delivery_fee
+    items_total = sum((ln.amount for ln in quote.lines), ZERO)
+    try:
+        coupon = online.find_coupon(coupon_code, customer, lock=coupon_lock)
+        quote.breakdown = online.calculate(
+            [
+                online.Item(
+                    kind="product",
+                    description=ln.product.name,
+                    amount=ln.amount,
+                    gst_percent=ln.gst_percent,
+                    key=str(ln.product.id),
+                )
+                for ln in quote.lines
+            ],
+            customer=customer,
+            coupon=coupon,
+            delivery_fee=delivery_fee_for(items_total),
+        )
+    except CheckoutError as exc:
+        raise ShopError(exc.message, field="coupon") from exc
     return quote
 
 
@@ -358,7 +380,23 @@ def order_data(order: Order, *, viewer=None, staff: bool = False) -> dict:
         "items_total": str(order.items_total),
         "gst_included": str(order.gst_included),
         "discount": str(order.discount),
+        "coupon_code": order.coupon_code,
+        "coupon_amount": str(order.coupon_amount),
+        "member_plan": order.member_plan,
+        "member_amount": str(order.member_amount),
         "delivery_fee": str(order.delivery_fee),
+        "gift_card_paid": str(
+            money(
+                sum(
+                    (
+                        p.amount
+                        for p in order.payments.all()
+                        if p.method == "gift_card" and p.status == OrderPayment.Status.SUCCEEDED
+                    ),
+                    ZERO,
+                )
+            )
+        ),
         "total": str(order.total),
         "paid": str(money(paid_total(order))),
         "refunded": str(money(sum((r.amount for r in order.refunds.all()), ZERO))),
@@ -466,8 +504,17 @@ def _refund_all(order: Order, *, actor=None, reason: str) -> Decimal:
             reason=reason[:300],
             actor=actor if getattr(actor, "is_authenticated", False) else None,
         )
+        if payment.method == "gift_card":
+            giftcards.refund_order_payment(payment, actor=actor, note=f"{order.number}: {reason}")
         total += payment.amount
     return total
+
+
+def _release_coupon(order: Order) -> None:
+    """A cancelled or expired order gives its coupon use back."""
+    CouponRedemption.objects.filter(order=order, released_at__isnull=True).update(
+        released_at=timezone.now()
+    )
 
 
 def expire_due(now=None) -> int:
@@ -485,13 +532,22 @@ def expire_due(now=None) -> int:
             order.status = S.PAYMENT_EXPIRED
             order.save(update_fields=["status", "updated_at"])
             _return_stock(order, note="payment time ran out")
+            _release_coupon(order)
             _step(order, S.PAYMENT_EXPIRED, previous=S.PENDING_PAYMENT)
             audit(AuditLog.Action.ORDER_EXPIRED, target=order.customer, order=order.number)
             count += 1
     return count
 
 
-def place(customer, items, *, address: dict | None = None, address_id=None, request=None) -> Order:
+def place(
+    customer,
+    items,
+    *,
+    address: dict | None = None,
+    address_id=None,
+    coupon_code: str = "",
+    request=None,
+) -> Order:
     """Creates an order waiting for payment and holds its stock. One transaction."""
     expire_due()
     if address_id:
@@ -503,7 +559,11 @@ def place(customer, items, *, address: dict | None = None, address_id=None, requ
         ship = clean_address(address or {})
     rules = shop_settings()
     with transaction.atomic():
-        quote = price(items, lock=True)
+        # The coupon row is locked too, so two orders cannot both take its last use.
+        quote = price(
+            items, customer=customer, coupon_code=coupon_code, lock=True, coupon_lock=True
+        )
+        b = quote.breakdown
         for ln in quote.lines:
             have = stock.level(ln.product)
             if have < ln.quantity:
@@ -525,11 +585,16 @@ def place(customer, items, *, address: dict | None = None, address_id=None, requ
             ship_city=ship["city"],
             ship_state=ship["state"],
             ship_pincode=ship["pincode"],
-            items_total=quote.items_total,
-            gst_included=quote.gst_included,
-            discount=quote.discount,
-            delivery_fee=quote.delivery_fee,
-            total=quote.total,
+            items_total=b.items_total,
+            gst_included=b.gst_included,
+            discount=b.discount,
+            coupon=b.coupon,
+            coupon_code=b.coupon.code if b.coupon else "",
+            coupon_amount=b.coupon_amount,
+            member_plan=b.member_plan,
+            member_amount=b.member_amount,
+            delivery_fee=b.delivery_fee,
+            total=b.total,
             pay_until=now + timedelta(minutes=int(rules["payment_hold_minutes"] or 30)),
         )
         for ln in quote.lines:
@@ -551,6 +616,10 @@ def place(customer, items, *, address: dict | None = None, address_id=None, requ
                 order=order,
                 note=order.number,
             )
+        if b.coupon is not None:
+            CouponRedemption.objects.create(
+                coupon=b.coupon, order=order, customer=customer, amount=b.coupon_amount
+            )
         _step(order, S.PENDING_PAYMENT, actor=customer)
         audit(
             AuditLog.Action.ORDER_PLACED,
@@ -558,6 +627,8 @@ def place(customer, items, *, address: dict | None = None, address_id=None, requ
             actor=customer,
             order=order.number,
             total=str(order.total),
+            coupon=order.coupon_code,
+            discount=str(order.discount),
         )
         if order.total <= 0:
             _mark_paid(order, actor=customer, reference="", request=request)
@@ -580,9 +651,26 @@ def _mark_paid(order: Order, *, actor, reference: str, request=None) -> None:
     email_customer(order, "is confirmed", "Thank you! We received your payment and will pack it.")
 
 
-def pay(order_id, *, customer, succeed: bool, request=None) -> tuple[Order, bool]:
-    """Pays an order through the simulated gateway. Returns (order, paid)."""
+def pay(
+    order_id,
+    *,
+    customer,
+    succeed: bool,
+    gift_code: str = "",
+    gift_amount=None,
+    ip: str | None = None,
+    request=None,
+) -> tuple[Order, bool]:
+    """Pays an order. A gift card pays first (all or part); the rest goes through the simulated
+    gateway. If the gateway part fails, nothing is taken from the card either. Returns
+    (order, paid)."""
     expire_due()
+    card = None
+    if gift_code:
+        try:
+            card = giftcards.find(gift_code, user=customer, ip=ip, request=request)
+        except giftcards.GiftCardError as exc:
+            raise ShopError(exc.message, field="gift_card_code") from exc
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id, customer=customer).first()
         if order is None:
@@ -596,18 +684,52 @@ def pay(order_id, *, customer, succeed: bool, request=None) -> tuple[Order, bool
         if order.status != S.PENDING_PAYMENT:
             raise ShopError("There is no payment waiting for this order.", code="conflict")
         due = order.total - paid_total(order)
-        if not succeed:
+        from_card = ZERO
+        if card is not None:
+            try:
+                balance = giftcards.check_usable(card)
+            except giftcards.GiftCardError as exc:
+                raise ShopError(exc.message, field="gift_card_code") from exc
+            wanted = due if gift_amount in (None, "") else money(gift_amount)
+            from_card = min(wanted, balance, due)
+            if from_card <= 0:
+                raise ShopError(
+                    "Enter an amount to take from the gift card.", field="gift_card_amount"
+                )
+        rest = due - from_card
+        if rest > 0 and not succeed:
             OrderPayment.objects.create(
                 order=order,
-                amount=due,
+                amount=rest,
                 status=OrderPayment.Status.FAILED,
                 reference=tender.reference("MOCK"),
             )
             return order, False
         reference = tender.reference("MOCK")
-        OrderPayment.objects.create(
-            order=order, amount=due, status=OrderPayment.Status.SUCCEEDED, reference=reference
-        )
+        if from_card > 0:
+            gift_payment = OrderPayment.objects.create(
+                order=order,
+                method="gift_card",
+                amount=from_card,
+                status=OrderPayment.Status.SUCCEEDED,
+                reference=tender.reference("GIFT"),
+            )
+            try:
+                giftcards.redeem(card.pk, from_card, order_payment=gift_payment, actor=customer)
+            except giftcards.GiftCardError as exc:
+                raise ShopError(exc.message, code="conflict", field="gift_card_code") from exc
+            audit(
+                AuditLog.Action.GIFT_CARD_REDEEMED,
+                request=request,
+                actor=customer,
+                card=giftcards.mask(card.last4),
+                amount=str(from_card),
+                order=order.number,
+            )
+        if rest > 0:
+            OrderPayment.objects.create(
+                order=order, amount=rest, status=OrderPayment.Status.SUCCEEDED, reference=reference
+            )
         _mark_paid(order, actor=customer, reference=reference, request=request)
     return order, True
 
@@ -619,6 +741,7 @@ def _cancel(order: Order, *, actor, reason: str, who: str, request=None) -> Deci
     order.pay_until = None
     order.save(update_fields=["status", "cancel_reason", "pay_until", "updated_at"])
     _return_stock(order, actor=actor, note=f"cancelled by the {who}")
+    _release_coupon(order)
     refunded = _refund_all(order, actor=actor, reason=f"Order cancelled by the {who}: {reason}")
     _step(order, S.CANCELLED, actor=actor, previous=previous, note=reason)
     audit(

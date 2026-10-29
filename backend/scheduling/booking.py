@@ -20,11 +20,13 @@ from django.utils import timezone
 
 from accounts import otp
 from accounts.tokens import hash_token, new_link_token
-from billing import tender
+from billing import online, tender
 from billing.models import Payment, PaymentLink, Refund
+from billing.pos import CheckoutError
 from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
+from marketing.models import CouponRedemption
 from people import ratings
 from people.models import DayOffRequest, StylistProfile
 from scheduling.models import (
@@ -731,6 +733,7 @@ def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
 
         if not package_settings()["no_show_consumes_session"]:
             packagecodes.release(appt, note=f"Cancelled by the salon: {reason}", actor=actor)
+        release_coupon(appt)
         pending = _request_refunds(appt, f"Cancelled by the salon: {reason}")
         record(appt, "cancelled_by_salon", actor=actor, from_status=previous, note=reason)
         intro = f"We are sorry: your booking was cancelled by the salon.\nReason: {reason}"
@@ -948,6 +951,23 @@ def active_link(appt: Appointment, token: str | None) -> PaymentLink | None:
     return links.first()
 
 
+def payment_breakdown(appt: Appointment, link: PaymentLink, *, coupon_code: str = "", lock=False):
+    """What the customer pays online for this booking, step by step (billing.online)."""
+    item = online.Item(kind="service", description=appt.service_name, amount=link.amount)
+    try:
+        coupon = online.find_coupon(coupon_code, appt.customer, lock=lock)
+        return online.calculate([item], customer=appt.customer, coupon=coupon)
+    except CheckoutError as exc:
+        raise BookingError(exc.message, field="coupon") from exc
+
+
+def release_coupon(appt: Appointment) -> None:
+    """A cancelled booking gives its online coupon use back."""
+    CouponRedemption.objects.filter(
+        appointment=appt, invoice__isnull=True, released_at__isnull=True
+    ).update(released_at=timezone.now())
+
+
 def pay(
     appt_id,
     *,
@@ -956,14 +976,16 @@ def pay(
     succeed: bool,
     gift_code: str = "",
     gift_amount=None,
+    coupon_code: str = "",
     ip: str | None = None,
     request=None,
 ) -> tuple[Appointment, bool]:
     """Pays the held booking. Returns (appointment, paid).
 
-    A gift card can pay all or part of it; any rest goes through the simulated gateway
-    (`succeed` is that gateway's result). If the gateway part fails, nothing is taken from the
-    card either.
+    The amount is worked out by the online engine (billing.online): the confirmed price, then a
+    coupon, then the customer's membership discount, then a gift card last. A gift card can pay
+    all or part of it; any rest goes through the simulated gateway (`succeed` is that gateway's
+    result). If the gateway part fails, nothing is taken from the card either.
     """
     expire_due()
     card = None
@@ -987,7 +1009,8 @@ def pay(
                 "from My Appointments.",
                 code="conflict",
             )
-        due = link.amount
+        b = payment_breakdown(appt, link, coupon_code=coupon_code, lock=True)
+        due = b.total
         from_card = Decimal("0")
         if card is not None:
             try:
@@ -1037,9 +1060,27 @@ def pay(
         link.save(update_fields=["status", "paid_at"])
         appt.status = S.SCHEDULED
         appt.awaiting_payment_until = None
-        appt.save(update_fields=["status", "awaiting_payment_until", "updated_at"])
+        appt.prepay_coupon = b.coupon
+        appt.prepay_coupon_amount = b.coupon_amount
+        appt.prepay_member_amount = b.member_amount
+        appt.save(
+            update_fields=[
+                "status",
+                "awaiting_payment_until",
+                "prepay_coupon",
+                "prepay_coupon_amount",
+                "prepay_member_amount",
+                "updated_at",
+            ]
+        )
+        if b.coupon is not None:
+            CouponRedemption.objects.create(
+                coupon=b.coupon, appointment=appt, customer=customer, amount=b.coupon_amount
+            )
         record(appt, "paid", actor=customer, from_status=S.AWAITING_PAYMENT, note=reference)
         how = f" Rs. {from_card} came from your gift card." if from_card > 0 else ""
+        if b.discount > 0:
+            how += f" You saved Rs. {b.discount}."
         email_customer(
             appt,
             "payment received",
@@ -1124,6 +1165,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
             )
             refunded += payment.amount
         packagecodes.release(appt, note="Free cancellation by the customer", actor=customer)
+        release_coupon(appt)
         record(appt, "cancelled", actor=customer, from_status=previous, note=reason)
         intro = "Your booking has been cancelled."
         if refunded:

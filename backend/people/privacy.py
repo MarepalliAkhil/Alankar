@@ -275,7 +275,7 @@ def coupon_export(user: User) -> list[dict]:
             "name": c.name,
             "valid_until": c.ends_on.isoformat() if c.ends_on else None,
             "active": c.is_active,
-            "used": c.redemptions.exists(),
+            "used": c.redemptions.filter(released_at__isnull=True).exists(),
         }
         for c in Coupon.objects.filter(customer=user)
     ]

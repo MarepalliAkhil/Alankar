@@ -283,6 +283,57 @@ describe('payment page', () => {
     );
   });
 
+  it('applies a coupon, shows the coupon and membership lines, and pays the lower amount', async () => {
+    const base = {
+      state: 'due' as const,
+      amount: '1000.00',
+      expires_at: '2026-10-27T14:00:00Z',
+      appointment: awaiting,
+    };
+    vi.mocked(bookingApi.getPayment).mockImplementation(async (_id, _link, coupon) =>
+      coupon === 'FLAT100'
+        ? {
+            ...base,
+            quote: {
+              items_total: '1000.00',
+              coupon_code: 'FLAT100',
+              coupon_amount: '100.00',
+              member_plan: 'Gold',
+              member_percent: '10.00',
+              member_amount: '90.00',
+              discount: '190.00',
+              total: '810.00',
+            },
+            coupon_error: '',
+          }
+        : coupon
+          ? { ...base, coupon_error: 'That coupon code is not valid.' }
+          : base,
+    );
+    vi.mocked(bookingApi.payAppointment).mockResolvedValue({ appointment: awaiting });
+    const user = userEvent.setup();
+    renderAt('/customer/pay/ap2?link=tok123');
+    const box = await screen.findByLabelText(/Coupon code/);
+    await user.type(box, 'nope');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('That coupon code is not valid.')).toBeInTheDocument();
+    await user.clear(box);
+    await user.type(box, 'flat100');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Coupon FLAT100')).toBeInTheDocument();
+    expect(screen.getByText(/Gold membership/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Pay ₹810/ }));
+    await waitFor(() =>
+      expect(bookingApi.payAppointment).toHaveBeenCalledWith(
+        'ap2',
+        'success',
+        'tok123',
+        null,
+        'FLAT100',
+      ),
+    );
+  });
+
   it.each([
     ['expired', 'This payment link has expired'],
     ['replaced', 'This link was replaced by a newer one'],

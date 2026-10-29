@@ -14,6 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.audit import client_ip
 from core.throttles import BOOKING_THROTTLES
 from shop import orders
 from shop.models import Address, Order, OrderStatus
@@ -33,6 +34,7 @@ def error_response(exc: orders.ShopError) -> Response:
 
 class CartSerializer(serializers.Serializer):
     items = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+    coupon = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
 
 
 class PlaceSerializer(CartSerializer):
@@ -43,6 +45,10 @@ class PlaceSerializer(CartSerializer):
 
 class OutcomeSerializer(serializers.Serializer):
     outcome = serializers.ChoiceField(choices=["success", "fail"], default="success")
+    gift_card_code = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    gift_card_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True, min_value=0
+    )
 
 
 class ReasonSerializer(serializers.Serializer):
@@ -81,7 +87,11 @@ class MyShopQuoteView(APIView):
         body = CartSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         try:
-            quote = orders.price(body.validated_data["items"])
+            quote = orders.price(
+                body.validated_data["items"],
+                customer=request.user,
+                coupon_code=body.validated_data["coupon"],
+            )
         except orders.ShopError as exc:
             return error_response(exc)
         return Response(quote.data())
@@ -160,12 +170,22 @@ class MyOrdersView(APIView):
         try:
             if data.get("address_id"):
                 order = orders.place(
-                    request.user, data["items"], address_id=data["address_id"], request=request
+                    request.user,
+                    data["items"],
+                    address_id=data["address_id"],
+                    coupon_code=data["coupon"],
+                    request=request,
                 )
             else:
                 address = data.get("address") or {}
                 orders.clean_address(address)
-                order = orders.place(request.user, data["items"], address=address, request=request)
+                order = orders.place(
+                    request.user,
+                    data["items"],
+                    address=address,
+                    coupon_code=data["coupon"],
+                    request=request,
+                )
                 if data.get("save_address"):
                     try:
                         orders.save_address(request.user, address)
@@ -205,6 +225,9 @@ class MyOrderPayView(APIView):
                 pk,
                 customer=request.user,
                 succeed=body.validated_data["outcome"] == "success",
+                gift_code=body.validated_data.get("gift_card_code") or "",
+                gift_amount=body.validated_data.get("gift_card_amount"),
+                ip=client_ip(request),
                 request=request,
             )
         except orders.ShopError as exc:
