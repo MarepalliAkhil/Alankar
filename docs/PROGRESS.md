@@ -1561,3 +1561,14 @@ and grants `CREATEDB` via the container's trusted local socket.
 
 Next: wait for the owner to confirm `pytest -q` and the DB fix both pass on their PC before Task 10
 or any further Task 8.5 work begins.
+
+## Status update (2026-10-29, owner's instruction)
+- Synced the sandbox from GitHub `main` (`0803e6e`, "WIP: Task 8 and partial Task 8.5").
+- **Task 8.5 is NOT done.** Done: part 1 (gift-card codes) and part 5 (packages). Not done yet:
+  part 2 (Shop and Orders), part 3 (coupons), part 4 (products in booking), part 6 (Memberships),
+  part 7 (tests), part 8 (policy, menus, chatbot) and part 9 (docs and delivery). Resuming now, in
+  that order.
+- **Task 10 is NOT done** and is not started.
+- **Task 11 (UI redesign) is ON HOLD** until Task 8.5 and Task 10 pass on the owner's PC. The plan
+  for it was agreed in outline (themes Midnight Studio / Sage Calm / Rose Glow, glass components,
+  scroll-driven 3D hero, staff photo background) and will be restated before work starts.
