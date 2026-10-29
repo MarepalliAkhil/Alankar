@@ -1727,3 +1727,22 @@ and the delivery figures come from the shop settings. Admin > Settings gained an
 section (delivery charge, free delivery on/off and threshold, most of one product per order, time
 to pay). Tests: `chatbot/tests/test_shop_answers.py` (13), the existing chatbot accuracy sets
 still pass unchanged, 2 new settings tests and 1 frontend settings test.
+
+### Task 8.5 parts 7 and 9: tests and delivery (sandbox done; waiting for the owner's PC run)
+Part 7 was done alongside each part: every new endpoint is in the automated allowed/denied sweep,
+and each part has its own business-rule, isolation, denial and concurrency tests (shop 44,
+coupons/engine 28, products in booking 19, memberships 14, chatbot 13, settings 3; frontend 23 new
+tests across shop, booking, memberships and settings).
+
+Sandbox verification at commit `44f9e50` (real date, no faked clock):
+- `ruff check .`: All checks passed!   `ruff format --check .`: 294 files already formatted
+- backend `pytest`: 1389 passed in 978.38s (0:16:18)
+- frontend `vitest`: Test Files 29 passed (29), Tests 406 passed (406)
+- `eslint . --max-warnings 0` and `prettier --check .`: clean
+- Not runnable in this sandbox (its node_modules are partial shims, not a real `npm install`):
+  `npm run typecheck` / `npm run build` (the `recharts` stub has no types; rollup's native parser
+  is a shim) and the Playwright browser tests (Vite's dev server cannot pre-bundle dependencies
+  here, and `@axe-core/playwright` is not installed). These must be run on the owner's PC.
+
+**Task 8.5 is NOT marked done** until the owner confirms the PC run (pytest, npm test, lint,
+typecheck, build, Playwright) and the browser walkthrough.
