@@ -156,6 +156,8 @@ export interface MembershipRow {
   period_end: string;
   cancelled_at: string | null;
   can_renew: boolean;
+  ended_at?: string | null;
+  end_reason?: string;
   customer_name?: string;
   customer_id?: string;
   ledger?: MembershipLedgerRow[];

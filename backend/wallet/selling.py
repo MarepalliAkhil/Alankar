@@ -339,9 +339,15 @@ def renew_membership(customer, *, channel, method="", succeed=True, actor=None):
     now = timezone.now()
     with transaction.atomic():
         end_lapsed(customer, now)
+        # A cancelled membership that is still running can be renewed too: renewing takes the
+        # cancellation back (Task 8.5 part 6).
         m = (
             Membership.objects.select_for_update()
-            .filter(customer=customer, status=Membership.Status.ACTIVE, period_end__gt=now)
+            .filter(
+                customer=customer,
+                status__in=[Membership.Status.ACTIVE, Membership.Status.CANCELLED],
+                period_end__gt=now,
+            )
             .first()
         )
         if m is None:
@@ -357,7 +363,11 @@ def renew_membership(customer, *, channel, method="", succeed=True, actor=None):
         m.period_start = m.period_end
         m.period_end = add_months(m.period_end, m.period_months)
         m.sessions_left = m.included_sessions
-        m.save(update_fields=["period_start", "period_end", "sessions_left"])
+        m.status = Membership.Status.ACTIVE
+        m.cancelled_at = None
+        m.save(
+            update_fields=["period_start", "period_end", "sessions_left", "status", "cancelled_at"]
+        )
         MembershipEntry.objects.create(
             membership=m,
             reason=MembershipEntry.Reason.RENEWED,
@@ -391,6 +401,37 @@ def cancel_membership(customer, *, actor=None) -> Membership:
             reason=MembershipEntry.Reason.CANCELLED,
             sessions_after=m.sessions_left,
             actor=actor if getattr(actor, "pk", None) else None,
+        )
+    return m
+
+
+def end_membership(membership_id, *, actor, reason: str) -> Membership:
+    """The admin ends a membership now, with a reason. Benefits stop at once; no money moves
+    automatically (a refund, if any, goes through the normal refund screens)."""
+    reason = " ".join(str(reason or "").split())
+    if len(reason) < 3:
+        raise WalletError("Give a reason (at least 3 characters).")
+    now = timezone.now()
+    with transaction.atomic():
+        m = Membership.objects.select_for_update().filter(pk=membership_id).first()
+        if m is None:
+            raise WalletError("That membership was not found.", code="not_found")
+        end_lapsed(m.customer, now)
+        m.refresh_from_db()
+        if m.status == Membership.Status.ENDED:
+            raise WalletError("This membership has already ended.", code="conflict")
+        m.status = Membership.Status.ENDED
+        m.period_end = now
+        m.sessions_left = 0
+        m.ended_at = now
+        m.end_reason = reason[:300]
+        m.save(update_fields=["status", "period_end", "sessions_left", "ended_at", "end_reason"])
+        MembershipEntry.objects.create(
+            membership=m,
+            reason=MembershipEntry.Reason.ENDED,
+            sessions_after=0,
+            actor=actor if getattr(actor, "pk", None) else None,
+            note=reason[:300],
         )
     return m
 

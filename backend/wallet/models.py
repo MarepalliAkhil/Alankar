@@ -296,6 +296,9 @@ class Membership(models.Model):
     period_end = models.DateTimeField()
     sessions_left = models.PositiveSmallIntegerField(default=0)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    # Task 8.5 part 6: the admin ended it early, with a reason.
+    ended_at = models.DateTimeField(null=True, blank=True)
+    end_reason = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.db import transaction
+from django.db.models import Q
 from django.http import Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
@@ -18,7 +20,7 @@ from waitlist import engine
 from waitlist.models import WaitlistEntry, WaitlistOffer
 from wallet import cancellation, data, giftcards, packagecodes, selling
 from wallet.errors import WalletError
-from wallet.models import MembershipPlan, Package, PackagePurchase
+from wallet.models import Membership, MembershipPlan, Package, PackagePurchase
 from website.content import package_settings
 
 STATUS = {
@@ -688,3 +690,106 @@ class DeskCheckGiftCardView(APIView):
     )
     def post(self, request: Request) -> Response:
         return _check_card(request)
+
+
+# --------------------------------------------------------------------------- memberships page
+
+
+class MyMembershipsView(APIView):
+    """Task 8.5 part 6: the customer's own Memberships page -- the current membership, past
+    ones, and the plans on offer (to join, or buy again after one ended)."""
+
+    policy_action = "my.memberships.list"
+
+    @extend_schema(summary="My memberships and the plans on offer", responses={200: None})
+    def get(self, request: Request) -> Response:
+        with transaction.atomic():
+            selling.end_lapsed(request.user)
+        rows = list(
+            Membership.objects.filter(customer=request.user).prefetch_related("entries__invoice")
+        )
+        current = next(
+            (
+                m
+                for m in rows
+                if m.status in (Membership.Status.ACTIVE, Membership.Status.CANCELLED)
+            ),
+            None,
+        )
+        return Response(
+            {
+                "current": data.membership_data(current, ledger=True) if current else None,
+                "past": [
+                    data.membership_data(m) for m in rows if m.status == Membership.Status.ENDED
+                ],
+                "plans": catalogue()["plans"],
+            }
+        )
+
+
+def _member_rows(request):
+    qs = Membership.objects.select_related("customer")
+    wanted = request.query_params.get("status", "")
+    if wanted in Membership.Status.values:
+        qs = qs.filter(status=wanted)
+    plan = request.query_params.get("plan", "")
+    if plan:
+        qs = qs.filter(plan_name__iexact=plan[:80])
+    q = " ".join(request.query_params.get("q", "").split())[:60]
+    if q:
+        qs = qs.filter(Q(customer__full_name__icontains=q) | Q(customer__email__icontains=q))
+    return qs
+
+
+class MembersView(APIView):
+    """Receptionist and admin: members with filters (status, plan, name or email)."""
+
+    policy_action = "members.list"
+
+    @extend_schema(summary="Members, with filters", responses={200: None})
+    def get(self, request: Request) -> Response:
+        rows = list(_member_rows(request).order_by("-started_at")[:200])
+        counts = {s: Membership.objects.filter(status=s).count() for s in Membership.Status.values}
+        plans = sorted(set(Membership.objects.values_list("plan_name", flat=True)))
+        role = getattr(request.user, "role", "")
+        return Response(
+            {
+                "members": [
+                    {
+                        **data.membership_data(m, admin=True),
+                        "customer_email": m.customer.email,
+                        "can_end": role == "admin" and m.status != Membership.Status.ENDED,
+                    }
+                    for m in rows
+                ],
+                "counts": counts,
+                "plans": plans,
+            }
+        )
+
+
+class EndSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=300, allow_blank=True)
+
+
+class MemberEndView(APIView):
+    policy_action = "memberships.end"
+
+    @extend_schema(summary="End a membership now, with a reason", request=EndSerializer)
+    def post(self, request: Request, pk) -> Response:
+        body = EndSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            m = selling.end_membership(pk, actor=request.user, reason=body.validated_data["reason"])
+        except WalletError as exc:
+            return error_response(exc)
+        audit(
+            AuditLog.Action.MEMBERSHIP_ENDED,
+            request=request,
+            actor=request.user,
+            target=m.customer,
+            membership=str(m.pk),
+            plan=m.plan_name,
+            reason=m.end_reason,
+        )
+        return Response({**data.membership_data(m, admin=True), "can_end": False})

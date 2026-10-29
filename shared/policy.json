@@ -192,7 +192,10 @@
     "orders.cancel": "Cancel an online order with a reason (refunds what was paid)",
     "my.shop.next_visit": "See which upcoming visit a product would be added to",
     "my.visit_products.add": "Add a product to my next visit (paid at the salon)",
-    "my.visit_products.remove": "Take a pay-at-the-salon product off my visit"
+    "my.visit_products.remove": "Take a pay-at-the-salon product off my visit",
+    "my.memberships.list": "See my Memberships page (current, past and plans on offer)",
+    "members.list": "See members with filters (status, plan, name or email)",
+    "memberships.end": "End a membership now, with a reason"
   },
   "public": {
     "api": [
@@ -299,7 +302,8 @@
         "my.orders.cancel",
         "my.shop.next_visit",
         "my.visit_products.add",
-        "my.visit_products.remove"
+        "my.visit_products.remove",
+        "my.memberships.list"
       ],
       "routes": [
         "/customer/pay/:id",
@@ -380,6 +384,14 @@
           "status": "available"
         },
         {
+          "id": "memberships",
+          "label": "Memberships",
+          "path": "/customer/memberships",
+          "description": "Your membership: benefits, sessions left, renew or cancel, and buy a plan again after it ends.",
+          "task": "Task 8e",
+          "status": "available"
+        },
+        {
           "id": "waitlist",
           "label": "Waitlist",
           "path": "/customer/waitlist",
@@ -437,7 +449,8 @@
         "payslips.own",
         "orders.list",
         "orders.read",
-        "orders.advance"
+        "orders.advance",
+        "members.list"
       ],
       "routes": [
         "/customers/:id",
@@ -489,6 +502,14 @@
           "label": "Orders",
           "path": "/orders",
           "description": "Online shop orders: filter, open one, mark packed, shipped and delivered.",
+          "task": "Task 8e",
+          "status": "available"
+        },
+        {
+          "id": "members",
+          "label": "Memberships",
+          "path": "/memberships",
+          "description": "Members with filters (view only).",
           "task": "Task 8e",
           "status": "available"
         },
@@ -690,7 +711,9 @@
         "orders.list",
         "orders.read",
         "orders.advance",
-        "orders.cancel"
+        "orders.cancel",
+        "members.list",
+        "memberships.end"
       ],
       "routes": [
         "/customers/:id",
@@ -790,6 +813,14 @@
           "label": "Orders",
           "path": "/orders",
           "description": "Online shop orders: filter, open one, mark packed, shipped and delivered, or cancel with a refund.",
+          "task": "Task 8e",
+          "status": "available"
+        },
+        {
+          "id": "members",
+          "label": "Memberships",
+          "path": "/memberships",
+          "description": "Members with filters: end a membership with a reason.",
           "task": "Task 8e",
           "status": "available"
         },

@@ -6,6 +6,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 
 from wallet import giftcards, selling
 from wallet.models import (
@@ -131,7 +132,10 @@ def membership_data(m: Membership, *, ledger: bool = False, admin: bool = False)
         "started_at": m.started_at,
         "period_end": m.period_end,
         "cancelled_at": m.cancelled_at,
-        "can_renew": m.status == Membership.Status.ACTIVE,
+        "can_renew": m.status in (Membership.Status.ACTIVE, Membership.Status.CANCELLED)
+        and m.period_end > timezone.now(),
+        "ended_at": m.ended_at,
+        "end_reason": m.end_reason,
     }
     if admin:
         data["customer_name"] = m.customer.full_name

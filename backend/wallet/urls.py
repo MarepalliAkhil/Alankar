@@ -16,6 +16,7 @@ my_wallet_patterns = [
         "gift-cards/<uuid:pk>/reveal/", v.MyGiftCardRevealView.as_view(), name="my-giftcard-reveal"
     ),
     path("packages/", v.MyPackagesView.as_view(), name="my-packages"),
+    path("memberships/", v.MyMembershipsView.as_view(), name="my-memberships"),
     path(
         "packages/<uuid:pk>/reveal/", v.MyPackageRevealCodeView.as_view(), name="my-package-reveal"
     ),
@@ -100,4 +101,10 @@ admin_wallet_patterns = [
         a.AdminWaitlistCancelView.as_view(),
         name="admin-waitlist-cancel",
     ),
+]
+
+# /api/memberships/ (receptionist and admin; ending one is admin only)
+member_patterns = [
+    path("", v.MembersView.as_view(), name="members"),
+    path("<uuid:pk>/end/", v.MemberEndView.as_view(), name="member-end"),
 ]

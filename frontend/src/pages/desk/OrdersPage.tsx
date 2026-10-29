@@ -49,7 +49,7 @@ export default function OrdersPage() {
         description="Online shop orders. Pack paid orders, hand them to delivery, mark them delivered."
       />
       {counts && (
-        <div className="flex flex-wrap gap-sm" aria-label="Work waiting">
+        <div className="flex flex-wrap gap-sm" role="group" aria-label="Work waiting">
           <Badge tone="primary">{counts.placed ?? 0} to pack</Badge>
           <Badge tone="info">{counts.packed ?? 0} to ship</Badge>
           <Badge tone="info">{counts.shipped ?? 0} out for delivery</Badge>

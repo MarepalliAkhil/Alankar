@@ -1280,6 +1280,14 @@ message (verified / to run / walkthrough / limitations) has gone out.
   products together, so the online payment still balances the bill exactly.
 - **Recommended products are chosen per service category** by the admin (Services > Categories);
   only active products sold online are offered to customers.
+- **Memberships: renewing a cancelled membership takes the cancellation back.** A customer who
+  cancelled keeps the benefits to the end of the period; "Renew" during that time re-activates it
+  and adds a period. Joining a second plan while one is still running stays refused. After a
+  membership ends, the customer can buy any plan again ("Buy again").
+- **Memberships: the admin can end one early with a reason** (benefits stop at once, sessions go to
+  0, a ledger row and an audit entry keep the reason). No money moves automatically; a refund, if
+  any, goes through the normal refund screens. Receptionists see the member list (filters by
+  status, plan, name or email) but cannot end memberships.
 (further decisions are appended below as each part is built)
 
 ### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
@@ -1689,3 +1697,15 @@ coupon across service and products, checkout billing without double deduction, c
 stock back for reject / expiry / customer cancel / salon cancel / no-show, add and remove for the
 next visit, admin audit, role denials, a two-thread race for the last bottle) and 4 new frontend
 tests.
+
+### Task 8.5 part 6: memberships -- cancel, renew, buy again (DONE, committed, verified in sandbox)
+Backend: `wallet.selling.renew_membership` also renews a cancelled-but-running membership;
+`end_membership` (admin, reason, audited `membership_ended`); `Membership.ended_at`/`end_reason`
+(migration `wallet/0005`). Endpoints: `GET /api/my/wallet/memberships/` (customer page: current,
+past, plans), `GET /api/memberships/` (receptionist and admin, filters and counts),
+`POST /api/memberships/<id>/end/` (admin). Policy: `my.memberships.list`, `members.list`,
+`memberships.end`; customer menu "Memberships", receptionist and admin menu "Memberships".
+Frontend: `MembershipsPage` (benefits, renew, cancel with confirmation, plans with Join / Buy again,
+past memberships with the end reason) and `MembersPage` (status chips, plan and search filters,
+admin-only "End membership" with a required reason).
+Tests: `wallet/tests/test_memberships_page.py` (14) and `src/pages/memberships.test.tsx` (5).

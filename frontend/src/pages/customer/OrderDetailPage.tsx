@@ -94,7 +94,7 @@ export default function OrderDetailPage() {
         )}
       </div>
       {o.status === 'pending_payment' && (
-        <Card className="flex flex-col gap-sm" aria-label="Payment">
+        <Card as="section" className="flex flex-col gap-sm" aria-label="Payment">
           <p className="text-sm text-text">
             Pay <span className="font-semibold">{formatINRExact(o.total)}</span>
             {o.pay_until && ` by ${formatDateTime(o.pay_until)}`} to confirm your order. Your items
@@ -155,7 +155,7 @@ export default function OrderDetailPage() {
           </p>
         </Card>
       )}
-      <Card aria-label="Tracking">
+      <Card as="section" aria-label="Tracking">
         <OrderTimeline order={o} />
       </Card>
       <div className="grid gap-lg md:grid-cols-2">

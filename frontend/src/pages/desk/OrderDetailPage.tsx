@@ -90,11 +90,11 @@ export default function OrderDetailPage() {
           <span className="text-sm text-text-muted">Cancelled: {o.cancel_reason}</span>
         )}
       </div>
-      <Card aria-label="Tracking">
+      <Card as="section" aria-label="Tracking">
         <OrderTimeline order={o} />
       </Card>
       {(next || o.actions.includes('cancel')) && (
-        <Card className="flex flex-col gap-sm" aria-label="Next step">
+        <Card as="section" className="flex flex-col gap-sm" aria-label="Next step">
           {next?.to === 'shipped' && (
             <Input
               label="Delivery note (optional)"

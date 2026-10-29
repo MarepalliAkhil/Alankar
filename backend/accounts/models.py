@@ -110,6 +110,7 @@ class AuditLog(models.Model):
         MEMBERSHIP_JOINED = "membership_joined", "Membership started"
         MEMBERSHIP_RENEWED = "membership_renewed", "Membership renewed"
         MEMBERSHIP_CANCELLED = "membership_cancelled", "Membership cancelled"
+        MEMBERSHIP_ENDED = "membership_ended", "Membership ended early by the admin"
         MEMBERSHIP_SESSION_RESTORED = "membership_session_restored", "Membership session put back"
         GIFT_CARD_SOLD = "gift_card_sold", "Gift card sold"
         GIFT_CARD_REDEEMED = "gift_card_redeemed", "Gift card used to pay"
