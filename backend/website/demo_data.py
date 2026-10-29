@@ -423,6 +423,36 @@ PRODUCTS = [
     ("CMB-001", "Wide-tooth Comb", "Accessories", 120, 12, 30, 10),
 ]
 
+# Task 8.5: shop descriptions for the demo products (only written where none is set yet) and the
+# products suggested in the booking sheet for each service category (only set where the admin has
+# not chosen any yet).
+PRODUCT_DESCRIPTIONS = {
+    "SHP-001": "A mild daily shampoo for all hair types.",
+    "CND-001": "Smooths and detangles; use after shampoo.",
+    "SRM-001": "A few drops tame frizz and add shine.",
+    "HMK-001": "A weekly deep-conditioning mask for dry or treated hair.",
+    "CLR-001": "At-home touch-up colour, natural brown.",
+    "CLR-002": "At-home touch-up colour, deep black.",
+    "FWS-001": "A gentle, soap-free face wash for everyday use.",
+    "FKT-001": "Everything for a glow facial at home, in four steps.",
+    "SUN-001": "Broad-spectrum sun protection, light and non-greasy.",
+    "MOL-001": "The oil our therapists use, for a relaxing massage at home.",
+    "WAX-001": "Refill cartridge for warm-wax kits.",
+    "NLP-001": "Long-wear nail polish in a classic red.",
+    "NLP-002": "Long-wear nail polish in a soft nude.",
+    "CMB-001": "Detangles wet hair without pulling.",
+}
+RECOMMENDED_PRODUCTS = {
+    "Haircuts": ["SHP-001", "CND-001", "CMB-001"],
+    "Hair Colour": ["CLR-001", "CLR-002", "HMK-001"],
+    "Hair Treatments": ["HMK-001", "SRM-001"],
+    "Massages": ["MOL-001"],
+    "Body Treatments": ["MOL-001"],
+    "Skin": ["FWS-001", "FKT-001", "SUN-001"],
+    "Nails": ["NLP-001", "NLP-002"],
+    "Waxing & Threading": ["WAX-001"],
+}
+
 # Longer descriptions for the demo services (2 to 3 factual sentences, no medical claims). They are
 # only written to services whose description is still empty, so the admin's own text is never
 # overwritten. The chatbot's "tell me about <service>" answer is built from these.

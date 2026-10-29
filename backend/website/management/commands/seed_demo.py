@@ -7,7 +7,17 @@ from django.utils.text import slugify
 from inventory.models import Product, StockMovement
 from people.models import StylistProfile
 from scheduling.models import Room, Service, ServiceAddon, ServiceCategory, ServiceVariant
-from website.demo_data import CATALOGUE, DESCRIPTIONS, FAQS, PRODUCTS, ROOMS, SITE_CONTENT, TEAM
+from website.demo_data import (
+    CATALOGUE,
+    DESCRIPTIONS,
+    FAQS,
+    PRODUCT_DESCRIPTIONS,
+    PRODUCTS,
+    RECOMMENDED_PRODUCTS,
+    ROOMS,
+    SITE_CONTENT,
+    TEAM,
+)
 from website.models import KnowledgeEntry, SiteContent
 
 
@@ -116,6 +126,13 @@ class Command(BaseCommand):
                     delta=opening,
                     reason=StockMovement.Reason.OPENING,
                     note="Opening stock (demo data)",
+                )
+            if not product.description and sku in PRODUCT_DESCRIPTIONS:
+                Product.objects.filter(pk=product.pk).update(description=PRODUCT_DESCRIPTIONS[sku])
+        for category in ServiceCategory.objects.filter(name__in=RECOMMENDED_PRODUCTS):
+            if not category.recommended_products.exists():
+                category.recommended_products.set(
+                    Product.objects.filter(sku__in=RECOMMENDED_PRODUCTS[category.name])
                 )
         for key, value in SITE_CONTENT.items():
             _, made = SiteContent.objects.get_or_create(key=key, defaults={"value": value})

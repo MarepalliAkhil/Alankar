@@ -43,10 +43,10 @@ flowchart LR
 
 | Role | Signs in at | Lands on | Can do |
 |---|---|---|---|
-| Customer | `/login` (Customer tab) | `/customer-dashboard` | Book, pay, cancel, rate, see own invoices, chat |
-| Receptionist | `/login` (Receptionist tab) | `/dashboard` | Confirm bookings, check in, POS billing, customers, view stock |
+| Customer | `/login` (Customer tab) | `/customer-dashboard` | Book (with products), pay (coupon, gift card), cancel, rate, own invoices, chat, Shop and My Orders, Packages, Memberships |
+| Receptionist | `/login` (Receptionist tab) | `/dashboard` | Confirm bookings, check in, POS billing, customers, view stock, move shop orders along, see members |
 | Stylist | `/login` (Stylist tab) | `/my-day` | Own visits: start, complete; own ratings and pay estimate |
-| Admin | `/login` (Admin tab) | `/dashboard` | Everything above plus staff, catalogue, stock, refunds, payroll, reports, audit log |
+| Admin | `/login` (Admin tab) | `/dashboard` | Everything above plus staff, catalogue, stock, refunds, payroll, reports, audit log, cancel shop orders, end memberships, shop settings |
 
 Staff never register: the admin invites them from **Staff** (the invite email shows in the dev mailbox).
 
@@ -351,6 +351,25 @@ If you ever do need a clean slate (not required for this issue): `docker compose
 the `salon-db-data` volume and all data in it, including every booking, customer and staff record
 you've created. Never run this without confirming first.
 
+## Online shop, coupons, products with a visit, memberships (Task 8.5)
+
+- **Shop** (customer menu): products marked "Sold in the online shop" in Admin > Inventory are
+  listed with their description. Prices, GST, coupon, membership discount and delivery are always
+  worked out by the server. Placing an order holds the stock; an unpaid order expires after the
+  "time to pay" in Admin > Settings > Online shop and the stock goes back.
+- **Orders** (receptionist and admin menu): filter by status, search, date range; mark packed,
+  hand to delivery (with a courier note), mark delivered. Only the admin cancels, with a reason;
+  everything paid is refunded and the stock goes back.
+- **Coupons** work at the shop checkout and on the booking payment page. Online, the order is
+  items, coupon, membership, package, delivery, gift card last. A coupon used online for a booking
+  is carried to the counter so the bill matches what was paid.
+- **Products with a visit**: Admin > Services > Categories > "Recommended products" decides what
+  the booking sheet offers. Products picked there are paid online with the booking; "Add to my
+  next appointment" in the Shop adds pay-at-the-salon items. Either way the stock is held and the
+  POS bills them once.
+- **Memberships** (customer menu): renew (also takes back a cancellation), cancel, buy again after
+  it ends. Admin > Memberships can end one early with a reason.
+
 ## Known limitations
 
 - Anyone can lock another person's account for 15 minutes by typing wrong passwords for that email; the owner can unlock it.
@@ -361,3 +380,7 @@ you've created. Never run this without confirming first.
 - Payments use a **mock gateway**; no real money moves. A real gateway is not integrated.
 - Browser tests that book "today" cannot run in the last ~30 minutes before midnight (shop time, Asia/Kolkata).
 - Deployment (HTTPS, reverse proxy, scheduled backups) is not set up yet: this is Task 12.
+- The shop delivers only (no "collect at the salon"); delivery has no courier integration, staff
+  type the courier and tracking number by hand.
+- The counter (POS) keeps its own discount order (membership before coupon), which can differ by
+  a few rupees from the online order for a flat coupon combined with a membership.
