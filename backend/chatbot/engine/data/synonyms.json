@@ -159,6 +159,32 @@
       "gpay",
       "paytm",
       "googlepay"
+    ],
+    "order": [
+      "orders",
+      "parcel",
+      "parcels",
+      "shipment"
+    ],
+    "deliver": [
+      "delivery",
+      "delivered",
+      "delivering",
+      "shipping",
+      "ship",
+      "shipped",
+      "courier",
+      "dispatch"
+    ],
+    "track": [
+      "tracking",
+      "tracked"
+    ],
+    "product": [
+      "products"
+    ],
+    "membership": [
+      "memberships"
     ]
   },
   "phrases": {
@@ -237,6 +263,16 @@
     "noshow": [
       "no show",
       "missed appointment"
+    ],
+    "couponcode": [
+      "coupon code",
+      "promo code",
+      "discount code",
+      "apply coupon",
+      "apply a coupon",
+      "use coupon",
+      "use a coupon",
+      "apply code"
     ]
   },
   "surface": {

@@ -124,4 +124,41 @@ BUILTIN_KB = [
         "tags": ["contact", "phone", "call", "email"],
         "answer": "Call us on {phone} or email {email}.",
     },
+    # ---- Task 8.5 ----
+    {
+        "id": "shop_delivery",
+        "question": "Do you deliver products? What is the delivery charge?",
+        "tags": ["shop", "delivery", "deliver", "order", "products", "charge", "free"],
+        "answer": "Yes. Order hair, skin and spa products from Shop in your account and we deliver them to your address. Delivery costs Rs {delivery_fee}, and it is free for orders of Rs {free_delivery_over} or more. Track every order under My Orders.",
+    },
+    {
+        "id": "order_cancel",
+        "question": "How do I cancel a shop order?",
+        "tags": ["order", "cancel", "refund", "shop"],
+        "answer": "Open My Orders, pick the order and choose Cancel this order. You can cancel while it is waiting for payment or paid but not yet packed, and anything you paid is refunded to the way you paid. Once it is packed, please call the salon.",
+    },
+    {
+        "id": "coupon_howto",
+        "question": "How do I use a coupon code?",
+        "tags": ["coupon", "code", "promo", "discount", "apply"],
+        "answer": "Type the code in the Coupon box when you check out in the Shop, or on the page where you pay for a booking, then choose Apply. One coupon per bill. A membership discount is worked out after the coupon, and a gift card pays last.",
+    },
+    {
+        "id": "products_with_booking",
+        "question": "Can I add products to my appointment?",
+        "tags": ["products", "appointment", "add", "booking", "visit"],
+        "answer": "Yes. The booking sheet suggests products for your service: add them and they are kept for you and paid online with the booking. You can also open Shop and choose Add to my next appointment; those are kept for your visit and paid at the salon.",
+    },
+    {
+        "id": "package_cancel",
+        "question": "How do I cancel a package and get a refund?",
+        "tags": ["package", "cancel", "refund", "sessions"],
+        "answer": "Open Packages, choose Cancel for a refund on the package and tell us why. You see an estimate for the unused sessions; the salon reviews every request and the refund is paid once it is approved.",
+    },
+    {
+        "id": "membership_manage",
+        "question": "How do I renew, cancel or buy a membership again?",
+        "tags": ["membership", "renew", "cancel", "again", "plan"],
+        "answer": "Open Memberships. Renew adds another period (renewing also takes back a cancellation). Cancel keeps your benefits until the end of the period. After a membership ends, pick a plan and choose Buy again.",
+    },
 ]

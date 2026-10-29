@@ -120,6 +120,12 @@ const settings: opsApi.BusinessSettings = {
     refund_expired_packages: false,
     no_show_consumes_session: true,
   },
+  online_shop: {
+    delivery_fee: 49,
+    free_delivery_over: 999,
+    max_quantity_per_order: 10,
+    payment_hold_minutes: 30,
+  },
 };
 
 const close: opsApi.CashCloseRow = {
@@ -336,6 +342,27 @@ describe('settings', () => {
     await user.click(screen.getByRole('button', { name: 'Save security' }));
     expect(await screen.findByText(/5 to 120/)).toBeInTheDocument();
     expect(opsApi.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('saves the online shop rules, with free delivery switched off', async () => {
+    const user = userEvent.setup();
+    vi.mocked(opsApi.saveSettings).mockResolvedValue(settings);
+    renderAt('/settings');
+    const fee = await screen.findByLabelText(/Delivery charge/);
+    await user.clear(fee);
+    await user.type(fee, '60');
+    await user.click(screen.getByLabelText('Free delivery for bigger orders'));
+    await user.click(screen.getByRole('button', { name: 'Save online shop' }));
+    await waitFor(() =>
+      expect(opsApi.saveSettings).toHaveBeenCalledWith({
+        online_shop: {
+          delivery_fee: 60,
+          free_delivery_over: null,
+          max_quantity_per_order: 10,
+          payment_hold_minutes: 30,
+        },
+      }),
+    );
   });
 
   it('turns on a package refund deadline and saves the cancellation rules', async () => {

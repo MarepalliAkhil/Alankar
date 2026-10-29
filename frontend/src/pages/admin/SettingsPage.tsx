@@ -62,6 +62,7 @@ export default function SettingsPage() {
           <SecuritySection value={settings.data.security} />
           <RatingSection value={settings.data.rating} />
           <PackagesSection value={settings.data.packages} />
+          {settings.data.online_shop && <OnlineShopSection value={settings.data.online_shop} />}
         </>
       )}
     </div>
@@ -607,6 +608,85 @@ function PackagesSection({ value }: { value: BusinessSettings['packages'] }) {
         label="A no-show or a late desk-cancellation still uses up the session (turn off to give the session back instead)"
         checked={noShowConsumes}
         onChange={(e) => setNoShowConsumes(e.target.checked)}
+      />
+    </Section>
+  );
+}
+
+function OnlineShopSection({ value }: { value: NonNullable<BusinessSettings['online_shop']> }) {
+  const [fee, setFee] = useState(String(value.delivery_fee));
+  const [hasFree, setHasFree] = useState(value.free_delivery_over !== null);
+  const [freeOver, setFreeOver] = useState(String(value.free_delivery_over ?? 999));
+  const [maxQty, setMaxQty] = useState(String(value.max_quantity_per_order));
+  const [hold, setHold] = useState(String(value.payment_hold_minutes));
+  const { save, problem, setProblem } = useSection();
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const feeNumber = wholeNumber(fee, 0, 5000);
+    if (feeNumber === null)
+      return setProblem('Delivery charge: a whole number of rupees, 0 to 5000.');
+    let over: number | null = null;
+    if (hasFree) {
+      over = wholeNumber(freeOver, 1, 1000000);
+      if (over === null) return setProblem('Free delivery from: a whole number of rupees.');
+    }
+    const qty = wholeNumber(maxQty, 1, 50);
+    if (qty === null) return setProblem('Most of one product per order: 1 to 50.');
+    const minutes = wholeNumber(hold, 5, 1440);
+    if (minutes === null) return setProblem('Time to pay: 5 to 1440 minutes.');
+    setProblem('');
+    save.mutate({
+      online_shop: {
+        delivery_fee: feeNumber,
+        free_delivery_over: over,
+        max_quantity_per_order: qty,
+        payment_hold_minutes: minutes,
+      },
+    });
+  };
+  return (
+    <Section
+      id="online-shop"
+      title="Online shop"
+      description="Delivery charge, free-delivery threshold, how many of one product an order may have, and how long an unpaid order holds its stock."
+      onSubmit={submit}
+      pending={save.isPending}
+      problem={problem}
+    >
+      <Input
+        label="Delivery charge (₹)"
+        inputMode="numeric"
+        value={fee}
+        onChange={(e) => setFee(e.target.value)}
+        className="max-w-xs"
+      />
+      <Checkbox
+        label="Free delivery for bigger orders"
+        checked={hasFree}
+        onChange={(e) => setHasFree(e.target.checked)}
+      />
+      {hasFree && (
+        <Input
+          label="Free delivery from (₹ of items)"
+          inputMode="numeric"
+          value={freeOver}
+          onChange={(e) => setFreeOver(e.target.value)}
+          className="max-w-xs"
+        />
+      )}
+      <Input
+        label="Most of one product per order"
+        inputMode="numeric"
+        value={maxQty}
+        onChange={(e) => setMaxQty(e.target.value)}
+        className="max-w-xs"
+      />
+      <Input
+        label="Time to pay before the order expires (minutes)"
+        inputMode="numeric"
+        value={hold}
+        onChange={(e) => setHold(e.target.value)}
+        className="max-w-xs"
       />
     </Section>
   );

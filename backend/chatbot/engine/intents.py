@@ -81,6 +81,7 @@ INTENTS: list[Intent] = [
         "service_price",
         {"price": 3, "rate": 2, "rupees": 1, "budget": 1, "cheap": 1, "affordable": 1},
         entity_boost={"service": 1, "division": 0.5, "gender": 0.5},
+        excludes=["deliver", "order"],
         template="What is the price of {what}?",
     ),
     Intent(
@@ -171,6 +172,7 @@ INTENTS: list[Intent] = [
         "cancel_info",
         {"cancel": 3, "policy": 1.5, "free": 1, "window": 1.5},
         phrases=[("cancel appointment", 2), ("cancel book", 2)],
+        excludes=["order", "package", "membership"],
         template="How do I cancel an appointment and what is the policy?",
     ),
     Intent(
@@ -318,6 +320,60 @@ INTENTS += [
     ),
 ]
 
+# ---- Task 8.5: shop, orders, coupons, products with a visit, packages, memberships ----
+INTENTS += [
+    Intent(
+        "my_orders",
+        {"order": 3, "track": 2, "status": 1.5, "deliver": 1, "where": 1, "arrive": 1.5},
+        phrases=[("where order", 3), ("track order", 3), ("order status", 3)],
+        personal=True,
+        howto_penalty=0.5,
+        requires=["order"],
+        excludes=["cancel"],
+        template="Where is my order?",
+    ),
+    Intent(
+        "shop_delivery",
+        {"deliver": 3, "price": 1, "free": 1.5, "long": 1, "home": 1, "shop": 1},
+        phrases=[("deliver price", 3)],
+        requires=["deliver"],
+        excludes=["cancel"],
+        template="Do you deliver, and what does delivery cost?",
+    ),
+    Intent(
+        "order_cancel",
+        {"cancel": 2.5, "order": 3, "refund": 1},
+        requires=["order"],
+        template="How do I cancel a shop order?",
+    ),
+    Intent(
+        "coupon_howto",
+        {"couponcode": 4, "offer": 1, "apply": 2, "use": 1},
+        requires=["couponcode", "apply"],
+        template="How do I use a coupon code?",
+    ),
+    Intent(
+        "products_with_booking",
+        {"product": 3, "appointment": 1.5, "add": 2, "visit": 1, "book": 1},
+        requires=["product"],
+        excludes=["order", "deliver"],
+        template="Can I add products to my appointment?",
+    ),
+    Intent(
+        "package_cancel",
+        {"package": 3, "cancel": 3, "refund": 2},
+        requires=["package"],
+        template="How do I cancel a package and get a refund?",
+    ),
+    Intent(
+        "membership_manage",
+        {"membership": 3, "cancel": 2, "renew": 2, "again": 1.5, "rejoin": 2, "buy": 1},
+        requires=["membership"],
+        howto_penalty=1.0,
+        template="How do I renew, cancel or buy a membership again?",
+    ),
+]
+
 INTENTS.append(
     Intent(
         "service_details",
@@ -356,4 +412,10 @@ INTENT_TO_KB = {
     "register_help": "register_help",
     "offers": "offers",
     "loyalty_info": "loyalty_info",
+    "shop_delivery": "shop_delivery",
+    "order_cancel": "order_cancel",
+    "coupon_howto": "coupon_howto",
+    "products_with_booking": "products_with_booking",
+    "package_cancel": "package_cancel",
+    "membership_manage": "membership_manage",
 }

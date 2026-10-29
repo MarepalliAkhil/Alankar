@@ -15,7 +15,7 @@ from chatbot.defaults import BUILTIN_KB
 from core import brand
 from people.models import Rating, StylistProfile
 from scheduling.models import Service
-from website.content import booking_settings, content
+from website.content import booking_settings, content, shop_settings
 from website.models import KnowledgeEntry
 
 DIVISION_KEY = {"salon": "salon", "spa": "spa", "beauty-parlor": "parlor"}
@@ -45,6 +45,7 @@ def hours_text(rows) -> str:
 def shop_facts() -> dict:
     contact = content("contact", {}) or {}
     booking = booking_settings()
+    shop_rules = shop_settings()
     return {
         "name": brand.SHOP_NAME,
         "address": contact.get("address") or "the address shown on the Contact section",
@@ -53,6 +54,8 @@ def shop_facts() -> dict:
         "hours": hours_text(content("hours", [])),
         "cancel_window_hours": booking["free_cancel_hours"],
         "link_valid_hours": booking["hold_hours"],
+        "delivery_fee": str(shop_rules.get("delivery_fee") or 0),
+        "free_delivery_over": str(shop_rules.get("free_delivery_over") or "-"),
     }
 
 

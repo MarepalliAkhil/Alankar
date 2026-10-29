@@ -142,4 +142,8 @@ SHOP_DEFAULTS = {
 
 def shop_settings() -> dict:
     stored = content("shop", {}) or {}
-    return {**SHOP_DEFAULTS, **{k: v for k, v in stored.items() if v is not None}}
+    # free_delivery_over may be saved as None on purpose: delivery is then never free.
+    return {
+        **SHOP_DEFAULTS,
+        **{k: v for k, v in stored.items() if v is not None or k == "free_delivery_over"},
+    }

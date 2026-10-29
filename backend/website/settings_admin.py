@@ -20,6 +20,7 @@ from website.content import (
     pay_rules,
     pos_settings,
     security_settings,
+    shop_settings,
 )
 from website.models import SiteContent
 
@@ -140,6 +141,18 @@ class PackageSettingsSerializer(serializers.Serializer):
     no_show_consumes_session = serializers.BooleanField(required=False)
 
 
+class OnlineShopSerializer(serializers.Serializer):
+    """Task 8.5: the online shop rules (SiteContent key "shop")."""
+
+    delivery_fee = serializers.IntegerField(min_value=0, max_value=5000, required=False)
+    # None = never free.
+    free_delivery_over = serializers.IntegerField(
+        min_value=1, max_value=1000000, required=False, allow_null=True
+    )
+    max_quantity_per_order = serializers.IntegerField(min_value=1, max_value=50, required=False)
+    payment_hold_minutes = serializers.IntegerField(min_value=5, max_value=1440, required=False)
+
+
 class SettingsSerializer(serializers.Serializer):
     shop = ShopSerializer(required=False)
     hours = HoursSerializer(required=False)
@@ -148,6 +161,7 @@ class SettingsSerializer(serializers.Serializer):
     security = SecuritySerializer(required=False)
     rating = RatingSerializer(required=False)
     packages = PackageSettingsSerializer(required=False)
+    online_shop = OnlineShopSerializer(required=False)
 
 
 def two(value) -> str:
@@ -175,6 +189,15 @@ def snapshot() -> dict:
         "billing": {"discount_cap_percent": pos_settings()["discount_cap_percent"]},
         "security": security_settings(),
         "packages": package_settings(),
+        "online_shop": {
+            k: shop_settings()[k]
+            for k in (
+                "delivery_fee",
+                "free_delivery_over",
+                "max_quantity_per_order",
+                "payment_hold_minutes",
+            )
+        },
         "rating": {
             "min_ratings": rules["min_ratings"],
             "flag_below": two(rules["flag_below"]),
@@ -236,6 +259,8 @@ class SettingsView(APIView):
                 save_key("security", dict(data["security"]))
             if "packages" in data:
                 save_key("packages", dict(data["packages"]))
+            if "online_shop" in data:
+                save_key("shop", dict(data["online_shop"]))
             if "rating" in data:
                 rating = data["rating"]
                 updates: dict = {}

@@ -26,6 +26,7 @@ URL_APPOINTMENTS = "/customer/appointments"
 URL_INVOICES = "/customer/invoices"
 URL_WALLET = "/customer/wallet"
 URL_BOOK = "/customer/book"
+URL_ORDERS = "/customer/orders"
 WORDS_NOT_LANGUAGE = "I can read English, and Telugu or Hindi words typed in English letters (for example 'haircut entha'). Please type your question using English letters."
 
 
@@ -79,6 +80,9 @@ class NullTools:
         return None
 
     def gift_cards(self, user_id):
+        return []
+
+    def orders(self, user_id):
         return []
 
 
@@ -477,6 +481,21 @@ class Engine:
                 else "You do not have any gift cards."
             )
             r.actions = [{"label": "Open My Wallet", "url": URL_WALLET}]
+        elif n == "my_orders":
+            items = tools.orders(uid)[:3]
+            r.text = (
+                (
+                    "Your latest orders:\n"
+                    + "\n".join(
+                        f"- {i['number']}: {i['status']}, Rs {i['total']}"
+                        + (f" ({i['note']})" if i.get("note") else "")
+                        for i in items
+                    )
+                )
+                if items
+                else "You have no shop orders yet."
+            )
+            r.actions = [{"label": "My Orders", "url": URL_ORDERS}]
         elif n == "my_loyalty":
             r.text = f"You have {tools.loyalty_points(uid)} loyalty points. You can redeem them at checkout."
             r.actions = [{"label": "Open My Wallet", "url": URL_WALLET}]
@@ -653,6 +672,8 @@ class Engine:
                 email=self.shop["email"],
                 cancel_window_hours=self.shop["cancel_window_hours"],
                 link_valid_hours=self.shop["link_valid_hours"],
+                delivery_fee=self.shop.get("delivery_fee", "49"),
+                free_delivery_over=self.shop.get("free_delivery_over", "999"),
             )
         )
 
@@ -665,6 +686,11 @@ class Engine:
                 {"label": "Call the salon", "url": f"tel:{self.shop['phone'].replace(' ', '')}"}
             ],
             "offers": [{"label": "My Wallet", "url": URL_WALLET}],
+            "shop_delivery": [{"label": "Shop", "url": "/customer/shop"}],
+            "order_cancel": [{"label": "My Orders", "url": URL_ORDERS}],
+            "products_with_booking": [{"label": "Shop", "url": "/customer/shop"}],
+            "package_cancel": [{"label": "Packages", "url": "/customer/packages"}],
+            "membership_manage": [{"label": "Memberships", "url": "/customer/memberships"}],
         }
         return list(m.get(kb_id, []))
 

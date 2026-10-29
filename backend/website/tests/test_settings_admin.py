@@ -237,3 +237,45 @@ def test_only_the_admin_reaches_the_settings(logged_in, role, method):
 @pytest.mark.parametrize("method", ["get", "patch"])
 def test_guests_cannot_reach_the_settings(client, method):
     assert call(client, method, URL, {}).status_code in (401, 403)
+
+
+# --------------------------------------------------------------------------- Task 8.5: online shop
+
+
+def test_the_admin_sets_the_online_shop_rules_and_they_are_used(logged_in):
+    from accounts.models import AuditLog
+    from shop.orders import delivery_fee_for
+    from website.content import shop_settings
+
+    admin, _ = logged_in("admin")
+    data = admin.get("/api/admin/settings/").json()
+    assert data["online_shop"]["delivery_fee"] == 49
+    r = admin.patch(
+        "/api/admin/settings/",
+        {
+            "online_shop": {
+                "delivery_fee": 30,
+                "free_delivery_over": None,
+                "payment_hold_minutes": 20,
+            }
+        },
+        content_type="application/json",
+    )
+    assert r.status_code == 200, r.content
+    rules = shop_settings()
+    assert rules["delivery_fee"] == 30 and rules["free_delivery_over"] is None
+    assert rules["payment_hold_minutes"] == 20
+    from decimal import Decimal
+
+    assert delivery_fee_for(Decimal("100000")) == Decimal("30.00")  # never free now
+    assert AuditLog.objects.filter(action="settings_changed").exists()
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [{"delivery_fee": -1}, {"payment_hold_minutes": 2}, {"max_quantity_per_order": 0}],
+)
+def test_bad_online_shop_rules_are_refused(logged_in, bad):
+    admin, _ = logged_in("admin")
+    r = admin.patch("/api/admin/settings/", {"online_shop": bad}, content_type="application/json")
+    assert r.status_code == 400

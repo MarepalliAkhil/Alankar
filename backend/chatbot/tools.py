@@ -126,3 +126,17 @@ class UserTools:
             for c in self._wallet()["gift_cards"]
             if c["status"] == "active" and not c["expired"]
         ]
+
+    def orders(self, _user_id=None):
+        """The customer's own latest shop orders (never the delivery address)."""
+        from shop.models import Order
+
+        return [
+            {
+                "number": o.number,
+                "status": o.get_status_display(),
+                "total": o.total,
+                "note": o.tracking_note,
+            }
+            for o in Order.objects.filter(customer=self.user).order_by("-created_at")[:3]
+        ]

@@ -1288,6 +1288,13 @@ message (verified / to run / walkthrough / limitations) has gone out.
   0, a ledger row and an audit entry keep the reason). No money moves automatically; a refund, if
   any, goes through the normal refund screens. Receptionists see the member list (filters by
   status, plan, name or email) but cannot end memberships.
+- **Chatbot: seven new question types**, all answered from the app's own data and settings:
+  where is my order (personal: the asker's own last three orders, number, status, total and the
+  delivery note -- never the address), delivery charge and free delivery (from the admin's shop
+  settings), cancelling an order, using a coupon code, adding products to an appointment,
+  cancelling a package for a refund, and renewing / cancelling / buying a membership again.
+  Package, membership and gift-card balance questions already existed and still show only the
+  last four characters of any code.
 (further decisions are appended below as each part is built)
 
 ### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
@@ -1709,3 +1716,14 @@ Frontend: `MembershipsPage` (benefits, renew, cancel with confirmation, plans wi
 past memberships with the end reason) and `MembersPage` (status chips, plan and search filters,
 admin-only "End membership" with a required reason).
 Tests: `wallet/tests/test_memberships_page.py` (14) and `src/pages/memberships.test.tsx` (5).
+
+### Task 8.5 part 8: menus, policy, chatbot and the shop settings screen (DONE, committed)
+Menus and policy actions were added with each part (customer: Shop, My Orders, Packages,
+Memberships; receptionist: Orders, Memberships; admin: Orders, Package Requests, Memberships), and
+the automated allowed/denied sweep (`core/tests/test_sweep.py`) covers every new endpoint for every
+role. Chatbot: 7 new intents and knowledge entries (`chatbot/engine/intents.py`, `defaults.py`,
+synonyms for order, delivery, tracking, product and "coupon code"), a personal `orders` tool,
+and the delivery figures come from the shop settings. Admin > Settings gained an "Online shop"
+section (delivery charge, free delivery on/off and threshold, most of one product per order, time
+to pay). Tests: `chatbot/tests/test_shop_answers.py` (13), the existing chatbot accuracy sets
+still pass unchanged, 2 new settings tests and 1 frontend settings test.

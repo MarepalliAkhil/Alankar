@@ -163,6 +163,13 @@ export interface BusinessSettings {
     refund_expired_packages: boolean;
     no_show_consumes_session: boolean;
   };
+  /** Task 8.5: online shop rules. free_delivery_over null = delivery is never free. */
+  online_shop?: {
+    delivery_fee: number;
+    free_delivery_over: number | null;
+    max_quantity_per_order: number;
+    payment_hold_minutes: number;
+  };
 }
 
 export type SettingsPatch = Partial<{
