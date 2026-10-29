@@ -174,6 +174,8 @@ export interface AdminCategory {
   sort_order: number;
   is_active: boolean;
   service_count: number;
+  /** Task 8.5 part 4: product ids offered in the booking sheet for this category. */
+  recommended_products?: string[];
 }
 
 export interface AdminRoom {
@@ -216,7 +218,10 @@ export async function listAdminCategories(): Promise<AdminCategory[]> {
   const { data } = await api.get<AdminCategory[]>(`${CAT}/categories/`);
   return data;
 }
-export type CategoryInput = Pick<AdminCategory, 'division' | 'name' | 'sort_order' | 'is_active'>;
+export type CategoryInput = Pick<
+  AdminCategory,
+  'division' | 'name' | 'sort_order' | 'is_active' | 'recommended_products'
+>;
 export async function createCategory(body: Partial<CategoryInput>): Promise<AdminCategory> {
   const { data } = await api.post<AdminCategory>(`${CAT}/categories/`, body);
   return data;

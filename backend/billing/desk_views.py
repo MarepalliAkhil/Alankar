@@ -216,6 +216,7 @@ def totals_data(result: dict) -> dict:
                 "amount": money_str(ln.amount),
                 "discount": money_str(ln.discount),
                 "after_discount": money_str(ln.after),
+                "from_booking": ln.prefilled,
             }
             for ln in t.lines
         ],

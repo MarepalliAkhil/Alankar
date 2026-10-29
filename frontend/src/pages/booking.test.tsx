@@ -5,6 +5,7 @@ import { ensureCsrf, getSession } from '../api/auth';
 import * as bookingApi from '../api/booking';
 import * as deskApi from '../api/desk';
 import * as publicApi from '../api/public';
+import * as shopApi from '../api/shop';
 import {
   appointment,
   awaiting,
@@ -76,6 +77,10 @@ vi.mock('../api/booking', async (importOriginal) => {
     changePassword: vi.fn(),
   };
 });
+vi.mock('../api/shop', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/shop')>()),
+  removeVisitProduct: vi.fn(),
+}));
 vi.mock('../api/privacy', () => ({
   listMyRequests: vi.fn().mockResolvedValue([]),
   createMyRequest: vi.fn(),
@@ -198,6 +203,65 @@ describe('booking sheet', () => {
     expect(screen.getByRole('button', { name: /10:00/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('adds recommended products to the request and the online total', async () => {
+    vi.mocked(bookingApi.getBookingOptions).mockResolvedValue({
+      ...options,
+      recommended_products: [
+        {
+          id: 'pr1',
+          name: 'Argan Hair Oil',
+          description: '',
+          price: '450.00',
+          in_stock: true,
+          available: 3,
+        },
+      ],
+    });
+    vi.mocked(bookingApi.sendBookingRequest).mockResolvedValue(appointment);
+    const user = userEvent.setup();
+    renderAt('/customer/book?service=womens-haircut');
+    await fillDetailsAndPickTime(user);
+    const row = screen.getByRole('listitem', { name: 'Argan Hair Oil' });
+    await user.click(within(row).getByRole('button', { name: 'One more Argan Hair Oil' }));
+    await user.click(within(row).getByRole('button', { name: 'One more Argan Hair Oil' }));
+    expect(screen.getByText('₹900')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Send booking request' }));
+    await waitFor(() => expect(bookingApi.sendBookingRequest).toHaveBeenCalled());
+    expect(bookingApi.sendBookingRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ products: [{ product: 'pr1', quantity: 2 }] }),
+    );
+  });
+
+  it('shows a product problem in the products step, not as a slot conflict', async () => {
+    vi.mocked(bookingApi.getBookingOptions).mockResolvedValue({
+      ...options,
+      recommended_products: [
+        {
+          id: 'pr1',
+          name: 'Argan Hair Oil',
+          description: '',
+          price: '450.00',
+          in_stock: true,
+          available: 3,
+        },
+      ],
+    });
+    vi.mocked(bookingApi.sendBookingRequest).mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 409,
+        data: { detail: 'Sorry, Argan Hair Oil has none left.', field: 'products' },
+      },
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/book?service=womens-haircut');
+    await fillDetailsAndPickTime(user);
+    await user.click(screen.getByRole('button', { name: 'One more Argan Hair Oil' }));
+    await user.click(screen.getByRole('button', { name: 'Send booking request' }));
+    expect(await screen.findByText('Sorry, Argan Hair Oil has none left.')).toBeInTheDocument();
+    expect(screen.queryByText('Nearest free times')).not.toBeInTheDocument();
+  });
+
   it('shows an empty state for a service that is not available', async () => {
     vi.mocked(bookingApi.getBookingOptions).mockRejectedValue({
       isAxiosError: true,
@@ -235,6 +299,45 @@ describe('my appointments', () => {
       '/customer/pay/ap2',
     );
     expect(within(payable!).getByRole('button', { name: 'Resend link' })).toBeInTheDocument();
+  });
+
+  it('lists products on a visit and takes a pay-at-salon one off', async () => {
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([
+      {
+        ...awaiting,
+        status: 'scheduled',
+        products: [
+          {
+            id: 'r1',
+            product: 'pr1',
+            name: 'Argan Hair Oil',
+            quantity: 1,
+            amount: '450.00',
+            paid_online: true,
+            status: 'held',
+          },
+          {
+            id: 'r2',
+            product: 'pr2',
+            name: 'Clay Mask',
+            quantity: 1,
+            amount: '300.00',
+            paid_online: false,
+            status: 'held',
+          },
+        ],
+      },
+    ]);
+    vi.mocked(shopApi.removeVisitProduct).mockResolvedValue();
+    const user = userEvent.setup();
+    renderAt('/customer/appointments');
+    const card = await screen.findByRole('article');
+    expect(within(card).getByText('With the booking')).toBeInTheDocument();
+    expect(within(card).getByText('Pay at the salon')).toBeInTheDocument();
+    const removes = within(card).getAllByRole('button', { name: 'Remove' });
+    expect(removes).toHaveLength(1); // the prepaid one cannot be taken off here
+    await user.click(removes[0]);
+    await waitFor(() => expect(shopApi.removeVisitProduct).toHaveBeenCalledWith('ap2', 'r2'));
   });
 
   it('cancels after confirming in the dialog', async () => {

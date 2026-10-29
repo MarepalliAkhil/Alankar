@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { genericErrorMessage } from '../../api/auth-messages';
 import {
+  addToNextVisit,
+  getNextVisit,
   getShopProducts,
   listAddresses,
   placeOrder,
@@ -12,6 +14,7 @@ import {
   type Address,
   type AddressInput,
   type DeliveryRules,
+  type NextVisit,
   type Quote,
   type ShopProduct,
 } from '../../api/shop';
@@ -32,7 +35,7 @@ import {
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { cart, useCart } from '../../lib/cart';
 import { cn } from '../../lib/cn';
-import { formatINRExact } from '../../lib/format';
+import { formatDateTime, formatINRExact } from '../../lib/format';
 
 type Step = 'cart' | 'checkout';
 
@@ -40,6 +43,7 @@ type Step = 'cart' | 'checkout';
 export default function ShopPage() {
   useDocumentTitle('Shop');
   const products = useQuery({ queryKey: ['shop-products'], queryFn: getShopProducts });
+  const nextVisit = useQuery({ queryKey: ['my-next-visit'], queryFn: getNextVisit });
   const items = useCart();
   const [step, setStep] = useState<Step>('cart');
   const [category, setCategory] = useState('all');
@@ -97,6 +101,7 @@ export default function ShopPage() {
                     product={p}
                     inCart={items.find((i) => i.product === p.id)?.quantity ?? 0}
                     max={delivery.max_quantity}
+                    visit={nextVisit.data ?? null}
                   />
                 ))}
               </ul>
@@ -117,12 +122,35 @@ function ProductCard({
   product: p,
   inCart,
   max,
+  visit,
 }: {
   product: ShopProduct;
   inCart: number;
   max: number;
+  visit: NextVisit | null;
 }) {
   const limit = Math.min(max, p.available);
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const addToVisit = useMutation({
+    mutationFn: () => addToNextVisit(p.id),
+    onSuccess: (v) => {
+      toast.show({
+        tone: 'success',
+        title: `${p.name} added to your visit`,
+        description: `We'll keep it for your ${v.service_name} on ${formatDateTime(v.start)}. Pay at the salon.`,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['shop-products'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-next-visit'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-appointments'] });
+    },
+    onError: (error: unknown) =>
+      toast.show({
+        tone: 'danger',
+        title: "Couldn't add it to your visit",
+        description: genericErrorMessage(error, 'Please try again.'),
+      }),
+  });
   return (
     <Card as="li" variant="dense" aria-label={p.name} className="flex flex-col gap-xs">
       <div className="flex flex-wrap items-center gap-xs">
@@ -155,6 +183,17 @@ function ProductCard({
           leftIcon={<ShoppingBag className="size-4" aria-hidden />}
         >
           Add to cart
+        </Button>
+      )}
+      {visit && p.in_stock && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          loading={addToVisit.isPending}
+          onClick={() => addToVisit.mutate()}
+        >
+          Add to my next appointment
         </Button>
       )}
     </Card>

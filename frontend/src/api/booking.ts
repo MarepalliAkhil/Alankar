@@ -24,6 +24,27 @@ export interface BookingOptions {
   contact: { name: string; email: string; phone: string; allergies: string };
   /** Visits the customer has not rated yet; new requests are blocked while this is above 0. */
   pending_ratings: number;
+  /** Task 8.5 part 4: products the salon suggests with this service. */
+  recommended_products?: RecommendedProduct[];
+}
+
+export interface RecommendedProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  in_stock: boolean;
+  available: number;
+}
+
+export interface AppointmentProductRow {
+  id: string;
+  product: string;
+  name: string;
+  quantity: number;
+  amount: string;
+  paid_online: boolean;
+  status: 'held' | 'billed';
 }
 
 export interface SlotQuery {
@@ -55,6 +76,7 @@ export interface BookingRequestPayload {
   notes: string;
   allergies: string;
   package_code?: string;
+  products?: { product: string; quantity: number }[];
   consent: boolean;
 }
 
@@ -100,6 +122,7 @@ interface AppointmentBase {
   notes: string;
   allergies: string;
   package_used: PackageUsed | null;
+  products?: AppointmentProductRow[];
 }
 
 export interface CustomerAppointment extends AppointmentBase {

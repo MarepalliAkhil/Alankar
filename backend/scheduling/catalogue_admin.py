@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from accounts.audit import audit
 from accounts.models import AuditLog
+from inventory.models import Product
 from scheduling.models import (
     Audience,
     Division,
@@ -79,10 +80,23 @@ def diff(instance, data: dict, fields) -> dict:
 
 class CategorySerializer(serializers.ModelSerializer):
     service_count = serializers.IntegerField(read_only=True)
+    # Task 8.5 part 4: products offered in the booking sheet for this category's services.
+    recommended_products = serializers.PrimaryKeyRelatedField(
+        many=True, required=False, queryset=Product.objects.filter(is_active=True)
+    )
 
     class Meta:
         model = ServiceCategory
-        fields = ["id", "division", "name", "slug", "sort_order", "is_active", "service_count"]
+        fields = [
+            "id",
+            "division",
+            "name",
+            "slug",
+            "sort_order",
+            "is_active",
+            "service_count",
+            "recommended_products",
+        ]
         read_only_fields = ["id", "slug", "service_count"]
         extra_kwargs = {"name": {"max_length": 80}}
 
@@ -92,16 +106,20 @@ class CategoryListView(APIView):
 
     @extend_schema(summary="All service categories (also hidden ones)")
     def get(self, request: Request) -> Response:
-        rows = ServiceCategory.objects.annotate(service_count=Count("services"))
+        rows = ServiceCategory.objects.annotate(service_count=Count("services")).prefetch_related(
+            "recommended_products"
+        )
         return Response(CategorySerializer(rows, many=True).data)
 
     @extend_schema(summary="Add a category", request=CategorySerializer)
     def post(self, request: Request) -> Response:
         body = CategorySerializer(data=request.data)
         body.is_valid(raise_exception=True)
-        data = body.validated_data
+        data = dict(body.validated_data)
+        recommended = data.pop("recommended_products", [])
         slug = unique_slug(ServiceCategory, f"{data['division']}-{data['name']}")
         row = ServiceCategory.objects.create(slug=slug, **data)
+        row.recommended_products.set(recommended)
         log_change(request, "category", "created", row.name, {"division": row.division})
         row.service_count = 0
         return Response(CategorySerializer(row).data, status=status.HTTP_201_CREATED)
@@ -116,6 +134,12 @@ class CategoryDetailView(APIView):
         body = CategorySerializer(row, data=request.data, partial=True)
         body.is_valid(raise_exception=True)
         changes = diff(row, body.validated_data, ("division", "name", "sort_order", "is_active"))
+        if "recommended_products" in body.validated_data:
+            before = sorted(p.name for p in row.recommended_products.all())
+            row.recommended_products.set(body.validated_data["recommended_products"])
+            after = sorted(p.name for p in row.recommended_products.all())
+            if before != after:
+                changes["recommended_products"] = [", ".join(before), ", ".join(after)]
         if changes:
             row.save()
             log_change(request, "category", "updated", row.name, changes)

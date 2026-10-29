@@ -69,6 +69,8 @@ class StockMovement(models.Model):
         RETURN = "return", "Returned by a customer (refund)"
         ORDER = "order", "Sold online (held for an order)"
         ORDER_RETURN = "order_return", "Online order cancelled or expired"
+        BOOKING_HOLD = "booking_hold", "Held for a booked visit"
+        BOOKING_RELEASE = "booking_back", "Booked visit did not happen (put back)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="movements")
@@ -76,6 +78,13 @@ class StockMovement(models.Model):
     reason = models.CharField(max_length=12, choices=Reason.choices)
     invoice = models.ForeignKey(
         "billing.Invoice",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="stock_movements",
+    )
+    appointment = models.ForeignKey(
+        "scheduling.Appointment",
         null=True,
         blank=True,
         on_delete=models.PROTECT,

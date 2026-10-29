@@ -220,6 +220,21 @@ export function CheckoutModal({
 
           <section aria-label="Products" className="flex flex-col gap-sm">
             <h3 className="text-sm font-semibold text-text">Products</h3>
+            {(quote.data?.lines ?? []).some((ln) => ln.from_booking) && (
+              <ul aria-label="Booked with the visit" className="flex flex-col gap-xs text-sm">
+                {quote
+                  .data!.lines.filter((ln) => ln.from_booking)
+                  .map((ln, i) => (
+                    <li key={`${ln.description}-${i}`} className="flex justify-between gap-sm">
+                      <span className="text-text">
+                        {ln.description} × {ln.quantity}{' '}
+                        <span className="text-xs text-text-muted">(booked with the visit)</span>
+                      </span>
+                      <span className="text-text">{formatINRExact(ln.amount)}</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
             <div className="flex items-end gap-sm">
               <div className="flex-1">
                 <Select

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from accounts.audit import client_ip
 from core.throttles import BOOKING_THROTTLES
+from scheduling import products as visit_products
 from shop import orders
 from shop.models import Address, Order, OrderStatus
 
@@ -355,3 +356,66 @@ class OrderCancelView(APIView):
         except orders.ShopError as exc:
             return error_response(exc)
         return Response(orders.order_data(_order(order.pk), viewer=request.user, staff=True))
+
+
+# --------------------------------------------------------------------------- add to my visit
+
+
+class AddToVisitSerializer(serializers.Serializer):
+    product = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1, max_value=5, default=1)
+
+
+def _visit_data(appt) -> dict | None:
+    if appt is None:
+        return None
+    return {
+        "id": str(appt.id),
+        "service_name": appt.service_name,
+        "status": appt.status,
+        "start": appt.start or appt.preferred_start,
+        "products": visit_products.rows_data(appt),
+    }
+
+
+class MyNextVisitView(APIView):
+    """ "Add to my next appointment": the visit it would go to, and adding to it. Products added
+    this way are held for the visit and paid at the salon."""
+
+    policy_actions = {"GET": "my.shop.next_visit", "POST": "my.visit_products.add"}
+
+    @extend_schema(summary="My next visit that can still take products", responses={200: None})
+    def get(self, request: Request) -> Response:
+        return Response({"visit": _visit_data(visit_products.next_visit(request.user))})
+
+    @extend_schema(summary="Add a product to my next visit (paid at the salon)", request=None)
+    def post(self, request: Request) -> Response:
+        body = AddToVisitSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        visit = visit_products.next_visit(request.user)
+        if visit is None:
+            return Response(
+                {"detail": "You have no upcoming visit to add this to. Book one first."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        item = {
+            "product": str(body.validated_data["product"]),
+            "quantity": body.validated_data["quantity"],
+        }
+        try:
+            appt = visit_products.add_to_visit(visit.pk, customer=request.user, items=[item])
+        except visit_products.ProductError as exc:
+            return Response({"detail": exc.message}, status=STATUS.get(exc.code, 400))
+        return Response({"visit": _visit_data(appt)}, status=status.HTTP_201_CREATED)
+
+
+class MyVisitProductView(APIView):
+    policy_action = "my.visit_products.remove"
+
+    @extend_schema(summary="Take a pay-at-the-salon product off my visit", request=None)
+    def delete(self, request: Request, appt, row) -> Response:
+        try:
+            appt_obj = visit_products.remove_from_visit(appt, row, customer=request.user)
+        except visit_products.ProductError as exc:
+            return Response({"detail": exc.message}, status=STATUS.get(exc.code, 400))
+        return Response({"visit": _visit_data(appt_obj)})

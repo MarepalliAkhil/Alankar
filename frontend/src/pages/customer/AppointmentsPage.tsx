@@ -10,6 +10,7 @@ import {
   type MyActionPath,
 } from '../../api/booking';
 import { RatingPrompt } from '../../components/booking/RatingPrompt';
+import { VisitProducts } from '../../components/customer/VisitProducts';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -293,6 +294,8 @@ function AppointmentCard({
           <dd className="font-medium text-text">{formatINR(appt.price_total)}</dd>
         </div>
       </dl>
+
+      <VisitProducts appt={appt} />
 
       {appt.chat_thread_id && (
         <Link

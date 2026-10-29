@@ -39,6 +39,9 @@ class BookingRequestSerializer(serializers.Serializer):
     package_code = serializers.CharField(
         max_length=60, required=False, allow_blank=True, default=""
     )
+    products = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list, max_length=10
+    )
     consent = serializers.BooleanField()
 
     def validate_contact_phone(self, value: str) -> str:
@@ -118,6 +121,13 @@ class _AppointmentBase(serializers.ModelSerializer):
     division = serializers.CharField(source="service.category.division", read_only=True)
     service_slug = serializers.CharField(source="service.slug", read_only=True)
     package_used = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
+
+    def get_products(self, obj: Appointment) -> list[dict]:
+        """Task 8.5 part 4: products added to the visit (held, or billed)."""
+        from scheduling import products
+
+        return products.rows_data(obj)
 
     def get_stylist_name(self, obj: Appointment) -> str | None:
         return obj.stylist.display_name if obj.stylist_id else None
@@ -164,6 +174,7 @@ COMMON_FIELDS = [
     "cancel_requested",
     "reject_reason",
     "package_used",
+    "products",
     "created_at",
 ]
 

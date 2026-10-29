@@ -39,6 +39,7 @@ from marketing import coupons
 from marketing.models import CouponRedemption
 from people.models import LoyaltyEntry, Rating
 from scheduling import booking
+from scheduling import products as visit_products
 from scheduling.models import Appointment, AppointmentStatus
 from wallet import credits as wallet_credits
 from wallet import giftcards
@@ -200,6 +201,20 @@ def _build(
                 product=product,
             )
         )
+    for row in visit_products.held(appt):
+        lines.append(
+            Line(
+                kind="product",
+                description=row.name,
+                quantity=row.quantity,
+                unit_price=row.unit_price,
+                amount=row.amount,
+                gst_percent=row.gst_percent,
+                product=row.product,
+                prefilled=True,
+                paid_online=row.paid_online,
+            )
+        )
     coupon_amount = ZERO
     coupon_applies = (lambda ln: coupons.eligible(ln, coupon)) if coupon else (lambda ln: True)
     if carried is not None:
@@ -207,14 +222,26 @@ def _build(
         # what was agreed online, so the online payment covers it exactly. Products added at the
         # counter are not discounted by it.
         coupon = carried.coupon
-        member_on_service = ZERO
-        if membership is not None and not use_session:
-            member_on_service = money(amount * membership.discount_percent / 100)
+
+        def paid_with_booking(ln) -> bool:
+            return ln.kind == "service" or (ln.prefilled and ln.paid_online)
+
+        member_now = ZERO
+        if membership is not None:
+            for ln in lines:
+                if not paid_with_booking(ln):
+                    continue
+                if ln.kind == "service" and use_session:
+                    continue
+                if ln.kind == "product" and not membership.applies_to_products:
+                    continue
+                member_now += money(ln.amount * membership.discount_percent / 100)
+        booked = sum((ln.amount for ln in lines if paid_with_booking(ln)), ZERO)
         coupon_amount = max(
-            ZERO, appt.prepay_coupon_amount + appt.prepay_member_amount - member_on_service
+            ZERO, appt.prepay_coupon_amount + appt.prepay_member_amount - member_now
         )
-        coupon_amount = min(coupon_amount, amount - member_on_service)
-        coupon_applies = lambda ln: ln.kind == "service"  # noqa: E731
+        coupon_amount = min(coupon_amount, booked - member_now)
+        coupon_applies = paid_with_booking
     elif coupon is not None:
         coupon_amount = coupons.amount_for(coupon, lines, discount_percent)
         total_percent = (
@@ -499,7 +526,7 @@ def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
                 unit_price=line.unit_price,
                 amount=line.amount,
             )
-            if line.product is not None:
+            if line.product is not None and not line.prefilled:
                 stock.move(
                     line.product,
                     -line.quantity,
@@ -507,6 +534,7 @@ def checkout(appt_id, data: dict, *, actor, ip: str | None = None) -> Invoice:
                     actor=actor,
                     invoice=invoice,
                 )
+        visit_products.mark_billed(appt)
         if carried is not None:
             # Records are not edited through save(); this only links the online use to the bill.
             CouponRedemption.objects.filter(pk=carried.pk).update(invoice=invoice)

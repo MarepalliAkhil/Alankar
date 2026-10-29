@@ -1264,6 +1264,22 @@ message (verified / to run / walkthrough / limitations) has gone out.
 - **Gift cards pay shop orders too**, at the payment step (used first, the rest through the
   simulated gateway; if the gateway part fails, nothing is taken from the card). A cancelled order
   puts the gift-card part back on the card.
+- **Products in a booking: stock is held from the request, not from the payment.** The price of
+  the products is fixed into the online payment when the request is sent, so the stock is held
+  from that moment (a `booking_hold` ledger row). It goes back (`booking_back`) if the request is
+  rejected, the payment link expires, the visit is cancelled (by anyone) or marked a no-show.
+  Holding only at payment time would let a customer be asked to pay for a product that had
+  meanwhile sold out.
+- **Two kinds of booked product.** Chosen in the booking sheet = paid online with the booking
+  (part of `amount_payable`; `price_total` stays the service's own so the stylist's completion and
+  pay are unchanged). Added later with "Add to my next appointment" = paid at the salon; the
+  customer can take such an item off again before the visit, but not a prepaid one.
+- **Checkout bills booked products automatically** (pre-filled lines marked "booked with the
+  visit"); their stock was already held, so checkout never takes it a second time, and the rows
+  are marked billed. An online coupon used for the booking covers the service and the prepaid
+  products together, so the online payment still balances the bill exactly.
+- **Recommended products are chosen per service category** by the admin (Services > Categories);
+  only active products sold online are offered to customers.
 (further decisions are appended below as each part is built)
 
 ### Task 8.5 part 1: gift card codes visible (DONE, committed, verified in sandbox)
@@ -1654,3 +1670,22 @@ Tests: `billing/tests/test_online_pricing.py` (28: fixed-number engine cases for
 combination, every coupon rule, private coupons, shop and booking flows, carry-over to checkout,
 coupon given back on cancel, gift card part payment and refund, two concurrency tests), plus 4 new
 frontend tests (`shop.test.tsx`, `booking.test.tsx`).
+
+### Task 8.5 part 4: products in appointment booking (DONE, committed, verified in sandbox)
+Backend: `ServiceCategory.recommended_products`, new `AppointmentProduct` (held / released /
+billed), stock reasons `booking_hold` and `booking_back` with an `appointment` link on the ledger,
+`scheduling/products.py` (hold, release, bill, next visit, add/remove). The booking sheet options
+return the recommended products; a request accepts `products`; the payment engine prices service
+and products together (coupon shared, membership on products only if the plan says so); every way
+a visit can end without happening gives the stock back; checkout pre-fills and bills them once.
+New customer endpoints `/api/my/shop/next-visit/` (GET, POST) and
+`/api/my/shop/visit-products/<visit>/<row>/` (DELETE); the admin category API takes
+`recommended_products` (audited). Frontend: "5. Add products" step in the booking sheet with the
+total in the summary, products on My Appointments cards (with Remove for pay-at-salon items),
+"Add to my next appointment" on shop cards, recommended-products checkboxes in Admin > Services >
+Categories, and booked products listed in the POS checkout.
+Tests: `scheduling/tests/test_booking_products.py` (19: offer list, price and hold, stock checks,
+coupon across service and products, checkout billing without double deduction, coupon carry-over,
+stock back for reject / expiry / customer cancel / salon cancel / no-show, add and remove for the
+next visit, admin audit, role denials, a two-thread race for the last bottle) and 4 new frontend
+tests.

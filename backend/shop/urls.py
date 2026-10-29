@@ -8,6 +8,12 @@ my_shop_patterns = [
     path("quote/", v.MyShopQuoteView.as_view(), name="my-shop-quote"),
     path("addresses/", v.MyAddressesView.as_view(), name="my-addresses"),
     path("addresses/<uuid:pk>/", v.MyAddressView.as_view(), name="my-address"),
+    path("next-visit/", v.MyNextVisitView.as_view(), name="my-next-visit"),
+    path(
+        "visit-products/<uuid:appt>/<uuid:row>/",
+        v.MyVisitProductView.as_view(),
+        name="my-visit-product",
+    ),
 ]
 
 # /api/my/orders/

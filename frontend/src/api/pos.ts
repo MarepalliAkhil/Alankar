@@ -165,6 +165,8 @@ export interface Quote {
     amount: string;
     discount: string;
     after_discount: string;
+    /** Task 8.5 part 4: booked with the visit; stock already held, never billed twice. */
+    from_booking?: boolean;
   }[];
   gross: string;
   discount_amount: string;

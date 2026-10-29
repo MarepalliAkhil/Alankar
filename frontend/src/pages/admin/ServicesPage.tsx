@@ -42,6 +42,7 @@ import {
   useToast,
   type TabItem,
 } from '../../components/ui';
+import { listProducts } from '../../api/adminOps';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatINRExact } from '../../lib/format';
 
@@ -609,6 +610,12 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
   const [division, setDivision] = useState('');
   const [active, setActive] = useState(true);
   const [problem, setProblem] = useState('');
+  const [recommended, setRecommended] = useState<string[]>([]);
+  const products = useQuery({
+    queryKey: ['admin-products'],
+    queryFn: listProducts,
+    enabled: editing !== null,
+  });
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
@@ -619,12 +626,22 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
     setName(target === 'new' ? '' : target.name);
     setDivision(target === 'new' ? '' : target.division);
     setActive(target === 'new' ? true : target.is_active);
+    setRecommended(target === 'new' ? [] : (target.recommended_products ?? []));
     setProblem('');
   };
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), division, is_active: active };
+      const before =
+        editing === 'new' || editing === null ? [] : (editing.recommended_products ?? []);
+      const changed =
+        before.length !== recommended.length || before.some((id) => !recommended.includes(id));
+      const body = {
+        name: name.trim(),
+        division,
+        is_active: active,
+        ...(changed ? { recommended_products: recommended } : {}),
+      };
       return editing === 'new' || editing === null
         ? createCategory(body)
         : updateCategory(editing.id, body);
@@ -763,6 +780,35 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
           />
+          <fieldset className="flex flex-col gap-xs">
+            <legend className="text-sm font-medium text-text">Recommended products</legend>
+            <p className="text-xs text-text-muted">
+              Offered in the booking sheet for this category&apos;s services. Only products sold
+              online are shown to customers.
+            </p>
+            {products.isPending ? (
+              <LoadingState label="Loading products…" />
+            ) : products.isError ? (
+              <p className="text-xs text-text-muted">The product list could not be loaded.</p>
+            ) : (
+              <div className="grid max-h-48 gap-xs overflow-y-auto sm:grid-cols-2">
+                {products.data.results
+                  .filter((p) => p.is_active)
+                  .map((p) => (
+                    <Checkbox
+                      key={p.id}
+                      label={p.name}
+                      checked={recommended.includes(p.id)}
+                      onChange={(e) =>
+                        setRecommended((cur) =>
+                          e.target.checked ? [...cur, p.id] : cur.filter((id) => id !== p.id),
+                        )
+                      }
+                    />
+                  ))}
+              </div>
+            )}
+          </fieldset>
           {problem && (
             <p role="alert" className="text-sm font-medium text-danger-text">
               {problem}

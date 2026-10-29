@@ -189,7 +189,10 @@
     "orders.list": "See online orders, with filters",
     "orders.read": "See one online order with the delivery address",
     "orders.advance": "Mark an online order packed, shipped or delivered",
-    "orders.cancel": "Cancel an online order with a reason (refunds what was paid)"
+    "orders.cancel": "Cancel an online order with a reason (refunds what was paid)",
+    "my.shop.next_visit": "See which upcoming visit a product would be added to",
+    "my.visit_products.add": "Add a product to my next visit (paid at the salon)",
+    "my.visit_products.remove": "Take a pay-at-the-salon product off my visit"
   },
   "public": {
     "api": [
@@ -293,7 +296,10 @@
         "my.orders.place",
         "my.orders.read",
         "my.orders.pay",
-        "my.orders.cancel"
+        "my.orders.cancel",
+        "my.shop.next_visit",
+        "my.visit_products.add",
+        "my.visit_products.remove"
       ],
       "routes": [
         "/customer/pay/:id",

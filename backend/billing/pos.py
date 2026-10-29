@@ -39,6 +39,10 @@ class Line:
     gst_included: Decimal | None = None  # services: GST inside `amount` before any discount
     product: object = None
     member: Decimal = ZERO  # membership discount on this line (inside `discount`)
+    # Task 8.5 part 4: a product booked with the visit; its stock is already held, so checkout
+    # bills it without taking it from stock again.
+    prefilled: bool = False
+    paid_online: bool = False
     discount: Decimal = ZERO
     after: Decimal = ZERO
     gst: Decimal = ZERO

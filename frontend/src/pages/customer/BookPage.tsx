@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarX, Search } from 'lucide-react';
+import { CalendarX, Minus, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
+  IconButton,
   Input,
   LoadingState,
   Select,
@@ -200,6 +201,13 @@ const schema = z.object({
   }),
 });
 
+/** A problem with the products the customer picked (out of stock, no longer sold). */
+function productsFieldError(error: unknown): string | null {
+  const data = (error as { response?: { data?: { field?: string; detail?: string } } })?.response
+    ?.data;
+  return data?.field === 'products' ? (data.detail ?? 'Check the products you picked.') : null;
+}
+
 function BookingForm({ options }: { options: BookingOptions }) {
   const { service, stylists, days, rules, contact } = options;
   const navigate = useNavigate();
@@ -221,6 +229,13 @@ function BookingForm({ options }: { options: BookingOptions }) {
     consent: false,
   });
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
+  const [picked, setPicked] = useState<Record<string, number>>({});
+  const recommended = options.recommended_products ?? [];
+  const productTotal = recommended.reduce(
+    (sum, p) => sum + Number(p.price) * (picked[p.id] ?? 0),
+    0,
+  );
+  const [productProblem, setProductProblem] = useState('');
 
   const slotKey = [service.slug, variant, addons.join(','), day, stylist];
   const slots = useQuery({
@@ -264,6 +279,11 @@ function BookingForm({ options }: { options: BookingOptions }) {
       const packageCodeIssue = packageCodeFieldError(error);
       if (packageCodeIssue) {
         setErrors((current) => ({ ...current, package_code: packageCodeIssue }));
+        return;
+      }
+      const productIssue = productsFieldError(error);
+      if (productIssue) {
+        setProductProblem(productIssue);
         return;
       }
       const nearest = conflictSlots(error);
@@ -318,6 +338,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
       return;
     }
     setErrors({});
+    setProductProblem('');
     send.mutate({
       service: service.slug,
       variant: variant || null,
@@ -330,6 +351,14 @@ function BookingForm({ options }: { options: BookingOptions }) {
       notes: parsed.data.notes,
       allergies: parsed.data.allergies,
       package_code: parsed.data.package_code || undefined,
+      ...(Object.keys(picked).length
+        ? {
+            products: Object.entries(picked).map(([product, quantity]) => ({
+              product,
+              quantity,
+            })),
+          }
+        : {}),
       consent: true,
     });
   };
@@ -529,6 +558,63 @@ function BookingForm({ options }: { options: BookingOptions }) {
               error={errors.package_code}
             />
           </Card>
+
+          {recommended.length > 0 && (
+            <Card variant="plain" padding="lg" as="section" className="flex flex-col gap-md">
+              <h2 className="text-base font-semibold text-text">5. Add products (optional)</h2>
+              <p className="text-sm text-text-muted">
+                Picked by the salon for this service. They are kept for you and paid online with the
+                booking.
+              </p>
+              <ul className="flex flex-col gap-sm">
+                {recommended.map((p) => {
+                  const qty = picked[p.id] ?? 0;
+                  const set = (n: number) =>
+                    setPicked((cur) => {
+                      const next = { ...cur };
+                      if (n <= 0) delete next[p.id];
+                      else next[p.id] = n;
+                      return next;
+                    });
+                  return (
+                    <li
+                      key={p.id}
+                      className="flex flex-wrap items-center justify-between gap-sm"
+                      aria-label={p.name}
+                    >
+                      <div>
+                        <p className="font-medium text-text">{p.name}</p>
+                        <p className="text-xs text-text-muted">
+                          {formatINR(p.price)} incl. GST
+                          {!p.in_stock && ' · out of stock'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-xs">
+                        <IconButton
+                          label={`One less ${p.name}`}
+                          icon={<Minus className="size-4" />}
+                          disabled={qty === 0}
+                          onClick={() => set(qty - 1)}
+                        />
+                        <span className="min-w-6 text-center font-semibold text-text">{qty}</span>
+                        <IconButton
+                          label={`One more ${p.name}`}
+                          icon={<Plus className="size-4" />}
+                          disabled={!p.in_stock || qty >= p.available}
+                          onClick={() => set(qty + 1)}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {productProblem && (
+                <p role="alert" className="text-sm font-medium text-danger-text">
+                  {productProblem}
+                </p>
+              )}
+            </Card>
+          )}
         </div>
 
         <aside className="flex flex-col gap-md">
@@ -559,10 +645,18 @@ function BookingForm({ options }: { options: BookingOptions }) {
                   <dd>{formatINR(price.gst_amount)}</dd>
                 </div>
               )}
+              {productTotal > 0 && (
+                <div className="flex justify-between gap-md">
+                  <dt className="text-text-muted">Products</dt>
+                  <dd className="font-medium text-text">{formatINR(productTotal)}</dd>
+                </div>
+              )}
               {price && (
                 <div className="flex justify-between gap-md border-t border-border pt-sm">
                   <dt className="text-text-muted">Pay online after we confirm</dt>
-                  <dd className="font-semibold text-text">{formatINR(price.amount_payable)}</dd>
+                  <dd className="font-semibold text-text">
+                    {formatINR(Number(price.amount_payable) + productTotal)}
+                  </dd>
                 </div>
               )}
             </dl>

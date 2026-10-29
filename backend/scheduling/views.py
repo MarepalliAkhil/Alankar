@@ -24,7 +24,7 @@ from core.throttles import BOOKING_THROTTLES
 from people import desk as customer_desk
 from people import ratings
 from people.models import CustomerProfile, DayOffRequest, StylistProfile
-from scheduling import booking
+from scheduling import booking, products
 from scheduling.models import Appointment, AppointmentEvent, Room, Service
 from scheduling.serializers import (
     BookingRequestSerializer,
@@ -80,7 +80,7 @@ def booking_error(exc: booking.BookingError) -> Response:
 def appointment_queryset():
     return Appointment.objects.select_related(
         "service__category", "stylist", "preferred_stylist", "room"
-    ).prefetch_related(Prefetch("payments", queryset=Payment.objects.all()))
+    ).prefetch_related(Prefetch("payments", queryset=Payment.objects.all()), "products")
 
 
 def get_service(slug: str) -> Service:
@@ -131,6 +131,7 @@ class BookingOptionsView(APIView):
                     for key in ("deposit_percent", "free_cancel_hours", "hold_hours", "gst_percent")
                 },
                 "pending_ratings": ratings.pending_count(request.user),
+                "recommended_products": products.recommended_for(service),
                 "contact": {
                     "name": request.user.full_name,
                     "email": request.user.email,
@@ -221,6 +222,7 @@ class BookingRequestView(APIView):
                 notes=data["notes"],
                 allergies=data["allergies"],
                 package_code=data.get("package_code", ""),
+                products_wanted=data.get("products") or [],
                 ip=client_ip(request),
                 request=request,
             )

@@ -29,6 +29,7 @@ from core.models import MailOutbox
 from marketing.models import CouponRedemption
 from people import ratings
 from people.models import DayOffRequest, StylistProfile
+from scheduling import products
 from scheduling.models import (
     BLOCKING_STATUSES,
     Appointment,
@@ -417,6 +418,7 @@ def expire_due(now: datetime | None = None) -> int:
                 status=PaymentLink.Status.EXPIRED
             )
             packagecodes.release(appt, note="Payment link expired")
+            products.release(appt, note="Payment link expired")
             record(appt, "payment_expired", from_status=S.AWAITING_PAYMENT)
             email_customer(
                 appt,
@@ -447,10 +449,15 @@ def create_request(
     notes: str,
     allergies: str,
     package_code: str = "",
+    products_wanted=None,
     ip: str | None = None,
     request=None,
 ) -> Appointment:
     expire_due()
+    try:
+        wanted = products.clean(products_wanted)
+    except products.ProductError as exc:
+        raise BookingError(exc.message, code=exc.code, field="products") from exc
     if not otp.email_verified_or_not_required(customer):
         raise BookingError(
             "Please verify your email with the code we sent you before booking.",
@@ -487,6 +494,12 @@ def create_request(
     price_total, gst_amount, amount_payable = q.price_total, q.gst_amount, q.amount_payable
     if package_purchase is not None:
         price_total = gst_amount = amount_payable = Decimal("0")
+    if wanted:
+        # Products chosen in the booking sheet are paid online with the booking. `price_total`
+        # and `gst_amount` stay the service's own (they drive the service line, the stylist's
+        # completion and pay); only the amount to pay online grows.
+        extra, _ = products.price_of(wanted)
+        amount_payable += extra
     with transaction.atomic():
         appt = Appointment.objects.create(
             customer=customer,
@@ -510,6 +523,10 @@ def create_request(
             package_purchase=package_purchase,
         )
         appt.addons.set(q.addons)
+        try:
+            products.hold(appt, wanted, paid_online=True, actor=customer)
+        except products.ProductError as exc:
+            raise BookingError(exc.message, code=exc.code, field="products") from exc
         if credit is not None:
             packagecodes.reserve(credit, appointment=appt, actor=customer)
         record(appt, "requested", actor=customer)
@@ -734,6 +751,7 @@ def desk_cancel(appt_id, *, actor, reason: str) -> Appointment:
         if not package_settings()["no_show_consumes_session"]:
             packagecodes.release(appt, note=f"Cancelled by the salon: {reason}", actor=actor)
         release_coupon(appt)
+        products.release(appt, note=f"Cancelled by the salon: {reason}", actor=actor)
         pending = _request_refunds(appt, f"Cancelled by the salon: {reason}")
         record(appt, "cancelled_by_salon", actor=actor, from_status=previous, note=reason)
         intro = f"We are sorry: your booking was cancelled by the salon.\nReason: {reason}"
@@ -760,6 +778,7 @@ def mark_no_show(appt_id, *, actor) -> Appointment:
 
         if not package_settings()["no_show_consumes_session"]:
             packagecodes.release(appt, note="No-show (admin setting)", actor=actor)
+        products.release(appt, note="No-show", actor=actor)
         pending = _request_refunds(appt, "No-show: admin to decide on the online payment")
         record(appt, "no_show", actor=actor, from_status=S.SCHEDULED)
         intro = "We missed you at your appointment, so it was marked as a no-show."
@@ -912,6 +931,7 @@ def reject(appt_id, *, actor, reason: str) -> Appointment:
         appt.reject_reason = reason
         appt.save(update_fields=["status", "reject_reason", "updated_at"])
         packagecodes.release(appt, note="Booking request rejected", actor=actor)
+        products.release(appt, note="Booking request rejected", actor=actor)
         record(appt, "rejected", actor=actor, from_status=previous, note=reason)
         email_customer(
             appt,
@@ -953,10 +973,21 @@ def active_link(appt: Appointment, token: str | None) -> PaymentLink | None:
 
 def payment_breakdown(appt: Appointment, link: PaymentLink, *, coupon_code: str = "", lock=False):
     """What the customer pays online for this booking, step by step (billing.online)."""
-    item = online.Item(kind="service", description=appt.service_name, amount=link.amount)
+    held = [r for r in products.held(appt) if r.paid_online]
+    product_total = sum((r.amount for r in held), Decimal("0"))
+    items = [
+        online.Item(
+            kind="service",
+            description=appt.service_name,
+            amount=max(link.amount - product_total, Decimal("0")),
+        )
+    ] + [
+        online.Item(kind="product", description=r.name, amount=r.amount, gst_percent=r.gst_percent)
+        for r in held
+    ]
     try:
         coupon = online.find_coupon(coupon_code, appt.customer, lock=lock)
-        return online.calculate([item], customer=appt.customer, coupon=coupon)
+        return online.calculate(items, customer=appt.customer, coupon=coupon)
     except CheckoutError as exc:
         raise BookingError(exc.message, field="coupon") from exc
 
@@ -1166,6 +1197,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "") -> Appointment:
             refunded += payment.amount
         packagecodes.release(appt, note="Free cancellation by the customer", actor=customer)
         release_coupon(appt)
+        products.release(appt, note="Cancelled by the customer", actor=customer)
         record(appt, "cancelled", actor=customer, from_status=previous, note=reason)
         intro = "Your booking has been cancelled."
         if refunded:

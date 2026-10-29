@@ -52,6 +52,9 @@ vi.mock('../api/shop', async (importOriginal) => ({
   getOrder: vi.fn(),
   advanceOrder: vi.fn(),
   cancelOrder: vi.fn(),
+  getNextVisit: vi.fn(),
+  addToNextVisit: vi.fn(),
+  removeVisitProduct: vi.fn(),
 }));
 
 const oil: shopApi.ShopProduct = {
@@ -170,6 +173,7 @@ beforeEach(() => {
   vi.mocked(shopApi.listAddresses).mockResolvedValue([]);
   vi.mocked(shopApi.getMyOrder).mockResolvedValue(order);
   vi.mocked(shopApi.listMyOrders).mockResolvedValue([order]);
+  vi.mocked(shopApi.getNextVisit).mockResolvedValue(null);
 });
 
 describe('customer shop', () => {
@@ -386,6 +390,31 @@ describe('customer shop', () => {
       amount: '300',
     });
     expect(await screen.findByText(/₹300.00 paid by gift card/)).toBeInTheDocument();
+  });
+
+  it('adds a product to the next appointment, paid at the salon', async () => {
+    const visit = {
+      id: 'ap9',
+      service_name: 'Haircut',
+      status: 'scheduled',
+      start: '2026-11-02T05:30:00Z',
+      products: [],
+    };
+    vi.mocked(shopApi.getNextVisit).mockResolvedValue(visit);
+    vi.mocked(shopApi.addToNextVisit).mockResolvedValue(visit);
+    const user = userEvent.setup();
+    renderAt('/customer/shop');
+    const card = await screen.findByRole('listitem', { name: 'Argan Hair Oil' });
+    await user.click(
+      await within(card).findByRole('button', { name: 'Add to my next appointment' }),
+    );
+    expect(shopApi.addToNextVisit).toHaveBeenCalledWith('p1');
+    expect(await screen.findByText('Argan Hair Oil added to your visit')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('listitem', { name: 'Sold Out Serum' })).queryByRole('button', {
+        name: 'Add to my next appointment',
+      }),
+    ).toBeNull();
   });
 
   it('lists my orders as cards', async () => {

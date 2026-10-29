@@ -29,6 +29,11 @@ class ServiceCategory(models.Model):
     slug = models.SlugField(max_length=90, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Products the admin suggests with services in this category (Task 8.5 part 4); offered in the
+    # booking sheet's "Add products" step.
+    recommended_products = models.ManyToManyField(
+        "inventory.Product", blank=True, related_name="recommended_for"
+    )
 
     class Meta:
         ordering = ["division", "sort_order", "name"]
@@ -346,3 +351,43 @@ class VisitCompletion(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("A completed visit record cannot be deleted.")
+
+
+class AppointmentProduct(models.Model):
+    """A product added to a booking (Task 8.5 part 4). Its stock is held through the ledger from
+    the moment it is added, given back if the visit does not happen, and billed at checkout
+    without being taken from stock a second time.
+
+    `paid_online`: chosen in the booking sheet, so it is part of the online payment. Products added
+    later ("Add to my next appointment") are paid at the salon.
+    """
+
+    class Status(models.TextChoices):
+        HELD = "held", "Held for the visit"
+        RELEASED = "released", "Put back (visit did not happen or item removed)"
+        BILLED = "billed", "Billed at checkout"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="products")
+    product = models.ForeignKey(
+        "inventory.Product", on_delete=models.PROTECT, related_name="appointment_lines"
+    )
+    name = models.CharField(max_length=120)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_online = models.BooleanField(default=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.HELD)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0), name="appointment_product_quantity"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} x{self.quantity} ({self.status})"

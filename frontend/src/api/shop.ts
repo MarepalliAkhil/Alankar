@@ -243,3 +243,38 @@ export function shopFieldError(error: unknown): { field: string; message: string
   }
   return null;
 }
+
+// ---------------------------------------------------------------- add to my next visit
+
+export interface NextVisit {
+  id: string;
+  service_name: string;
+  status: string;
+  start: string;
+  products: {
+    id: string;
+    product: string;
+    name: string;
+    quantity: number;
+    amount: Money;
+    paid_online: boolean;
+    status: string;
+  }[];
+}
+
+export async function getNextVisit(): Promise<NextVisit | null> {
+  const { data } = await api.get<{ visit: NextVisit | null }>('/my/shop/next-visit/');
+  return data.visit;
+}
+
+export async function addToNextVisit(product: string, quantity = 1): Promise<NextVisit> {
+  const { data } = await api.post<{ visit: NextVisit }>('/my/shop/next-visit/', {
+    product,
+    quantity,
+  });
+  return data.visit;
+}
+
+export async function removeVisitProduct(appointment: string, row: string): Promise<void> {
+  await api.delete(`/my/shop/visit-products/${appointment}/${row}/`);
+}
