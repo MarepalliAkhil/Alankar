@@ -1750,7 +1750,11 @@ typecheck, build, Playwright) and the browser walkthrough.
 ### Task 8.5: DONE (2026-10-30)
 The owner confirmed the PC run and pushed (`c912df6` on GitHub `main`). Task 8.5 is complete.
 
+## Task 9: Zenotians page ON HOLD
+Only its existing content-pending shell is restyled in Task 11g; no content is added.
+
 ## Task 10: NOT built yet
+**Style the Alankar Intelligence screens when Task 10 is built.**
 Task 10 (the rule-based admin assistant "Alankar Intelligence") is not built. **When it is built,
 style its panel with the Task 11 staff theme** (glass panel from `components/ui`, denser glass for
 its tables, skeleton loaders) -- Task 11e deliberately skips it because the screen does not exist.
@@ -1759,10 +1763,58 @@ its tables, skeleton loaders) -- Task 11e deliberately skips it because the scre
 Plan approved by the owner with corrections: 11d includes Shop, My Orders, Memberships and the
 receptionist/admin Orders and Memberships screens; 11e skips Alankar Intelligence (see Task 10).
 Order: 11a foundation, 11b hero, 11c division pages, 11d customer portal, 11e staff portals,
-11f polish and verification. One commit per subtask.
+11f motion, polish and verification, 11g wrap-up (Zenotians shell, 403/404/error pages, README).
+One commit per subtask.
 
 ### Task 11: decisions
 - **No framer-motion.** The owner's rules mention "the existing framer-motion", but it was never
   installed (it is not in `frontend/package.json`). Rather than add a dependency, page transitions,
   the loader and every other animation are plain CSS (transform/opacity only), which is lighter and
   respects `prefers-reduced-motion` through one media query.
+- **framer-motion: asking the owner.** The Task 11 brief says "smooth page transitions with
+  framer-motion", but framer-motion is not installed and this sandbox cannot reach the npm
+  registry, so it cannot be added here. 11a uses CSS-only motion; if the owner wants framer-motion
+  added, it is one `npm install framer-motion` plus swapping `PageTransition`'s CSS class for a
+  `motion.div` -- nothing else depends on it.
+- **Photos are picked up at build time.** `vite-plugins/photo-manifest.js` lists
+  `frontend/public/photos/` when the site is built (and live while `npm run dev` runs), so a photo
+  never causes a failed request. Adding a photo needs no code change, only a rebuild (or a running
+  dev server). The admin content editor does not store images today, so precedence (a) from the
+  brief does not apply yet; slots go (b) photo in `public/photos/`, then (c) generated artwork.
+- **Reduce transparency** follows the system setting (`prefers-reduced-transparency`) and a
+  per-browser switch in the display menu; either one turns every glass surface solid with no blur.
+  Browsers without `backdrop-filter` get the same solid surfaces.
+- **One theme attribute on `<html>`** (`data-theme`, `data-mode`, `data-transparency`), set before
+  React renders so there is no flash. Layouts set their theme with `useRouteTheme` (staff layout:
+  `staff`; public and customer pages: `brand` until 11b-11d give the division pages their themes).
+
+### Task 11a: foundation (DONE, committed)
+- Tokens: `src/design/themes.ts` -- five token sets (brand, salon "Midnight Studio", spa "Sage
+  Calm", parlor "Rose Glow", staff), each light and dark, plus glass tokens (fill, dense fill,
+  tint, blur sm/md/lg, saturation, border, highlight, shadow, noise and its opacity). The existing
+  `tokens.ts` and Tailwind names are unchanged; the CSS variables now come from the active set.
+  `themes.test.ts` checks every text/background pair against WCAG AA in every theme and mode.
+- `ThemeProvider` / `theme-context` / `display.ts`: theme, mode (light, dark, system; remembered in
+  localStorage inside try/catch, falls back to the system setting) and reduce transparency.
+  `DisplaySettings` (mode and transparency menu) is in the public navbar and the staff top bar;
+  `ThemeSwitcher` lets the design-system page preview any theme.
+- Components (`components/ui`): `GlassCard`, `GlassPanel` (dense), `GlassButton`, `GlassInput`,
+  `GlassNav`, `GlassModal` and `GlassDrawer` (the existing Modal and Drawer, already dense glass,
+  with a rise / slide-in entrance), all token-driven with the solid fallback.
+- Loading: `FullScreenLoader` with drawn marks (Salon scissors and comb, Spa lotus and ripple,
+  Parlor brush and flower, a cycling mark for brand/staff) and `DelayedLoader`, which shows it only
+  after 300 ms; a matching pre-JavaScript loader in `index.html`; `Spinner` for buttons; shimmer
+  `SkeletonCard`, `SkeletonTable`, `SkeletonChart`, `SkeletonChat`; `PageTransition` on route
+  changes. All of it is instant / static with reduced motion.
+- Art: `src/design/art.ts` registry and `ArtImage` (explicit width/height, lazy below the fold,
+  decorative art hidden from screen readers, photo first then artwork). First backgrounds: salon,
+  spa and parlor, light and dark (`src/assets/art/`, 5-9 KB each, drawn by
+  `scripts/generate_art.py`; `art.test.ts` checks every file is registered and under 200 KB).
+- `/design-system` shows every theme in both modes with computed contrast ratios, every glass
+  component (with modal and drawer), every loader and skeleton, and the artwork with its photo
+  name and size.
+- Checks in the sandbox: vitest Test Files 32 passed (32), Tests 432 passed (432); eslint and
+  prettier clean; `tsc --noEmit` only shows the 2 known sandbox `recharts` stub errors; Playwright
+  `full-workflow`, `basic-a11y` and `mobile`: 27 passed (3.5m). Not runnable here: `npm run build`
+  (rollup's native parser is a stub in this sandbox) and `e2e/axe.e2e.ts`
+  (`@axe-core/playwright` is not installed here) -- run them on the PC.

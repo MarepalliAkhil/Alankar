@@ -7,3 +7,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module 'virtual:photo-manifest' {
+  /** File names in public/photos (Task 11 photo slots). */
+  const photos: string[];
+  export default photos;
+}

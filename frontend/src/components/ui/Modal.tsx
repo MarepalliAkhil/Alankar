@@ -43,7 +43,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          'glass-dense relative flex max-h-[90vh] w-full flex-col rounded-modal shadow-raised focus:outline-none',
+          'glass-dense sheet-up relative flex max-h-[90vh] w-full flex-col rounded-modal shadow-raised focus:outline-none',
           widths[size],
         )}
       >

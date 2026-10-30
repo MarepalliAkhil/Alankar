@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { lazy, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CustomerShell } from './components/layout/CustomerShell';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { StaffLayout } from './components/layout/StaffLayout';
-import { ToastProvider } from './components/ui';
+import { DelayedLoader, ToastProvider } from './components/ui';
 import { divisions } from './config/divisions';
+import { ThemeProvider } from './design/ThemeProvider';
 import { routerFuture } from './config/router';
 import { rolePaths } from './policy/policy';
 import { RequireRole } from './routes/RequireRole';
@@ -108,9 +109,11 @@ export function AppProviders({
   );
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>
-        <SessionProvider>{children}</SessionProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <SessionProvider>{children}</SessionProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
@@ -120,7 +123,10 @@ export default function App() {
     <ErrorBoundary>
       <AppProviders>
         <BrowserRouter future={routerFuture}>
-          <AppRoutes />
+          {/* First load: the branded loader, only if it takes longer than 300 ms. */}
+          <Suspense fallback={<DelayedLoader />}>
+            <AppRoutes />
+          </Suspense>
         </BrowserRouter>
       </AppProviders>
     </ErrorBoundary>

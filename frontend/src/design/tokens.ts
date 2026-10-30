@@ -4,7 +4,12 @@
  * - `applyTokens()` writes every token to a CSS variable on <html> at startup.
  * - `tailwindTheme` maps Tailwind class names to those CSS variables.
  * A redesign (stage 2) changes this file and the ui components, never the pages.
+ *
+ * Task 11: the values below are the base (the "brand" theme in light mode). themes.ts holds the
+ * other themes and dark mode as overrides of these same names; applyTokens() writes them all as
+ * one stylesheet keyed on `[data-theme][data-mode]`.
  */
+import { MODES, THEMES, themes, type Mode, type ThemeName } from './themes';
 
 export const tokens = {
   color: {
@@ -17,7 +22,13 @@ export const tokens = {
     textMuted: '#5B5675',
     background: '#F8F6FF',
     surface: '#FFFFFF',
+    surfaceMuted: '#F1EDFC',
     border: '#E4DDF7',
+    accent: '#BE185D',
+    accentSoft: '#FCE7F3',
+    onAccent: '#FFFFFF',
+    // Laid over background artwork so text above it stays readable (Task 11).
+    artOverlay: 'rgba(248, 246, 255, 0.55)',
     success: '#22C55E',
     successSoft: '#DCFCE7',
     successText: '#166534',
@@ -51,11 +62,22 @@ export const tokens = {
     noShow: { bg: '#FEE2E2', fg: '#991B1B' },
   },
   glass: {
-    fill: 'rgba(255, 255, 255, 0.62)',
-    fillDense: 'rgba(255, 255, 255, 0.86)',
-    border: 'rgba(255, 255, 255, 0.75)',
+    fill: 'rgba(255, 255, 255, 0.66)',
+    fillDense: 'rgba(255, 255, 255, 0.88)',
+    // The "reduce transparency" fallback: a solid surface, no blur.
+    fillSolid: '#FFFFFF',
+    tint: 'rgba(124, 58, 237, 0.06)',
+    border: 'rgba(255, 255, 255, 0.72)',
+    highlight: 'rgba(255, 255, 255, 0.9)',
+    shadow: '0 10px 40px rgba(124, 58, 237, 0.14)',
+    blurSm: '8px',
     blur: '16px',
+    blurLg: '28px',
     saturate: '160%',
+    // A tiny generated grain texture over glass (SVG feTurbulence, no image file).
+    noise:
+      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E\")",
+    noiseOpacity: '0.035',
   },
   radius: {
     none: '0px',
@@ -86,6 +108,7 @@ export const tokens = {
     fast: '120ms',
     base: '200ms',
     slow: '320ms',
+    page: '260ms',
     ease: 'cubic-bezier(0.2, 0, 0, 1)',
   },
   z: {
@@ -117,11 +140,59 @@ export function cssVariables(source: TokenTree = tokens, prefix = ''): Record<st
   return out;
 }
 
-/** Writes all tokens as CSS variables on the root element. Call once before rendering. */
-export function applyTokens(root: HTMLElement = document.documentElement): void {
-  for (const [name, value] of Object.entries(cssVariables())) {
-    root.style.setProperty(name, value);
+/** Every colour of one theme in one mode: the base values with the theme's overrides. */
+export function resolvedColors(theme: ThemeName, mode: Mode): Record<string, string> {
+  return { ...tokens.color, ...themes[theme][mode].color };
+}
+
+/** The CSS variables a theme sets on top of the base, for one mode. */
+export function themeVariables(theme: ThemeName, mode: Mode): Record<string, string> {
+  const t = themes[theme][mode];
+  return {
+    ...cssVariables(t.color, 'color'),
+    ...(t.status ? cssVariables(t.status, 'status') : {}),
+    ...cssVariables(t.glass, 'glass'),
+  };
+}
+
+const block = (selector: string, vars: Record<string, string>, extra = '') =>
+  `${selector}{${Object.entries(vars)
+    .map(([k, v]) => `${k}:${v};`)
+    .join('')}${extra}}`;
+
+/** One stylesheet: the base tokens on :root, then every theme in both modes. */
+export function themeStylesheet(): string {
+  const rules = [block(':root', cssVariables(), 'color-scheme:light;')];
+  for (const theme of THEMES) {
+    for (const mode of MODES) {
+      rules.push(
+        block(
+          `[data-theme="${theme}"][data-mode="${mode}"]`,
+          themeVariables(theme, mode),
+          `color-scheme:${mode};`,
+        ),
+      );
+    }
   }
+  return rules.join('\n');
+}
+
+/**
+ * Writes all tokens as one stylesheet (base on :root, themes on [data-theme][data-mode]). Call
+ * once before rendering. A stylesheet rather than inline styles on <html>, so a theme rule can
+ * override the base.
+ */
+export function applyTokens(root: HTMLElement = document.documentElement): void {
+  const doc = root.ownerDocument;
+  let tag = doc.getElementById('design-tokens');
+  if (!tag) {
+    tag = doc.createElement('style');
+    tag.id = 'design-tokens';
+    doc.head.appendChild(tag);
+  }
+  tag.textContent = themeStylesheet();
+  if (!root.dataset.theme) root.dataset.theme = 'brand';
+  if (!root.dataset.mode) root.dataset.mode = 'light';
 }
 
 function varTree(group: string, source: TokenTree): NestedVars {
@@ -148,7 +219,14 @@ export const tailwindTheme = {
     current: 'currentColor',
     ...varTree('color', tokens.color),
     status: varTree('status', tokens.status),
-    glass: flatVars('glass', { fill: '', fillDense: '', border: '' }),
+    glass: flatVars('glass', {
+      fill: '',
+      fillDense: '',
+      fillSolid: '',
+      tint: '',
+      border: '',
+      highlight: '',
+    }),
   } as NestedVars,
   borderRadius: flatVars('radius', tokens.radius),
   boxShadow: flatVars('shadow', tokens.shadow),
@@ -159,7 +237,12 @@ export const tailwindTheme = {
     fast: tokens.motion.fast,
     base: tokens.motion.base,
     slow: tokens.motion.slow,
+    page: tokens.motion.page,
   }),
   transitionTimingFunction: { brand: 'var(--motion-ease)' },
-  backdropBlur: { glass: 'var(--glass-blur)' },
+  backdropBlur: {
+    glass: 'var(--glass-blur)',
+    'glass-sm': 'var(--glass-blur-sm)',
+    'glass-lg': 'var(--glass-blur-lg)',
+  },
 };

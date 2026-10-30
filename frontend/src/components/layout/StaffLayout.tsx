@@ -10,7 +10,10 @@ import { IdleGuard } from './IdleGuard';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { LoadingState } from '../ui/Skeleton';
+import { DisplaySettings } from '../ui/DisplaySettings';
+import { DelayedLoader } from '../ui/Loader';
+import { PageTransition } from '../ui/PageTransition';
+import { useRouteTheme } from '../../design/display';
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -24,6 +27,7 @@ export function StaffLayout() {
   const { user, signOut } = useSession();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  useRouteTheme('staff');
   if (!user) return null;
   const menu = menuFor(user.role);
 
@@ -43,7 +47,10 @@ export function StaffLayout() {
           >
             {brand.logoText}
           </Link>
-          <Badge tone="primary">{roleLabel(user.role)}</Badge>
+          <div className="flex items-center gap-xs">
+            <Badge tone="primary">{roleLabel(user.role)}</Badge>
+            <DisplaySettings />
+          </div>
         </div>
         <nav
           aria-label={`${roleLabel(user.role)} menu`}
@@ -101,8 +108,10 @@ export function StaffLayout() {
       {user.role === 'receptionist' && <IdleGuard />}
       <main id="main" className="min-w-0 flex-1">
         <ErrorBoundary resetKey={pathname}>
-          <Suspense fallback={<LoadingState label="Loading page…" lines={4} className="py-2xl" />}>
-            <Outlet />
+          <Suspense fallback={<DelayedLoader label="Loading page…" />}>
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </Suspense>
         </ErrorBoundary>
       </main>

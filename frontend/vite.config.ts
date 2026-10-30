@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+import photoManifest from './vite-plugins/photo-manifest.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -8,7 +9,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000';
 
   return {
-    plugins: [react()],
+    plugins: [react(), photoManifest()],
     server: {
       port: 5173,
       strictPort: true,

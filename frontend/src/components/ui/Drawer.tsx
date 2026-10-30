@@ -31,7 +31,7 @@ export function Drawer({ open, onClose, title, description, children, footer }: 
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className="glass-dense relative flex h-full w-full max-w-md flex-col rounded-l-modal shadow-raised focus:outline-none"
+        className="glass-dense sheet-in relative flex h-full w-full max-w-md flex-col rounded-l-modal shadow-raised focus:outline-none"
       >
         <div className="flex items-start justify-between gap-md p-lg pb-md">
           <div>

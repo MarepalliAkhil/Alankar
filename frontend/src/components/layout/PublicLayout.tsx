@@ -2,11 +2,11 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { LoadingState } from '../ui/Skeleton';
+import { DelayedLoader } from '../ui/Loader';
+import { PageTransition } from '../ui/PageTransition';
 import { AnnouncementBar } from './AnnouncementBar';
 import { Footer } from './Footer';
 import { Navbar } from './Navbar';
-import { PageContainer } from './PageContainer';
 
 export function PublicLayout() {
   const { pathname } = useLocation();
@@ -22,14 +22,10 @@ export function PublicLayout() {
       <Navbar />
       <main id="main" className="flex-1">
         <ErrorBoundary resetKey={pathname}>
-          <Suspense
-            fallback={
-              <PageContainer>
-                <LoadingState label="Loading page…" lines={4} className="py-2xl" />
-              </PageContainer>
-            }
-          >
-            <Outlet />
+          <Suspense fallback={<DelayedLoader label="Loading page…" />}>
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </Suspense>
         </ErrorBoundary>
       </main>

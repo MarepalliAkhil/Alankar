@@ -10,6 +10,7 @@ import { useSession } from '../../session/session-context';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { ButtonLink } from '../ui/ButtonLink';
+import { DisplaySettings } from '../ui/DisplaySettings';
 import { DropdownMenu, type DropdownItem } from '../ui/DropdownMenu';
 import { IconButton } from '../ui/IconButton';
 
@@ -129,10 +130,12 @@ export function Navbar() {
           <NavLink to="/zenotians" className={zenotiansClass}>
             For Zenotians
           </NavLink>
+          <DisplaySettings className="ml-1" />
         </div>
 
+        <DisplaySettings className="ml-auto md:hidden" />
         <IconButton
-          className="ml-auto md:hidden"
+          className="md:hidden"
           label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="mobile-menu"

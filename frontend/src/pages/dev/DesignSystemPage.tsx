@@ -24,7 +24,31 @@ import {
   useToast,
   type Column,
 } from '../../components/ui';
-import { tokens, type ColorToken } from '../../design/tokens';
+import {
+  ArtImage,
+  BrandMark,
+  DisplaySettings,
+  FullScreenLoader,
+  GlassButton,
+  GlassCard,
+  GlassDrawer,
+  GlassInput,
+  GlassModal,
+  GlassNav,
+  GlassPanel,
+  SkeletonCard,
+  SkeletonChart,
+  SkeletonChat,
+  SkeletonTable,
+  Spinner,
+  ThemeSwitcher,
+} from '../../components/ui';
+import { art, type ArtId } from '../../design/art';
+import { contrastReport } from '../../design/contrast';
+import { useTheme } from '../../design/theme-context';
+import { ThemeScope } from '../../design/ThemeProvider';
+import { MODES, THEMES, themeLabels, type Mode, type ThemeName } from '../../design/themes';
+import { resolvedColors, type ColorToken } from '../../design/tokens';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { appointmentStatuses } from '../../types/appointment';
 
@@ -39,7 +63,12 @@ const swatches = {
   textMuted: 'bg-text-muted',
   background: 'bg-background',
   surface: 'bg-surface',
+  surfaceMuted: 'bg-surface-muted',
   border: 'bg-border',
+  accent: 'bg-accent',
+  accentSoft: 'bg-accent-soft',
+  onAccent: 'bg-on-accent',
+  artOverlay: 'bg-art-overlay',
   success: 'bg-success',
   successSoft: 'bg-success-soft',
   successText: 'bg-success-text',
@@ -88,6 +117,24 @@ const tabItems = [
   { id: 'three', label: 'History' },
 ] as const;
 
+function FilterChipsMode({ value, onChange }: { value: Mode; onChange: (m: Mode) => void }) {
+  return (
+    <div role="group" aria-label="Preview mode" className="flex gap-sm">
+      {MODES.map((m) => (
+        <Button
+          key={m}
+          size="sm"
+          variant={value === m ? 'primary' : 'secondary'}
+          aria-pressed={value === m}
+          onClick={() => onChange(m)}
+        >
+          {m === 'light' ? 'Light' : 'Dark'}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card as="section" variant="dense" aria-label={title} className="flex flex-col gap-md">
@@ -103,9 +150,15 @@ export default function DesignSystemPage() {
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [glassDialog, setGlassDialog] = useState<'modal' | 'drawer' | null>(null);
   const [tab, setTab] = useState<(typeof tabItems)[number]['id']>('one');
   const [checked, setChecked] = useState(true);
   const [showTableEmpty, setShowTableEmpty] = useState(false);
+  const display = useTheme();
+  const [previewTheme, setPreviewTheme] = useState<ThemeName>('salon');
+  const [previewMode, setPreviewMode] = useState<Mode>(display.mode);
+  const [loaderOpen, setLoaderOpen] = useState(false);
+  const colors = resolvedColors(display.theme, display.mode);
 
   return (
     <PageContainer className="flex flex-col gap-lg pb-xl">
@@ -115,13 +168,209 @@ export default function DesignSystemPage() {
         description="All tokens and base components. Pages may only use these."
       />
 
+      <Section title="Themes and modes">
+        <p className="text-sm text-text-muted">
+          Five themes, each in light and dark. The page itself follows the display setting (top
+          right); every panel below is a scoped preview. The number is the lowest WCAG contrast of
+          all text pairs in that theme, glass over artwork included (AA needs 4.5).
+        </p>
+        <DisplaySettings />
+        <ul className="grid gap-md sm:grid-cols-2 xl:grid-cols-5">
+          {THEMES.flatMap((theme) =>
+            MODES.map((mode) => {
+              const rows = contrastReport(theme, mode);
+              const worst = rows.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+              return (
+                <li key={`${theme}-${mode}`}>
+                  <ThemeScope
+                    theme={theme}
+                    mode={mode}
+                    className="flex h-full flex-col gap-sm rounded-card border border-border bg-background p-md text-text"
+                  >
+                    <p className="text-sm font-semibold">
+                      {themeLabels[theme]} · {mode}
+                    </p>
+                    <div className="flex gap-1" aria-hidden="true">
+                      {['bg-primary', 'bg-primary-hover', 'bg-accent', 'bg-surface', 'bg-text'].map(
+                        (cls) => (
+                          <span
+                            key={cls}
+                            className={`h-6 flex-1 rounded-input border border-border ${cls}`}
+                          />
+                        ),
+                      )}
+                    </div>
+                    <GlassCard padding="sm" className="flex flex-col gap-xs">
+                      <p className="text-sm">Glass card text</p>
+                      <p className="text-xs text-text-muted">Secondary text</p>
+                      <Button size="sm">Book now</Button>
+                    </GlassCard>
+                    <p className="text-xs text-text-muted">
+                      Lowest contrast {worst.ratio.toFixed(2)}:1{' '}
+                      {rows.every((r) => r.pass) ? '(all pass AA)' : '(FAILS)'}
+                    </p>
+                  </ThemeScope>
+                </li>
+              );
+            }),
+          )}
+        </ul>
+      </Section>
+
+      <Section title="Contrast values">
+        <ThemeSwitcher value={previewTheme} onChange={setPreviewTheme} />
+        <FilterChipsMode value={previewMode} onChange={setPreviewMode} />
+        <Table
+          caption={`Contrast, ${themeLabels[previewTheme]}, ${previewMode} mode`}
+          rows={contrastReport(previewTheme, previewMode)}
+          rowKey={(row) => row.use}
+          columns={[
+            { key: 'use', header: 'Used for', render: (row) => row.use },
+            { key: 'pair', header: 'Pair', render: (row) => `${row.fg} on ${row.bg}` },
+            { key: 'ratio', header: 'Ratio', render: (row) => `${row.ratio.toFixed(2)}:1` },
+            { key: 'min', header: 'Needs', render: (row) => `${row.min}:1` },
+            {
+              key: 'pass',
+              header: 'Result',
+              render: (row) => (
+                <Badge tone={row.pass ? 'success' : 'danger'}>{row.pass ? 'Pass' : 'Fail'}</Badge>
+              ),
+            },
+          ]}
+        />
+      </Section>
+
+      <Section title="Glass components">
+        <p className="text-sm text-text-muted">
+          Shown in the {themeLabels[previewTheme]} theme over its artwork. Turn on &quot;Reduce
+          transparency&quot; in the display settings to see the solid fallback.
+        </p>
+        <ThemeScope
+          theme={previewTheme}
+          mode={previewMode}
+          className="relative overflow-hidden rounded-card text-text"
+        >
+          <ArtImage
+            slot={
+              previewTheme === 'spa'
+                ? 'spaBackground'
+                : previewTheme === 'parlor'
+                  ? 'parlorBackground'
+                  : 'salonBackground'
+            }
+            mode={previewMode}
+            className="absolute inset-0 h-full w-full"
+          />
+          <div className="relative flex flex-col gap-md p-md sm:p-lg">
+            <GlassNav label="Example navigation" className="flex items-center gap-sm px-md py-sm">
+              <span className="font-semibold">Alankar</span>
+              <span className="ml-auto text-sm text-text-muted">GlassNav</span>
+            </GlassNav>
+            <div className="grid gap-md md:grid-cols-2">
+              <GlassCard interactive className="flex flex-col gap-sm">
+                <p className="text-lg font-semibold">GlassCard</p>
+                <p className="text-sm text-text-muted">
+                  Light glass for content over artwork. Hover lifts it slightly.
+                </p>
+                <div className="flex flex-wrap gap-sm">
+                  <Button size="sm">Primary</Button>
+                  <GlassButton size="sm">GlassButton</GlassButton>
+                  <GlassButton size="sm" onClick={() => setGlassDialog('modal')}>
+                    Open GlassModal
+                  </GlassButton>
+                  <GlassButton size="sm" onClick={() => setGlassDialog('drawer')}>
+                    Open GlassDrawer
+                  </GlassButton>
+                </div>
+              </GlassCard>
+              <GlassPanel className="flex flex-col gap-sm">
+                <p className="text-lg font-semibold">GlassPanel</p>
+                <GlassInput
+                  label="GlassInput"
+                  placeholder="Type here"
+                  hint="Dense glass for forms"
+                />
+              </GlassPanel>
+            </div>
+          </div>
+        </ThemeScope>
+        <GlassModal
+          open={glassDialog === 'modal'}
+          onClose={() => setGlassDialog(null)}
+          title="GlassModal"
+          description="Dense glass, rises in; solid with reduced transparency."
+          footer={<Button onClick={() => setGlassDialog(null)}>Close</Button>}
+        >
+          <p className="text-sm text-text">Focus is trapped here and Escape closes it.</p>
+        </GlassModal>
+        <GlassDrawer
+          open={glassDialog === 'drawer'}
+          onClose={() => setGlassDialog(null)}
+          title="GlassDrawer"
+          description="Dense glass, slides in from the right."
+        >
+          <p className="text-sm text-text">Full width on phones.</p>
+        </GlassDrawer>
+      </Section>
+
+      <Section title="Loading">
+        <div className="flex flex-wrap items-center gap-lg">
+          {THEMES.map((theme) => (
+            <ThemeScope
+              key={theme}
+              theme={theme}
+              className="flex flex-col items-center gap-xs text-text"
+            >
+              <BrandMark theme={theme} className="h-14 w-14" />
+              <span className="text-xs text-text-muted">{themeLabels[theme]}</span>
+            </ThemeScope>
+          ))}
+          <Spinner label="Inline spinner" />
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setLoaderOpen(true);
+              window.setTimeout(() => setLoaderOpen(false), 2000);
+            }}
+          >
+            Show the full-screen loader (2 s)
+          </Button>
+        </div>
+        {loaderOpen && <FullScreenLoader label="Preview of the full-screen loader" />}
+        <div className="grid gap-md lg:grid-cols-2">
+          <SkeletonCard label="Card placeholder" />
+          <SkeletonTable rows={3} label="Table placeholder" />
+          <SkeletonChart label="Chart placeholder" />
+          <SkeletonChat label="Chat placeholder" />
+        </div>
+      </Section>
+
+      <Section title="Artwork">
+        <p className="text-sm text-text-muted">
+          Generated, original artwork. Put a photo named as shown in frontend/public/photos/ to
+          replace a slot; the artwork stays as the fallback.
+        </p>
+        <ul className="grid gap-md md:grid-cols-3">
+          {(Object.keys(art) as ArtId[]).map((id) => (
+            <li key={id} className="flex flex-col gap-xs">
+              <ArtImage slot={id} className="aspect-[8/5] w-full rounded-nested" />
+              <p className="text-sm font-semibold text-text">{id}</p>
+              <p className="text-xs text-text-muted">{art[id].description}</p>
+              <p className="text-xs text-text-muted">
+                Photo: public/photos/{art[id].photo}.jpg · {art[id].width}×{art[id].height}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
       <Section title="Colour tokens">
         <ul className="grid grid-cols-2 gap-sm sm:grid-cols-4 lg:grid-cols-6">
           {(Object.keys(swatches) as ColorToken[]).map((key) => (
             <li key={key} className="flex flex-col gap-1">
               <span className={`h-12 rounded-nested border border-border ${swatches[key]}`} />
               <span className="text-xs font-medium text-text">{key}</span>
-              <span className="text-xs text-text-muted">{tokens.color[key]}</span>
+              <span className="text-xs text-text-muted">{colors[key]}</span>
             </li>
           ))}
         </ul>
