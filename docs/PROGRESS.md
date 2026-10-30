@@ -1162,7 +1162,7 @@ Backend: `ruff format --check` clean (275 files). `deploy_check` correctly flagg
 ## Task 8: DONE (2026-10-29)
 `scripts\e2e.cmd` passed on the owner's PC (run from the repository root). Combined with the earlier confirmed `pytest` (1221 passed, 2 skipped), `npm test` (365 passed), clean lint/typecheck/build, and a clean `pip-audit`/`npm audit` for Django/DRF (only `twisted` and the frontend breaking-upgrade findings remain, both documented limitations/follow-up), Task 8 (8a security, 8b data/reliability, 8c Playwright e2e, 8d README/demo data) is verified end to end on the owner's machine and pushed to `main`.
 
-## Task 8.5: product shop, coupons, packages, memberships (IN PROGRESS, 2026-10-29)
+## Task 8.5: product shop, coupons, packages, memberships (DONE, 2026-10-30)
 A large feature set, built one numbered part at a time, each committed on its own and verified in
 the sandbox before moving on (migrate, pytest, ruff, npm test/lint/typecheck as each part's files
 allow). This section is updated as each part lands; it is not DONE until every part is built, the
@@ -1746,3 +1746,23 @@ Sandbox verification at commit `44f9e50` (real date, no faked clock):
 
 **Task 8.5 is NOT marked done** until the owner confirms the PC run (pytest, npm test, lint,
 typecheck, build, Playwright) and the browser walkthrough.
+
+### Task 8.5: DONE (2026-10-30)
+The owner confirmed the PC run and pushed (`c912df6` on GitHub `main`). Task 8.5 is complete.
+
+## Task 10: NOT built yet
+Task 10 (the rule-based admin assistant "Alankar Intelligence") is not built. **When it is built,
+style its panel with the Task 11 staff theme** (glass panel from `components/ui`, denser glass for
+its tables, skeleton loaders) -- Task 11e deliberately skips it because the screen does not exist.
+
+## Task 11: UI redesign (IN PROGRESS, started 2026-10-30)
+Plan approved by the owner with corrections: 11d includes Shop, My Orders, Memberships and the
+receptionist/admin Orders and Memberships screens; 11e skips Alankar Intelligence (see Task 10).
+Order: 11a foundation, 11b hero, 11c division pages, 11d customer portal, 11e staff portals,
+11f polish and verification. One commit per subtask.
+
+### Task 11: decisions
+- **No framer-motion.** The owner's rules mention "the existing framer-motion", but it was never
+  installed (it is not in `frontend/package.json`). Rather than add a dependency, page transitions,
+  the loader and every other animation are plain CSS (transform/opacity only), which is lighter and
+  respects `prefers-reduced-motion` through one media query.
