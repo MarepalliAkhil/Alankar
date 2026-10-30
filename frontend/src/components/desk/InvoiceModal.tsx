@@ -64,6 +64,7 @@ export function InvoiceModal({ invoiceId, onClose }: { invoiceId: string; onClos
   const data = invoice.data;
   return (
     <Modal
+      busy={refund.isPending}
       open
       size="lg"
       onClose={onClose}

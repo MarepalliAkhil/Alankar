@@ -100,6 +100,7 @@ export function PlansPanel() {
                     Edit
                   </Button>
                   <Button
+                    loading={flip.isPending && flip.variables?.id === p.id}
                     type="button"
                     size="sm"
                     variant="ghost"
@@ -185,7 +186,13 @@ function PlanForm({
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
   return (
-    <Modal open onClose={onClose} title={plan ? `Edit ${plan.name}` : 'New plan'} size="lg">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={plan ? `Edit ${plan.name}` : 'New plan'}
+      size="lg"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <div className="grid gap-md sm:grid-cols-2">
           <Input label="Name" value={form.name} onChange={set('name')} />
@@ -250,7 +257,7 @@ function PlanForm({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={save.isPending}>
+          <Button loading={save.isPending} type="submit" disabled={save.isPending}>
             Save plan
           </Button>
         </div>

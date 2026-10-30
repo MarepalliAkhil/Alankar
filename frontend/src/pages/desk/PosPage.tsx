@@ -305,6 +305,7 @@ function Refunds() {
       )}
       {deciding && (
         <Modal
+          busy={decide.isPending}
           open
           onClose={() => setDeciding(null)}
           title={deciding.approve ? 'Approve this refund' : 'Reject this refund'}

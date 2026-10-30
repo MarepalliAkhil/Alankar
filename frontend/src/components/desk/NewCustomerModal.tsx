@@ -51,6 +51,7 @@ export function NewCustomerModal({
 
   return (
     <Modal
+      busy={create.isPending}
       open
       onClose={onClose}
       title="Register a customer"

@@ -551,7 +551,7 @@ function ReviewForm({
         </p>
       )}
       <div>
-        <Button type="submit" disabled={save.isPending}>
+        <Button loading={save.isPending} type="submit" disabled={save.isPending}>
           Save review
         </Button>
       </div>

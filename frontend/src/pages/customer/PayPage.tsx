@@ -15,6 +15,7 @@ import {
   LoadingState,
   StatusBadge,
   useToast,
+  PendingArea,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINR, formatINRExact } from '../../lib/format';
@@ -156,125 +157,142 @@ export default function PayPage() {
       );
     }
     return (
-      <Card variant="plain" padding="lg" className="mx-auto flex max-w-lg flex-col gap-md">
-        <div className="flex items-start justify-between gap-md">
-          <div>
-            <h2 className="text-base font-semibold text-text">{appointment.service_name}</h2>
-            <p className="text-sm text-text-muted">
-              {appointment.start ? formatDateTime(appointment.start) : ''}
-              {appointment.stylist_name ? ` · ${appointment.stylist_name}` : ''}
-            </p>
-          </div>
-          <StatusBadge status={appointment.status} />
-        </div>
-        <div className="rounded-nested bg-primary-soft p-md">
-          <p className="text-xs text-text-muted">Amount due (incl. GST)</p>
-          <p className="text-2xl font-semibold text-text">{formatINR(amount)}</p>
-          {quote && Number(quote.discount) > 0 && (
-            <dl className="mt-xs flex flex-col gap-1 text-xs text-text-muted">
-              <div className="flex justify-between">
-                <dt>Price</dt>
-                <dd>{formatINRExact(quote.items_total)}</dd>
-              </div>
-              {Number(quote.coupon_amount) > 0 && (
-                <div className="flex justify-between">
-                  <dt>Coupon {quote.coupon_code}</dt>
-                  <dd>- {formatINRExact(quote.coupon_amount)}</dd>
-                </div>
-              )}
-              {Number(quote.member_amount) > 0 && (
-                <div className="flex justify-between">
-                  <dt>
-                    {quote.member_plan} membership ({Number(quote.member_percent)}%)
-                  </dt>
-                  <dd>- {formatINRExact(quote.member_amount)}</dd>
-                </div>
-              )}
-            </dl>
-          )}
-          {expires && (
-            <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>
-          )}
-        </div>
-        <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
-          <div className="flex flex-wrap items-end gap-sm">
-            <div className="min-w-0 flex-1">
-              <Input
-                label="Coupon code (optional)"
-                autoComplete="off"
-                value={couponInput}
-                error={coupon ? payment.data.coupon_error || undefined : undefined}
-                onChange={(e) => setCouponInput(e.target.value)}
-              />
+      <PendingArea
+        pending={pay.isPending}
+        message="Taking your payment. Please wait, this can take a few seconds."
+        className="mx-auto w-full max-w-lg"
+      >
+        <Card variant="plain" padding="lg" className="flex flex-col gap-md">
+          <div className="flex items-start justify-between gap-md">
+            <div>
+              <h2 className="text-base font-semibold text-text">{appointment.service_name}</h2>
+              <p className="text-sm text-text-muted">
+                {appointment.start ? formatDateTime(appointment.start) : ''}
+                {appointment.stylist_name ? ` · ${appointment.stylist_name}` : ''}
+              </p>
             </div>
+            <StatusBadge status={appointment.status} />
+          </div>
+          <div className="rounded-nested bg-primary-soft p-md">
+            <p className="text-xs text-text-muted">Amount due (incl. GST)</p>
+            <p className="text-2xl font-semibold text-text">{formatINR(amount)}</p>
+            {quote && Number(quote.discount) > 0 && (
+              <dl className="mt-xs flex flex-col gap-1 text-xs text-text-muted">
+                <div className="flex justify-between">
+                  <dt>Price</dt>
+                  <dd>{formatINRExact(quote.items_total)}</dd>
+                </div>
+                {Number(quote.coupon_amount) > 0 && (
+                  <div className="flex justify-between">
+                    <dt>Coupon {quote.coupon_code}</dt>
+                    <dd>- {formatINRExact(quote.coupon_amount)}</dd>
+                  </div>
+                )}
+                {Number(quote.member_amount) > 0 && (
+                  <div className="flex justify-between">
+                    <dt>
+                      {quote.member_plan} membership ({Number(quote.member_percent)}%)
+                    </dt>
+                    <dd>- {formatINRExact(quote.member_amount)}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {expires && (
+              <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
+            <div className="flex flex-wrap items-end gap-sm">
+              <div className="min-w-0 flex-1">
+                <Input
+                  label="Coupon code (optional)"
+                  autoComplete="off"
+                  value={couponInput}
+                  error={coupon ? payment.data.coupon_error || undefined : undefined}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={couponInput.trim() === ''}
+                loading={payment.isFetching && coupon !== ''}
+                onClick={() => setCoupon(couponInput.trim().toUpperCase())}
+              >
+                Apply
+              </Button>
+            </div>
+            {couponOk && (
+              <p role="status" className="text-sm text-text">
+                Coupon {coupon} applied.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
+            <Input
+              label="Gift card code (optional)"
+              hint="It pays all or part of the amount. The rest is paid below."
+              autoComplete="off"
+              value={giftCode}
+              onChange={(e) => {
+                setGiftCode(e.target.value);
+                setGiftNote(null);
+              }}
+            />
+            <Input
+              label="Amount to take from the gift card (₹, optional)"
+              inputMode="decimal"
+              value={giftAmount}
+              onChange={(e) => setGiftAmount(e.target.value)}
+            />
+            <div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={giftCode.trim() === ''}
+                loading={checkGift.isPending}
+                onClick={() => checkGift.mutate()}
+              >
+                Check balance
+              </Button>
+            </div>
+            {giftNote && (
+              <p
+                role={giftNote.bad ? 'alert' : 'status'}
+                className={
+                  giftNote.bad ? 'text-sm font-medium text-danger-text' : 'text-sm text-text'
+                }
+              >
+                {giftNote.text}
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-text-muted">
+            Test payment: no real money moves and no card details are asked for.
+          </p>
+          <div className="flex flex-wrap gap-sm">
             <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={couponInput.trim() === '' || payment.isFetching}
-              onClick={() => setCoupon(couponInput.trim().toUpperCase())}
+              loading={pay.isPending && pay.variables === 'success'}
+              loadingText="Paying…"
+              disabled={pay.isPending}
+              onClick={() => pay.mutate('success')}
             >
-              Apply
+              Pay {formatINR(amount)}
+            </Button>
+            <Button
+              loading={pay.isPending && pay.variables === 'fail'}
+              variant="secondary"
+              disabled={pay.isPending}
+              onClick={() => pay.mutate('fail')}
+            >
+              Simulate failed payment
             </Button>
           </div>
-          {couponOk && (
-            <p role="status" className="text-sm text-text">
-              Coupon {coupon} applied.
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
-          <Input
-            label="Gift card code (optional)"
-            hint="It pays all or part of the amount. The rest is paid below."
-            autoComplete="off"
-            value={giftCode}
-            onChange={(e) => {
-              setGiftCode(e.target.value);
-              setGiftNote(null);
-            }}
-          />
-          <Input
-            label="Amount to take from the gift card (₹, optional)"
-            inputMode="decimal"
-            value={giftAmount}
-            onChange={(e) => setGiftAmount(e.target.value)}
-          />
-          <div>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={giftCode.trim() === ''}
-              loading={checkGift.isPending}
-              onClick={() => checkGift.mutate()}
-            >
-              Check balance
-            </Button>
-          </div>
-          {giftNote && (
-            <p
-              role={giftNote.bad ? 'alert' : 'status'}
-              className={
-                giftNote.bad ? 'text-sm font-medium text-danger-text' : 'text-sm text-text'
-              }
-            >
-              {giftNote.text}
-            </p>
-          )}
-        </div>
-        <p className="text-xs text-text-muted">
-          Test payment: no real money moves and no card details are asked for.
-        </p>
-        <div className="flex flex-wrap gap-sm">
-          <Button loading={pay.isPending} onClick={() => pay.mutate('success')}>
-            Pay {formatINR(amount)}
-          </Button>
-          <Button variant="secondary" disabled={pay.isPending} onClick={() => pay.mutate('fail')}>
-            Simulate failed payment
-          </Button>
-        </div>
-      </Card>
+        </Card>
+      </PendingArea>
     );
   };
 

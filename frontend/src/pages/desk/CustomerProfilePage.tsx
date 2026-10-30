@@ -327,6 +327,7 @@ function EditModal({
   };
   return (
     <Modal
+      busy={save.isPending}
       open
       onClose={onClose}
       title="Edit customer details"

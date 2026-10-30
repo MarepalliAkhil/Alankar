@@ -94,6 +94,7 @@ export function FaqPanel() {
                     Edit
                   </Button>
                   <Button
+                    loading={flip.isPending && flip.variables?.id === faq.id}
                     type="button"
                     size="sm"
                     variant="ghost"
@@ -103,6 +104,7 @@ export function FaqPanel() {
                     {faq.is_active ? 'Hide' : 'Publish'}
                   </Button>
                   <Button
+                    loading={remove.isPending && remove.variables?.id === faq.id}
                     type="button"
                     size="sm"
                     variant="danger"
@@ -183,7 +185,13 @@ function FaqForm({
     });
   };
   return (
-    <Modal open onClose={onClose} title={faq ? 'Edit question' : 'Add a question'} size="md">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={faq ? 'Edit question' : 'Add a question'}
+      size="md"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <Input
           label="Question"

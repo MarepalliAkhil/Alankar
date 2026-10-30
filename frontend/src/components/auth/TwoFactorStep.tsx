@@ -51,7 +51,7 @@ export function TwoFactorStep({ message, onVerify, onBack }: TwoFactorStepProps)
         onChange={(event) => setCode(event.target.value)}
         error={error ?? undefined}
       />
-      <Button type="submit" fullWidth loading={busy}>
+      <Button type="submit" fullWidth loading={busy} loadingText="Checking…">
         Verify and sign in
       </Button>
       <Button type="button" variant="ghost" onClick={onBack}>

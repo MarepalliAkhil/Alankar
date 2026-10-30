@@ -160,6 +160,7 @@ export default function MembershipsPage() {
       )}
 
       <Modal
+        busy={cancel.isPending}
         open={cancelling}
         onClose={() => setCancelling(false)}
         title="Cancel your membership?"

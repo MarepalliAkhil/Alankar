@@ -188,7 +188,7 @@ function IssueForm({ onClose, onDone }: { onClose: () => void; onDone: () => voi
     save.mutate();
   };
   return (
-    <Modal open onClose={onClose} title="Issue private coupons" size="md">
+    <Modal busy={save.isPending} open onClose={onClose} title="Issue private coupons" size="md">
       <form onSubmit={submit} className="flex flex-col gap-md" noValidate>
         <Input
           label="Coupon name"

@@ -137,6 +137,7 @@ export default function GiftCardsPage() {
       </Card>
       {viewing && (
         <Modal
+          busy={reveal.isPending}
           open
           onClose={() => {
             setViewing(null);
@@ -161,6 +162,7 @@ export default function GiftCardsPage() {
                 {detail.data.code_available ? (
                   !revealedCode && (
                     <Button
+                      loading={reveal.isPending}
                       type="button"
                       size="sm"
                       variant="secondary"

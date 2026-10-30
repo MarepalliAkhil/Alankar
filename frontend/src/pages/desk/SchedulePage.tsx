@@ -218,6 +218,7 @@ export default function SchedulePage() {
 
       {clash && (
         <Modal
+          busy={move.isPending}
           open
           onClose={() => setClash(null)}
           title="That time is taken"

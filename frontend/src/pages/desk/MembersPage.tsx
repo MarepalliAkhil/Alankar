@@ -127,6 +127,7 @@ function EndModal({ member, onClose }: { member: MemberRow; onClose: () => void 
   });
   return (
     <Modal
+      busy={end.isPending}
       open
       onClose={onClose}
       title={`End ${member.customer_name}'s membership?`}

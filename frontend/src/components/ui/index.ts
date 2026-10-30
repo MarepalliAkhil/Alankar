@@ -49,3 +49,4 @@ export { BrandMark, DelayedLoader, FullScreenLoader, LOADER_DELAY_MS } from './L
 export { PageTransition } from './PageTransition';
 export { ThemeSwitcher } from './ThemeSwitcher';
 export { ArtImage } from './ArtImage';
+export { PendingArea, type PendingAreaProps } from './PendingArea';

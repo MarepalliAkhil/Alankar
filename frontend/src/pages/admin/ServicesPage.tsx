@@ -508,6 +508,7 @@ function ServicesTab({ options }: { options: CatalogueOptions }) {
       </Drawer>
 
       <Modal
+        busy={remove.isPending}
         open={deleting !== null}
         onClose={() => setDeleting(null)}
         title="Delete this service?"
@@ -737,6 +738,7 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
                   Edit<span className="sr-only"> {row.name}</span>
                 </Button>
                 <Button
+                  loading={remove.isPending && remove.variables?.id === row.id}
                   size="sm"
                   variant="danger"
                   disabled={row.service_count > 0}
@@ -751,6 +753,7 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
         ]}
       />
       <Modal
+        busy={save.isPending}
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing === 'new' ? 'Add a category' : 'Edit category'}
@@ -936,7 +939,12 @@ function RoomsTab({ options }: { options: CatalogueOptions }) {
                 <Button size="sm" variant="secondary" onClick={() => open(row)}>
                   Edit<span className="sr-only"> {row.name}</span>
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => remove.mutate(row)}>
+                <Button
+                  loading={remove.isPending && remove.variables?.id === row.id}
+                  size="sm"
+                  variant="danger"
+                  onClick={() => remove.mutate(row)}
+                >
                   Delete<span className="sr-only"> {row.name}</span>
                 </Button>
               </div>
@@ -945,6 +953,7 @@ function RoomsTab({ options }: { options: CatalogueOptions }) {
         ]}
       />
       <Modal
+        busy={save.isPending}
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing === 'new' ? 'Add a room' : 'Edit room'}

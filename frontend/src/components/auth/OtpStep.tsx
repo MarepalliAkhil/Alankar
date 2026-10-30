@@ -1,6 +1,7 @@
 import { MailCheck } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { resendOtp, type OtpPurpose } from '../../api/auth';
+import { usePendingAction } from '../../hooks/usePendingAction';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { Button, Input } from '../ui';
 
@@ -47,7 +48,7 @@ export function OtpStep({ email, purpose, message, onVerify, onBack }: OtpStepPr
     }
   };
 
-  const resend = async () => {
+  const [resend, resending] = usePendingAction(async () => {
     setError(null);
     setInfo(null);
     try {
@@ -56,7 +57,7 @@ export function OtpStep({ email, purpose, message, onVerify, onBack }: OtpStepPr
     } catch (failure) {
       setError(genericErrorMessage(failure, "We couldn't send a new code. Please try again."));
     }
-  };
+  });
 
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-md">
@@ -76,14 +77,21 @@ export function OtpStep({ email, purpose, message, onVerify, onBack }: OtpStepPr
         error={error ?? undefined}
       />
       {info && <p className="text-sm text-text-muted">{info}</p>}
-      <Button type="submit" fullWidth loading={busy}>
+      <Button type="submit" fullWidth loading={busy} loadingText="Checking…">
         Verify and continue
       </Button>
       <div className="flex items-center justify-between text-sm">
         <Button type="button" variant="ghost" onClick={onBack}>
           Back
         </Button>
-        <Button type="button" variant="ghost" disabled={cooldown > 0} onClick={() => void resend()}>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={cooldown > 0}
+          loading={resending}
+          loadingText="Sending…"
+          onClick={() => void resend()}
+        >
           {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
         </Button>
       </div>

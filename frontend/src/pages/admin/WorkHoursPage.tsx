@@ -326,6 +326,7 @@ function CorrectModal({
   };
   return (
     <Modal
+      busy={save.isPending}
       open
       onClose={onClose}
       title="Correct a work session"
@@ -354,7 +355,7 @@ function CorrectModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={save.isPending}>
+          <Button loading={save.isPending} type="submit" disabled={save.isPending}>
             Save correction
           </Button>
         </div>
@@ -451,7 +452,7 @@ function ShiftEditor({
         </p>
       )}
       <div>
-        <Button type="submit" disabled={save.isPending}>
+        <Button loading={save.isPending} type="submit" disabled={save.isPending}>
           Save shifts
         </Button>
       </div>

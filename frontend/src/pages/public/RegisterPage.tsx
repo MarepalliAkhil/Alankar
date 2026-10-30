@@ -11,6 +11,7 @@ import {
   Button,
   ButtonLink,
   Card,
+  PendingArea,
   Checkbox,
   EmptyState,
   Input,
@@ -147,102 +148,113 @@ export default function RegisterPage() {
 
   return (
     <PageContainer className="flex justify-center py-xl">
-      <Card variant="dense" padding="lg" className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-text">Create your account</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Register as a customer to book appointments at {brand.shopName}.
-        </p>
+      <PendingArea
+        pending={submitting}
+        message="Creating your account. Please wait…"
+        className="w-full max-w-md"
+      >
+        <Card variant="dense" padding="lg" className="w-full">
+          <h1 className="text-2xl font-bold text-text">Create your account</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Register as a customer to book appointments at {brand.shopName}.
+          </p>
 
-        <form noValidate onSubmit={onSubmit} className="mt-lg flex flex-col gap-md">
-          <Input
-            label="Full name"
-            name="name"
-            autoComplete="name"
-            required
-            value={values.name}
-            onChange={update('name')}
-            error={errors.name}
-          />
-          <Input
-            label="Email"
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            value={values.email}
-            onChange={update('email')}
-            error={errors.email}
-          />
-          <Input
-            label="Mobile number"
-            type="tel"
-            name="phone"
-            autoComplete="tel"
-            inputMode="tel"
-            hint="We'll use this to confirm your bookings."
-            required
-            value={values.phone}
-            onChange={update('phone')}
-            error={errors.phone}
-          />
-          <PasswordInput
-            label="Password"
-            name="password"
-            autoComplete="new-password"
-            hint="At least 8 characters."
-            required
-            value={values.password}
-            onChange={update('password')}
-            error={errors.password}
-          />
-          <PasswordInput
-            label="Confirm password"
-            name="confirmPassword"
-            autoComplete="new-password"
-            required
-            value={values.confirmPassword}
-            onChange={update('confirmPassword')}
-            error={errors.confirmPassword}
-          />
-          <Checkbox
-            name="consent"
-            checked={consent}
-            onChange={(event) => setConsent(event.target.checked)}
-            label="I agree to the terms, privacy notice and cancellation policy."
-            error={errors.consent}
-          />
-          <Checkbox
-            name="marketing"
-            checked={marketing}
-            onChange={(event) => setMarketing(event.target.checked)}
-            label="Send me offers and news by email. I can unsubscribe any time (optional)."
-          />
-          {formError && (
-            <p
-              role="alert"
-              className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
+          <form noValidate onSubmit={onSubmit} className="mt-lg flex flex-col gap-md">
+            <Input
+              label="Full name"
+              name="name"
+              autoComplete="name"
+              required
+              value={values.name}
+              onChange={update('name')}
+              error={errors.name}
+            />
+            <Input
+              label="Email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              value={values.email}
+              onChange={update('email')}
+              error={errors.email}
+            />
+            <Input
+              label="Mobile number"
+              type="tel"
+              name="phone"
+              autoComplete="tel"
+              inputMode="tel"
+              hint="We'll use this to confirm your bookings."
+              required
+              value={values.phone}
+              onChange={update('phone')}
+              error={errors.phone}
+            />
+            <PasswordInput
+              label="Password"
+              name="password"
+              autoComplete="new-password"
+              hint="At least 8 characters."
+              required
+              value={values.password}
+              onChange={update('password')}
+              error={errors.password}
+            />
+            <PasswordInput
+              label="Confirm password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              required
+              value={values.confirmPassword}
+              onChange={update('confirmPassword')}
+              error={errors.confirmPassword}
+            />
+            <Checkbox
+              name="consent"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+              label="I agree to the terms, privacy notice and cancellation policy."
+              error={errors.consent}
+            />
+            <Checkbox
+              name="marketing"
+              checked={marketing}
+              onChange={(event) => setMarketing(event.target.checked)}
+              label="Send me offers and news by email. I can unsubscribe any time (optional)."
+            />
+            {formError && (
+              <p
+                role="alert"
+                className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
+              >
+                {formError}
+              </p>
+            )}
+            <Button
+              type="submit"
+              fullWidth
+              loading={submitting}
+              loadingText="Creating your account…"
             >
-              {formError}
-            </p>
-          )}
-          <Button type="submit" fullWidth loading={submitting}>
-            Create account
-          </Button>
-        </form>
+              Create account
+            </Button>
+          </form>
 
-        <p className="mt-lg text-center text-sm text-text-muted">
-          Already have an account?{' '}
-          <Link
-            to={loginPath}
-            className="font-medium text-primary-hover underline-offset-4 hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
-        <p className="mt-sm text-center text-xs text-text-muted">
-          Staff accounts are created by the salon admin. Staff sign in from the Login page.
-        </p>
-      </Card>
+          <p className="mt-lg text-center text-sm text-text-muted">
+            Already have an account?{' '}
+            <Link
+              to={loginPath}
+              className="font-medium text-primary-hover underline-offset-4 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+          <p className="mt-sm text-center text-xs text-text-muted">
+            Staff accounts are created by the salon admin. Staff sign in from the Login page.
+          </p>
+        </Card>
+      </PendingArea>
     </PageContainer>
   );
 }

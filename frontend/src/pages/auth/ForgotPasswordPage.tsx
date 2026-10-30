@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
                   {formError}
                 </p>
               )}
-              <Button type="submit" fullWidth loading={submitting}>
+              <Button type="submit" fullWidth loading={submitting} loadingText="Sending…">
                 Send reset link
               </Button>
             </form>

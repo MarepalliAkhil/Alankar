@@ -114,6 +114,7 @@ function PackageCard({ purchase: p }: { purchase: PurchaseRow }) {
         </span>
         {p.code_available ? (
           <Button
+            loading={reveal.isPending}
             type="button"
             variant="secondary"
             size="sm"
@@ -227,7 +228,13 @@ function CancelRequestModal({
       setProblem(genericErrorMessage(error, 'We could not send the request.')),
   });
   return (
-    <Modal open onClose={onClose} title={`Cancel ${purchase.name}`} size="md">
+    <Modal
+      busy={submit.isPending}
+      open
+      onClose={onClose}
+      title={`Cancel ${purchase.name}`}
+      size="md"
+    >
       <div className="flex flex-col gap-md">
         {estimate.isPending ? (
           <LoadingState label="Estimating your refund…" />

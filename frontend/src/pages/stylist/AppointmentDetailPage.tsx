@@ -154,6 +154,7 @@ export default function AppointmentDetailPage() {
         </div>
       )}
       <Modal
+        busy={complete.isPending}
         open={completing}
         onClose={() => setCompleting(false)}
         title="Complete the service"

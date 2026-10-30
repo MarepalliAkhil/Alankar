@@ -163,6 +163,7 @@ export function CheckoutModal({
   const visit = context.data?.visit;
   return (
     <Modal
+      busy={save.isPending}
       open
       size="lg"
       onClose={onClose}

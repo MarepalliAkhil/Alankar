@@ -95,10 +95,22 @@ export function AchievementsPanel() {
                   </Badge>
                 </p>
                 <div className="flex gap-sm">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => flip.mutate(a)}>
+                  <Button
+                    loading={flip.isPending && flip.variables?.id === a.id}
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => flip.mutate(a)}
+                  >
                     {a.is_active ? 'Hide' : 'Show'}
                   </Button>
-                  <Button type="button" size="sm" variant="danger" onClick={() => remove.mutate(a)}>
+                  <Button
+                    loading={remove.isPending && remove.variables?.id === a.id}
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => remove.mutate(a)}
+                  >
                     Delete
                   </Button>
                 </div>

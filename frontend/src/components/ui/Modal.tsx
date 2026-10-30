@@ -3,7 +3,9 @@ import { useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialog } from '../../hooks/useDialog';
 import { cn } from '../../lib/cn';
+import { useSlowPending } from '../../hooks/useSlowPending';
 import { IconButton } from './IconButton';
+import { BusyOverlay, SLOW_ACTION_MESSAGE } from './PendingArea';
 
 export interface ModalProps {
   open: boolean;
@@ -13,6 +15,12 @@ export interface ModalProps {
   children?: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * The dialog's action is running (mutation.isPending). If it is still running after 800 ms a
+   * glass overlay with the branded loader covers the dialog until it ends.
+   */
+  busy?: boolean;
+  busyMessage?: string;
 }
 
 const widths = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' };
@@ -25,7 +33,10 @@ export function Modal({
   children,
   footer,
   size = 'md',
+  busy = false,
+  busyMessage = SLOW_ACTION_MESSAGE,
 }: ModalProps) {
+  const slow = useSlowPending(busy);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -41,6 +52,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
+        aria-busy={busy || undefined}
         tabIndex={-1}
         className={cn(
           'glass-dense sheet-up relative flex max-h-[90vh] w-full flex-col rounded-modal shadow-raised focus:outline-none',
@@ -66,6 +78,7 @@ export function Modal({
             {footer}
           </div>
         )}
+        {slow && <BusyOverlay message={busyMessage} className="rounded-modal" />}
       </div>
     </div>,
     document.body,

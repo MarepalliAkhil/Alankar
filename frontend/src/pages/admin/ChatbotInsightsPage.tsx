@@ -56,6 +56,7 @@ function AddFaqModal({ row, onClose }: { row: UnansweredRow; onClose: () => void
   const ready = question.trim() !== '' && answer.trim() !== '';
   return (
     <Modal
+      busy={save.isPending}
       open
       onClose={onClose}
       title="Add as FAQ"
@@ -65,7 +66,12 @@ function AddFaqModal({ row, onClose }: { row: UnansweredRow; onClose: () => void
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" disabled={!ready || save.isPending} onClick={() => save.mutate()}>
+          <Button
+            loading={save.isPending}
+            type="button"
+            disabled={!ready || save.isPending}
+            onClick={() => save.mutate()}
+          >
             {save.isPending ? 'Saving…' : 'Add FAQ'}
           </Button>
         </>
@@ -118,7 +124,7 @@ function TestBox() {
             onChange={(e) => setMessage(e.target.value)}
           />
         </div>
-        <Button type="submit" disabled={test.isPending || !message.trim()}>
+        <Button loading={test.isPending} type="submit" disabled={test.isPending || !message.trim()}>
           {test.isPending ? 'Asking…' : 'Ask'}
         </Button>
       </form>
@@ -217,6 +223,7 @@ export default function ChatbotInsightsPage() {
                         Add as FAQ
                       </Button>
                       <Button
+                        loading={dismiss.isPending && dismiss.variables === q.id}
                         type="button"
                         size="sm"
                         variant="ghost"

@@ -174,6 +174,7 @@ export function CampaignsPanel() {
                       Edit
                     </Button>
                     <Button
+                      loading={remove.isPending && remove.variables?.id === c.id}
                       type="button"
                       size="sm"
                       variant="danger"
@@ -245,7 +246,7 @@ function ScheduleDialog({
       setProblem(serverFieldErrors(error).send_at ?? errorDetail(error) ?? 'Could not schedule.'),
   });
   return (
-    <Modal open onClose={onClose} title="Schedule this campaign" size="sm">
+    <Modal busy={save.isPending} open onClose={onClose} title="Schedule this campaign" size="sm">
       <form
         className="flex flex-col gap-md"
         noValidate
@@ -310,7 +311,7 @@ function SendDialog({
     onError: (error) => setProblem(errorDetail(error) ?? 'Could not send.'),
   });
   return (
-    <Modal open onClose={onClose} title="Send this campaign?" size="sm">
+    <Modal busy={send.isPending} open onClose={onClose} title="Send this campaign?" size="sm">
       <p className="text-sm text-text">
         “{campaign.subject}” will go to {campaign.would_reach ?? 0} opted-in customer
         {campaign.would_reach === 1 ? '' : 's'}. A sent campaign cannot be changed or sent again.
@@ -379,7 +380,13 @@ function CampaignForm({
     save.mutate({ ...form, coupon: form.coupon || null });
   };
   return (
-    <Modal open onClose={onClose} title={campaign ? 'Edit campaign' : 'New campaign'} size="lg">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={campaign ? 'Edit campaign' : 'New campaign'}
+      size="lg"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <Input
           label="Name (only you see it)"

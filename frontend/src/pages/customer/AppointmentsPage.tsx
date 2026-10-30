@@ -159,6 +159,7 @@ export default function AppointmentsPage() {
       )}
 
       <Modal
+        busy={act.isPending}
         open={dialog !== null}
         onClose={close}
         title={

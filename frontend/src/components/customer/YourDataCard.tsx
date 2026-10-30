@@ -95,6 +95,7 @@ export function YourDataCard() {
                 <Badge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Badge>
                 {r.status === 'pending' && (
                   <Button
+                    loading={cancel.isPending && cancel.variables === r.id}
                     type="button"
                     size="sm"
                     variant="ghost"
@@ -104,7 +105,12 @@ export function YourDataCard() {
                   </Button>
                 )}
                 {r.can_download && (
-                  <Button type="button" size="sm" onClick={() => download.mutate(r.id)}>
+                  <Button
+                    loading={download.isPending && download.variables === r.id}
+                    type="button"
+                    size="sm"
+                    onClick={() => download.mutate(r.id)}
+                  >
                     Download my data
                   </Button>
                 )}
@@ -114,6 +120,7 @@ export function YourDataCard() {
         </ul>
       )}
       <Modal
+        busy={create.isPending}
         open={confirming}
         onClose={() => setConfirming(false)}
         title="Delete your account?"

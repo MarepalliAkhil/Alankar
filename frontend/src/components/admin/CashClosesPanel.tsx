@@ -123,6 +123,7 @@ export function CashClosesPanel() {
         ]}
       />
       <Modal
+        busy={review.isPending}
         open={reviewing !== null}
         onClose={() => setReviewing(null)}
         title="Mark this close as reviewed"

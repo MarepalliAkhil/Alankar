@@ -181,6 +181,7 @@ export function DaysOffPanel() {
       )}
 
       <Modal
+        busy={decide.isPending}
         open={declining !== null}
         onClose={() => setDeclining(null)}
         title="Decline this request?"
@@ -217,6 +218,7 @@ export function DaysOffPanel() {
       </Modal>
 
       <Modal
+        busy={decide.isPending}
         open={warning !== null}
         onClose={() => setWarning(null)}
         title="There are visits on those days"

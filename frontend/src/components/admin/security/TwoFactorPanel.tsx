@@ -197,7 +197,13 @@ function SetupDialog({
       setProblem(serverFieldErrors(error).code ?? errorDetail(error) ?? 'That code did not work.'),
   });
   return (
-    <Modal open onClose={onClose} title="Set up two-step sign-in" size="md">
+    <Modal
+      busy={confirm.isPending}
+      open
+      onClose={onClose}
+      title="Set up two-step sign-in"
+      size="md"
+    >
       {start.isPending ? (
         <LoadingState label="Preparing…" />
       ) : start.isError ? (
@@ -310,7 +316,7 @@ function ProofDialog({
     },
   });
   return (
-    <Modal open onClose={onClose} title={title} size="sm">
+    <Modal busy={go.isPending} open onClose={onClose} title={title} size="sm">
       <form
         noValidate
         className="flex flex-col gap-md"
@@ -381,7 +387,13 @@ function ResetDialog({
       setProblem(serverFieldErrors(error).reason ?? errorDetail(error) ?? 'Could not reset it.'),
   });
   return (
-    <Modal open onClose={onClose} title={`Reset two-step sign-in for ${admin.name}`} size="sm">
+    <Modal
+      busy={go.isPending}
+      open
+      onClose={onClose}
+      title={`Reset two-step sign-in for ${admin.name}`}
+      size="sm"
+    >
       <form
         noValidate
         className="flex flex-col gap-md"

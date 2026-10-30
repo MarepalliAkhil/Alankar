@@ -21,6 +21,7 @@ import {
   Modal,
   Textarea,
   useToast,
+  PendingArea,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
@@ -94,50 +95,57 @@ export default function OrderDetailPage() {
         )}
       </div>
       {o.status === 'pending_payment' && (
-        <Card as="section" className="flex flex-col gap-sm" aria-label="Payment">
-          <p className="text-sm text-text">
-            Pay <span className="font-semibold">{formatINRExact(o.total)}</span>
-            {o.pay_until && ` by ${formatDateTime(o.pay_until)}`} to confirm your order. Your items
-            are held until then.
-          </p>
-          <div className="grid gap-sm sm:grid-cols-2">
-            <Input
-              label="Gift card code (optional)"
-              hint="Used first; the rest is paid below."
-              autoComplete="off"
-              value={giftCode}
-              onChange={(e) => setGiftCode(e.target.value)}
-            />
-            <Input
-              label="Amount from the gift card (₹, optional)"
-              inputMode="decimal"
-              value={giftAmount}
-              onChange={(e) => setGiftAmount(e.target.value)}
-            />
-          </div>
-          <p className="text-xs text-text-muted">
-            This is a test payment page: no card details are asked for.
-          </p>
-          <div className="flex flex-wrap gap-sm">
-            <Button
-              type="button"
-              loading={pay.isPending && pay.variables === 'success'}
-              disabled={pay.isPending}
-              onClick={() => pay.mutate('success')}
-              leftIcon={<CreditCard className="size-4" aria-hidden />}
-            >
-              Pay {formatINRExact(o.total)}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={pay.isPending}
-              onClick={() => pay.mutate('fail')}
-            >
-              Simulate a failed payment
-            </Button>
-          </div>
-        </Card>
+        <PendingArea
+          pending={pay.isPending}
+          message="Taking your payment. Please wait, this can take a few seconds."
+        >
+          <Card as="section" className="flex flex-col gap-sm" aria-label="Payment">
+            <p className="text-sm text-text">
+              Pay <span className="font-semibold">{formatINRExact(o.total)}</span>
+              {o.pay_until && ` by ${formatDateTime(o.pay_until)}`} to confirm your order. Your
+              items are held until then.
+            </p>
+            <div className="grid gap-sm sm:grid-cols-2">
+              <Input
+                label="Gift card code (optional)"
+                hint="Used first; the rest is paid below."
+                autoComplete="off"
+                value={giftCode}
+                onChange={(e) => setGiftCode(e.target.value)}
+              />
+              <Input
+                label="Amount from the gift card (₹, optional)"
+                inputMode="decimal"
+                value={giftAmount}
+                onChange={(e) => setGiftAmount(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-text-muted">
+              This is a test payment page: no card details are asked for.
+            </p>
+            <div className="flex flex-wrap gap-sm">
+              <Button
+                type="button"
+                loading={pay.isPending && pay.variables === 'success'}
+                loadingText="Paying…"
+                disabled={pay.isPending}
+                onClick={() => pay.mutate('success')}
+                leftIcon={<CreditCard className="size-4" aria-hidden />}
+              >
+                Pay {formatINRExact(o.total)}
+              </Button>
+              <Button
+                loading={pay.isPending && pay.variables === 'fail'}
+                type="button"
+                variant="secondary"
+                disabled={pay.isPending}
+                onClick={() => pay.mutate('fail')}
+              >
+                Simulate a failed payment
+              </Button>
+            </div>
+          </Card>
+        </PendingArea>
       )}
       {o.status === 'cancelled' && (
         <Card variant="dense">
@@ -212,7 +220,13 @@ function CancelModal({
   });
   const paid = Number(order.paid) > 0;
   return (
-    <Modal open onClose={onClose} title={`Cancel ${order.number}?`} size="md">
+    <Modal
+      busy={cancel.isPending}
+      open
+      onClose={onClose}
+      title={`Cancel ${order.number}?`}
+      size="md"
+    >
       <div className="flex flex-col gap-md">
         <p className="text-sm text-text">
           {paid

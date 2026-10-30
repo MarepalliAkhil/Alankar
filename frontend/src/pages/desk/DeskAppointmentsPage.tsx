@@ -407,6 +407,7 @@ function RejectModal({
   };
   return (
     <Modal
+      busy={reject.isPending}
       open
       onClose={onClose}
       title="Reject this request?"

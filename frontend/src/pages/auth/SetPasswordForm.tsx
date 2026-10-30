@@ -74,7 +74,7 @@ export function SetPasswordForm({
           {serverError}
         </p>
       )}
-      <Button type="submit" fullWidth loading={submitting}>
+      <Button type="submit" fullWidth loading={submitting} loadingText="Saving…">
         {submitLabel}
       </Button>
     </form>

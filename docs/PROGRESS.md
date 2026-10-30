@@ -1818,3 +1818,46 @@ One commit per subtask.
   `full-workflow`, `basic-a11y` and `mobile`: 27 passed (3.5m). Not runnable here: `npm run build`
   (rollup's native parser is a stub in this sandbox) and `e2e/axe.e2e.ts`
   (`@axe-core/playwright` is not installed here) -- run them on the PC.
+
+### Task 11a fix: buttons react the moment you press them (DONE, committed)
+Owner report: "nothing animates after I click Submit". One shared mechanism, used everywhere:
+- `Button` `loading` (+ optional `loadingText`): the spinner and the short label ("Signing in…",
+  "Creating your account…", "Paying…", "Placing your order…", "Saving…", "Checking…",
+  "Sending…", "Signing out…") appear at once, laid over the normal label so the button keeps
+  its width; the button is disabled, `aria-busy="true"` and has a screen-reader "Loading". No
+  300 ms delay here (that delay is only for the full-screen loader).
+- The pending flag is always the real one: `mutation.isPending` (row buttons use
+  `isPending && variables.id === row.id`), or `usePendingAction` for plain async calls (sign out,
+  resend code), which also ignores a second click while the first is running. On failure the
+  button comes back and the existing error message shows.
+- Slow actions: `useSlowPending` (800 ms) drives `PendingArea` (wraps a form or card) and the new
+  `Modal busy` prop. After 800 ms a nearly solid glass overlay with the active theme's branded mark
+  and "Please wait, this can take a few seconds" (or a specific message) covers the form and takes
+  no clicks; it goes the moment the request ends.
+- Reduced motion: the spinner pulses slowly instead of spinning; the overlay appears without the
+  fade. Works in light and dark in every theme (all token colours).
+- Where: `PendingArea` on Login, Register, the payment card (Pay page, customer order detail) and
+  shop Checkout. `Modal busy` on every modal with a server action (49 modals: checkout, refunds,
+  payroll approve / pay / adjust lines, cancel order, end membership, package and gift-card
+  dialogs, coupons, campaigns, offers, FAQ, inventory, services, 2-step sign-in, data requests,
+  days off, cash close, staff, schedule moves, reject request, complete service and others).
+  Buttons that had no loading state and now do: Your data (download / delete request), visit
+  products remove, FAQ / achievements / offers / packages / plans / coupons show-hide and remove,
+  purchase order close, campaign remove, Pay page "fail" demo button, My packages reveal, Wallet
+  join / buy / reveal, Waitlist decline / leave, Staff Summary save, Payroll create / refresh /
+  approve / pay / void / add line, Gift cards reveal, Chatbot insights save / test / dismiss,
+  supplier toggle / remove, Work hours save, service category and room remove, package request
+  decisions, chat widget send, Logout (public navbar and staff bar), OTP resend.
+- Not changed on purpose: Audit log filter (no request is sent by the button itself), the stylist
+  chat Send (a WebSocket message with no reply to wait for), copy-to-clipboard buttons.
+- Tests: `src/components/ui/loading.test.tsx` (spinner, disabled and aria-busy while pending;
+  restored after success and after failure; no double submit; overlay only after 800 ms and gone
+  after; Modal busy; reduced-motion variant). `e2e/loading-states.e2e.ts` holds the sign-in and
+  registration requests back 2 s and screenshots light and dark mid-request into
+  `docs/ui-screenshots/` (`login-loading-*`, `login-slow-overlay-*`, `register-loading-*`,
+  `register-slow-overlay-*`); the registration request is answered by the test itself, so nothing
+  is created. Vitest now processes `design/index.css` only, so a test can read its rules.
+- Checks in the sandbox: vitest Test Files 33 passed (33), Tests 439 passed (439); eslint and
+  prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors; Playwright
+  `full-workflow`, `basic-a11y`, `mobile` and `loading-states`: 31 passed (4.0m). Not runnable
+  here: `npm run build` and `e2e/axe.e2e.ts`.

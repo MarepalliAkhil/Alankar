@@ -88,6 +88,7 @@ export function PackagesPanel() {
                     Edit
                   </Button>
                   <Button
+                    loading={flip.isPending && flip.variables?.id === p.id}
                     type="button"
                     size="sm"
                     variant="ghost"
@@ -177,7 +178,13 @@ function PackageForm({
     });
   };
   return (
-    <Modal open onClose={onClose} title={pack ? `Edit ${pack.name}` : 'New package'} size="lg">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={pack ? `Edit ${pack.name}` : 'New package'}
+      size="lg"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <div className="grid gap-md sm:grid-cols-2">
           <Input
@@ -264,7 +271,7 @@ function PackageForm({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={save.isPending}>
+          <Button loading={save.isPending} type="submit" disabled={save.isPending}>
             Save package
           </Button>
         </div>

@@ -145,6 +145,7 @@ export default function WaitlistPage() {
                           Take this slot
                         </Button>
                         <Button
+                          loading={decline.isPending && decline.variables === e.offer?.id}
                           type="button"
                           size="sm"
                           variant="secondary"
@@ -159,6 +160,7 @@ export default function WaitlistPage() {
                   {(e.status === 'waiting' || e.status === 'offered') && (
                     <div className="mt-sm">
                       <Button
+                        loading={leave.isPending && leave.variables === e.id}
                         type="button"
                         size="sm"
                         variant="ghost"

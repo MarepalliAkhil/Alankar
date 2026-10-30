@@ -31,6 +31,7 @@ import {
   Input,
   LoadingState,
   useToast,
+  PendingArea,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { cart, useCart } from '../../lib/cart';
@@ -472,141 +473,152 @@ function Checkout({
   }
 
   return (
-    <div className="grid gap-lg lg:grid-cols-[1fr_22rem]">
-      <Card className="flex flex-col gap-md">
-        <h2 className="text-lg font-semibold text-text">Delivery address</h2>
-        <p className="text-sm text-text-muted">
-          Every order is delivered, so a full address and a mobile number are required.
-        </p>
-        {addresses.isPending ? (
-          <LoadingState label="Loading your addresses…" />
-        ) : (
-          <fieldset className="flex flex-col gap-sm">
-            <legend className="sr-only">Choose an address</legend>
-            {saved.map((a) => (
-              <AddressOption
-                key={a.id}
-                address={a}
-                checked={choice === a.id}
-                onPick={() => setPicked(a.id)}
-              />
-            ))}
-            <label
-              className={cn(
-                'flex cursor-pointer items-center gap-sm rounded-card border p-sm text-sm',
-                choice === 'new' ? 'border-primary' : 'border-border',
-              )}
-            >
-              <input
-                type="radio"
-                name="address"
-                checked={choice === 'new'}
-                onChange={() => setPicked('new')}
-                className="accent-primary"
-              />
-              <span className="font-medium text-text">Use a new address</span>
-            </label>
-          </fieldset>
-        )}
-        {choice === 'new' && (
-          <div className="grid gap-sm sm:grid-cols-2">
-            {ADDRESS_FIELDS.map((f) => (
+    <PendingArea
+      pending={place.isPending}
+      message="Placing your order. Please wait, this can take a few seconds."
+    >
+      <div className="grid gap-lg lg:grid-cols-[1fr_22rem]">
+        <Card className="flex flex-col gap-md">
+          <h2 className="text-lg font-semibold text-text">Delivery address</h2>
+          <p className="text-sm text-text-muted">
+            Every order is delivered, so a full address and a mobile number are required.
+          </p>
+          {addresses.isPending ? (
+            <LoadingState label="Loading your addresses…" />
+          ) : (
+            <fieldset className="flex flex-col gap-sm">
+              <legend className="sr-only">Choose an address</legend>
+              {saved.map((a) => (
+                <AddressOption
+                  key={a.id}
+                  address={a}
+                  checked={choice === a.id}
+                  onPick={() => setPicked(a.id)}
+                />
+              ))}
+              <label
+                className={cn(
+                  'flex cursor-pointer items-center gap-sm rounded-card border p-sm text-sm',
+                  choice === 'new' ? 'border-primary' : 'border-border',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="address"
+                  checked={choice === 'new'}
+                  onChange={() => setPicked('new')}
+                  className="accent-primary"
+                />
+                <span className="font-medium text-text">Use a new address</span>
+              </label>
+            </fieldset>
+          )}
+          {choice === 'new' && (
+            <div className="grid gap-sm sm:grid-cols-2">
+              {ADDRESS_FIELDS.map((f) => (
+                <Input
+                  key={f.key}
+                  label={f.label}
+                  required={f.required}
+                  value={String(form[f.key] ?? '')}
+                  error={errors[f.key]}
+                  inputMode={f.key === 'mobile' || f.key === 'pincode' ? 'numeric' : undefined}
+                  autoComplete={AUTOCOMPLETE[f.key]}
+                  onChange={(e) => setForm((cur) => ({ ...cur, [f.key]: e.target.value }))}
+                />
+              ))}
+              <div className="sm:col-span-2">
+                <Checkbox
+                  label="Save this address for next time"
+                  checked={saveIt}
+                  onChange={(e) => setSaveIt(e.target.checked)}
+                />
+              </div>
+            </div>
+          )}
+        </Card>
+        <Card as="section" aria-label="Order summary" className="flex h-fit flex-col gap-sm">
+          <h2 className="text-lg font-semibold text-text">Order summary</h2>
+          {quote.isPending ? (
+            <LoadingState label="Working out the price…" />
+          ) : quote.isError ? (
+            <p role="alert" className="text-sm font-medium text-danger-text">
+              {genericErrorMessage(quote.error, "We couldn't price your cart.")}
+            </p>
+          ) : (
+            <>
+              <ul className="flex flex-col gap-xs text-sm">
+                {quote.data.lines.map((ln) => (
+                  <li key={ln.product} className="flex justify-between gap-sm">
+                    <span className="text-text">
+                      {ln.name} × {ln.quantity}
+                    </span>
+                    <span className="text-text">{formatINRExact(ln.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              <Totals quote={quote.data} delivery={delivery} />
+            </>
+          )}
+          <div className="flex items-end gap-xs">
+            <div className="min-w-0 flex-1">
               <Input
-                key={f.key}
-                label={f.label}
-                required={f.required}
-                value={String(form[f.key] ?? '')}
-                error={errors[f.key]}
-                inputMode={f.key === 'mobile' || f.key === 'pincode' ? 'numeric' : undefined}
-                autoComplete={AUTOCOMPLETE[f.key]}
-                onChange={(e) => setForm((cur) => ({ ...cur, [f.key]: e.target.value }))}
-              />
-            ))}
-            <div className="sm:col-span-2">
-              <Checkbox
-                label="Save this address for next time"
-                checked={saveIt}
-                onChange={(e) => setSaveIt(e.target.checked)}
+                label="Coupon code"
+                autoComplete="off"
+                value={couponInput}
+                error={couponError || undefined}
+                onChange={(e) => setCouponInput(e.target.value)}
               />
             </div>
+            {coupon ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCoupon('');
+                  setCouponInput('');
+                }}
+              >
+                Remove
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                loading={tryCoupon.isPending}
+                disabled={!couponInput.trim()}
+                onClick={() => tryCoupon.mutate(couponInput.trim())}
+              >
+                Apply
+              </Button>
+            )}
           </div>
-        )}
-      </Card>
-      <Card as="section" aria-label="Order summary" className="flex h-fit flex-col gap-sm">
-        <h2 className="text-lg font-semibold text-text">Order summary</h2>
-        {quote.isPending ? (
-          <LoadingState label="Working out the price…" />
-        ) : quote.isError ? (
-          <p role="alert" className="text-sm font-medium text-danger-text">
-            {genericErrorMessage(quote.error, "We couldn't price your cart.")}
+          <p className="text-xs text-text-muted">
+            Your items are held for {delivery.payment_hold_minutes} minutes while you pay. A gift
+            card can be used on the payment step.
           </p>
-        ) : (
-          <>
-            <ul className="flex flex-col gap-xs text-sm">
-              {quote.data.lines.map((ln) => (
-                <li key={ln.product} className="flex justify-between gap-sm">
-                  <span className="text-text">
-                    {ln.name} × {ln.quantity}
-                  </span>
-                  <span className="text-text">{formatINRExact(ln.amount)}</span>
-                </li>
-              ))}
-            </ul>
-            <Totals quote={quote.data} delivery={delivery} />
-          </>
-        )}
-        <div className="flex items-end gap-xs">
-          <div className="min-w-0 flex-1">
-            <Input
-              label="Coupon code"
-              autoComplete="off"
-              value={couponInput}
-              error={couponError || undefined}
-              onChange={(e) => setCouponInput(e.target.value)}
-            />
-          </div>
-          {coupon ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setCoupon('');
-                setCouponInput('');
-              }}
-            >
-              Remove
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              loading={tryCoupon.isPending}
-              disabled={!couponInput.trim()}
-              onClick={() => tryCoupon.mutate(couponInput.trim())}
-            >
-              Apply
-            </Button>
+          {problem && (
+            <p role="alert" className="text-sm font-medium text-danger-text">
+              {problem}
+            </p>
           )}
-        </div>
-        <p className="text-xs text-text-muted">
-          Your items are held for {delivery.payment_hold_minutes} minutes while you pay. A gift card
-          can be used on the payment step.
-        </p>
-        {problem && (
-          <p role="alert" className="text-sm font-medium text-danger-text">
-            {problem}
-          </p>
-        )}
-        <Button type="button" fullWidth loading={place.isPending} onClick={submit}>
-          Place order
-        </Button>
-        <Button type="button" variant="ghost" fullWidth onClick={onBack}>
-          Back to the cart
-        </Button>
-      </Card>
-    </div>
+          <Button
+            type="button"
+            fullWidth
+            loading={place.isPending}
+            loadingText="Placing your order…"
+            onClick={submit}
+          >
+            Place order
+          </Button>
+          <Button type="button" variant="ghost" fullWidth onClick={onBack}>
+            Back to the cart
+          </Button>
+        </Card>
+      </div>
+    </PendingArea>
   );
 }
 

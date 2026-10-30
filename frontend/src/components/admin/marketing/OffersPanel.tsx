@@ -83,10 +83,22 @@ export function OffersPanel() {
                   <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(o)}>
                     Edit
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => flip.mutate(o)}>
+                  <Button
+                    loading={flip.isPending && flip.variables?.id === o.id}
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => flip.mutate(o)}
+                  >
                     {o.is_active ? 'Switch off' : 'Switch on'}
                   </Button>
-                  <Button type="button" size="sm" variant="danger" onClick={() => remove.mutate(o)}>
+                  <Button
+                    loading={remove.isPending && remove.variables?.id === o.id}
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => remove.mutate(o)}
+                  >
                     Delete
                   </Button>
                 </div>
@@ -152,7 +164,13 @@ function OfferForm({
     save.mutate({ ...form, valid_until: form.valid_until || null });
   };
   return (
-    <Modal open onClose={onClose} title={offer ? 'Edit offer' : 'Add an offer'} size="md">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={offer ? 'Edit offer' : 'Add an offer'}
+      size="md"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <Input
           label="Title"

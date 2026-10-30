@@ -185,7 +185,13 @@ function CancelModal({
       setProblem(genericErrorMessage(error, 'We could not cancel this order.')),
   });
   return (
-    <Modal open onClose={onClose} title={`Cancel ${order.number}?`} size="md">
+    <Modal
+      busy={cancel.isPending}
+      open
+      onClose={onClose}
+      title={`Cancel ${order.number}?`}
+      size="md"
+    >
       <div className="flex flex-col gap-md">
         <p className="text-sm text-text">
           The stock goes back on the shelf and everything the customer paid is refunded. The

@@ -301,6 +301,7 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
       )}
 
       <Modal
+        busy={save.isPending}
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing === 'new' ? 'Add a product' : 'Edit product'}
@@ -403,6 +404,7 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
       )}
 
       <Modal
+        busy={remove.isPending}
         open={deleting !== null}
         onClose={() => setDeleting(null)}
         title="Delete this product?"
@@ -489,6 +491,7 @@ function StockModal({
 
   return (
     <Modal
+      busy={save.isPending}
       open
       onClose={onClose}
       title={`Change stock: ${product.name}`}
@@ -730,11 +733,17 @@ function SuppliersTab() {
                 <Button size="sm" variant="secondary" onClick={() => open(row)}>
                   Edit<span className="sr-only"> {row.name}</span>
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => toggle.mutate(row)}>
+                <Button
+                  loading={toggle.isPending && toggle.variables?.id === row.id}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => toggle.mutate(row)}
+                >
                   {row.is_active ? 'Hide' : 'Show'}
                   <span className="sr-only"> {row.name}</span>
                 </Button>
                 <Button
+                  loading={remove.isPending && remove.variables?.id === row.id}
                   size="sm"
                   variant="danger"
                   disabled={row.movement_count > 0}
@@ -749,6 +758,7 @@ function SuppliersTab() {
         ]}
       />
       <Modal
+        busy={save.isPending}
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing === 'new' ? 'Add a supplier' : 'Edit supplier'}

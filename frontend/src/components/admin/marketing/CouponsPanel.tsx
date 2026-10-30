@@ -101,6 +101,7 @@ export function CouponsPanel() {
                     Edit
                   </Button>
                   <Button
+                    loading={flip.isPending && flip.variables?.id === c.id}
                     type="button"
                     size="sm"
                     variant="ghost"
@@ -202,7 +203,13 @@ function CouponForm({
     });
   };
   return (
-    <Modal open onClose={onClose} title={coupon ? `Edit ${coupon.code}` : 'New coupon'} size="lg">
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={coupon ? `Edit ${coupon.code}` : 'New coupon'}
+      size="lg"
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <div className="grid gap-md sm:grid-cols-2">
           <Input

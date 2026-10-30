@@ -487,6 +487,7 @@ export default function StaffManagementPage() {
       <StaffDetailsDrawer member={editing} onClose={() => setEditing(null)} />
 
       <Modal
+        busy={toggle.isPending}
         open={confirming !== null}
         onClose={() => setConfirming(null)}
         title="Deactivate this account?"

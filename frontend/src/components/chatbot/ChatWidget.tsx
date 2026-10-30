@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { askChatbot, type ChatAction, type ChatReply } from '../../api/chatbot';
 import { cn } from '../../lib/cn';
 import { useSession } from '../../session/session-context';
+import { Spinner } from '../ui/Spinner';
 
 export const CHATBOT_NAME = 'AI Alankar Intelligence';
 const MAX_LENGTH = 500;
@@ -249,9 +250,10 @@ export function ChatWidget() {
               type="submit"
               aria-label="Send"
               disabled={typing || !draft.trim()}
+              aria-busy={typing || undefined}
               className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary hover:bg-primary-hover focus-visible:shadow-focus focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Send className="h-5 w-5" aria-hidden="true" />
+              {typing ? <Spinner size="sm" /> : <Send className="h-5 w-5" aria-hidden="true" />}
             </button>
           </form>
         </section>

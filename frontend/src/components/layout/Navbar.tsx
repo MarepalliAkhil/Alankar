@@ -6,6 +6,7 @@ import { divisions } from '../../config/divisions';
 import { BOOK_NOW_PATH } from '../../config/paths';
 import { cn } from '../../lib/cn';
 import { menuFor } from '../../policy/policy';
+import { usePendingAction } from '../../hooks/usePendingAction';
 import { useSession } from '../../session/session-context';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
@@ -44,10 +45,10 @@ export function Navbar() {
   const isStaff = !!user && !isCustomer;
   const bookPath = isCustomer ? '/customer/book' : BOOK_NOW_PATH;
 
-  const handleSignOut = async () => {
+  const [handleSignOut, signingOut] = usePendingAction(async () => {
     await signOut();
     navigate('/');
-  };
+  });
 
   // Customer avatar menu: account pages from the shared policy, plus Logout.
   const accountItems: DropdownItem[] = isCustomer
@@ -81,7 +82,13 @@ export function Navbar() {
         <ButtonLink to={user.home} size="sm" variant="secondary">
           Go to dashboard
         </ButtonLink>
-        <Button size="sm" variant="ghost" onClick={() => void handleSignOut()}>
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={signingOut}
+          loadingText="Signing out…"
+          onClick={() => void handleSignOut()}
+        >
           Logout
         </Button>
       </>
@@ -181,7 +188,13 @@ export function Navbar() {
             For Zenotians
           </NavLink>
           {user && (
-            <Button variant="ghost" fullWidth onClick={() => void handleSignOut()}>
+            <Button
+              variant="ghost"
+              fullWidth
+              loading={signingOut}
+              loadingText="Signing out…"
+              onClick={() => void handleSignOut()}
+            >
               Logout
             </Button>
           )}

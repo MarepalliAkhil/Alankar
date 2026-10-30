@@ -42,6 +42,7 @@ export function VisitProducts({ appt }: { appt: CustomerAppointment }) {
               </Badge>
               {!r.paid_online && r.status === 'held' && CHANGEABLE.includes(appt.status) && (
                 <Button
+                  loading={remove.isPending && remove.variables === r.id}
                   type="button"
                   size="sm"
                   variant="ghost"

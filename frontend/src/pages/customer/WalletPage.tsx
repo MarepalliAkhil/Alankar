@@ -213,12 +213,22 @@ function MembershipSection({ wallet }: { wallet: MyWallet }) {
                 <Button
                   type="button"
                   size="sm"
-                  loading={join.isPending}
+                  loading={
+                    join.isPending &&
+                    join.variables?.plan === p.id &&
+                    join.variables.outcome === 'success'
+                  }
+                  disabled={join.isPending}
                   onClick={() => join.mutate({ plan: p.id, outcome: 'success' })}
                 >
                   Join for {formatINR(p.price)}
                 </Button>
                 <Button
+                  loading={
+                    join.isPending &&
+                    join.variables?.plan === p.id &&
+                    join.variables.outcome === 'fail'
+                  }
                   type="button"
                   size="sm"
                   variant="ghost"
@@ -293,12 +303,20 @@ function PackagesSection({ wallet }: { wallet: MyWallet }) {
                 <Button
                   type="button"
                   size="sm"
-                  loading={buy.isPending}
+                  loading={
+                    buy.isPending &&
+                    buy.variables?.id === p.id &&
+                    buy.variables.outcome === 'success'
+                  }
+                  disabled={buy.isPending}
                   onClick={() => buy.mutate({ id: p.id, outcome: 'success' })}
                 >
                   Buy for {formatINR(p.price)}
                 </Button>
                 <Button
+                  loading={
+                    buy.isPending && buy.variables?.id === p.id && buy.variables.outcome === 'fail'
+                  }
                   type="button"
                   size="sm"
                   variant="ghost"
@@ -428,6 +446,7 @@ function GiftCardCard({ card: c }: { card: GiftCardRow }) {
       <div className="mt-xs flex flex-wrap items-center gap-xs">
         {c.code_available ? (
           <Button
+            loading={reveal.isPending}
             type="button"
             variant="secondary"
             size="sm"
@@ -580,7 +599,7 @@ function BuyGiftCardModal({
     buy.mutate(outcome);
   };
   return (
-    <Modal open onClose={onClose} title="Buy a gift card" size="md">
+    <Modal busy={buy.isPending} open onClose={onClose} title="Buy a gift card" size="md">
       <form
         noValidate
         onSubmit={(e) => {

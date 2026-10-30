@@ -77,7 +77,11 @@ export default function PayrollRuns() {
               onChange={(e) => e.target.value && setMonth(e.target.value)}
             />
           </div>
-          <Button disabled={create.isPending} onClick={() => create.mutate()}>
+          <Button
+            loading={create.isPending}
+            disabled={create.isPending}
+            onClick={() => create.mutate()}
+          >
             Create draft run
           </Button>
         </div>
@@ -238,6 +242,7 @@ function RunPanel({ id }: { id: string }) {
         {r.status === 'draft' && (
           <>
             <Button
+              loading={refresh.isPending}
               variant="secondary"
               disabled={refresh.isPending}
               onClick={() => refresh.mutate()}
@@ -254,6 +259,7 @@ function RunPanel({ id }: { id: string }) {
       </p>
       {confirming && (
         <Modal
+          busy={approve.isPending}
           open
           onClose={() => setConfirming(false)}
           title="Approve this payroll run?"
@@ -263,7 +269,11 @@ function RunPanel({ id }: { id: string }) {
               <Button variant="ghost" onClick={() => setConfirming(false)}>
                 Cancel
               </Button>
-              <Button disabled={approve.isPending} onClick={() => approve.mutate()}>
+              <Button
+                loading={approve.isPending}
+                disabled={approve.isPending}
+                onClick={() => approve.mutate()}
+              >
                 Yes, approve and lock
               </Button>
             </div>
@@ -316,6 +326,7 @@ function PayModal({
   });
   return (
     <Modal
+      busy={pay.isPending}
       open
       onClose={onClose}
       title="Mark this run as paid"
@@ -344,7 +355,7 @@ function PayModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pay.isPending}>
+          <Button loading={pay.isPending} type="submit" disabled={pay.isPending}>
             Confirm paid
           </Button>
         </div>
@@ -408,7 +419,13 @@ function SlipModal({
     add.mutate();
   };
   return (
-    <Modal open onClose={onClose} size="lg" title={`Payslip for ${item.name}`}>
+    <Modal
+      busy={add.isPending || voidIt.isPending}
+      open
+      onClose={onClose}
+      size="lg"
+      title={`Payslip for ${item.name}`}
+    >
       {slip.isPending ? (
         <LoadingState label="Loading the payslip…" />
       ) : slip.isError ? (
@@ -434,7 +451,12 @@ function SlipModal({
                         value={voidReason}
                         onChange={(e) => setVoidReason(e.target.value)}
                       />
-                      <Button size="sm" disabled={voidIt.isPending} onClick={() => voidIt.mutate()}>
+                      <Button
+                        loading={voidIt.isPending}
+                        size="sm"
+                        disabled={voidIt.isPending}
+                        onClick={() => voidIt.mutate()}
+                      >
                         Confirm void
                       </Button>
                     </>
@@ -476,7 +498,7 @@ function SlipModal({
                 </p>
               )}
               <div>
-                <Button type="submit" disabled={add.isPending}>
+                <Button loading={add.isPending} type="submit" disabled={add.isPending}>
                   Add line
                 </Button>
               </div>

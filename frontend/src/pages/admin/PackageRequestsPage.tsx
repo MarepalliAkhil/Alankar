@@ -265,7 +265,7 @@ function ApproveModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={busy}>
+          <Button loading={busy} type="submit" disabled={busy}>
             Approve
           </Button>
         </div>

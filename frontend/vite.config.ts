@@ -23,7 +23,8 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
       testTimeout: 20000,
-      css: false,
+      // Only the main stylesheet is processed, so tests can read its rules with `?raw`.
+      css: { include: [/design\/index\.css/] },
       restoreMocks: true,
       // Browser tests (Playwright) run with `npm run e2e`, not here.
       exclude: ['node_modules/**', 'dist/**', 'e2e/**'],

@@ -691,7 +691,12 @@ function BookingForm({ options }: { options: BookingOptions }) {
                 </>
               }
             />
-            <Button type="submit" loading={send.isPending} fullWidth>
+            <Button
+              type="submit"
+              loading={send.isPending}
+              loadingText="Sending your request…"
+              fullWidth
+            >
               Send booking request
             </Button>
           </Card>

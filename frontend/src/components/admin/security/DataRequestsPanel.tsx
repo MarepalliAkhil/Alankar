@@ -130,6 +130,7 @@ export function DataRequestsPanel() {
       </ul>
 
       <Modal
+        busy={decide.isPending}
         open={asking !== null}
         onClose={() => setAsking(null)}
         title={

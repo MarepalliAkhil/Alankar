@@ -11,6 +11,7 @@ import {
   Button,
   ButtonLink,
   Card,
+  PendingArea,
   Input,
   PasswordInput,
   TabPanel,
@@ -152,118 +153,127 @@ export default function LoginPage() {
 
   return (
     <PageContainer className="flex justify-center py-xl">
-      <Card variant="dense" padding="lg" className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-text">Sign in</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          {bookingIntent
-            ? 'Sign in to your customer account to book an appointment.'
-            : `Welcome back to ${brand.shopName}. Choose who you are and sign in.`}
-        </p>
+      <PendingArea
+        pending={submitting}
+        message="Signing you in. Please wait…"
+        className="w-full max-w-md"
+      >
+        <Card variant="dense" padding="lg" className="w-full">
+          <h1 className="text-2xl font-bold text-text">Sign in</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {bookingIntent
+              ? 'Sign in to your customer account to book an appointment.'
+              : `Welcome back to ${brand.shopName}. Choose who you are and sign in.`}
+          </p>
 
-        {twoFactor ? (
-          <div className="mt-lg">
-            <TwoFactorStep
-              message={twoFactor.detail}
-              onVerify={verifyAppCode}
-              onBack={() => setTwoFactor(null)}
-            />
-          </div>
-        ) : otp ? (
-          <div className="mt-lg">
-            <OtpStep
-              email={otp.email}
-              purpose={otp.purpose}
-              message={otp.detail}
-              onVerify={verifyCode}
-              onBack={() => setOtp(null)}
-            />
-          </div>
-        ) : (
-          <>
-            <Tabs
-              className="mt-lg"
-              items={loginRoles}
-              value={role}
-              onChange={changeRole}
-              label="Sign in as"
-              idPrefix="login"
-            />
+          {twoFactor ? (
+            <div className="mt-lg">
+              <TwoFactorStep
+                message={twoFactor.detail}
+                onVerify={verifyAppCode}
+                onBack={() => setTwoFactor(null)}
+              />
+            </div>
+          ) : otp ? (
+            <div className="mt-lg">
+              <OtpStep
+                email={otp.email}
+                purpose={otp.purpose}
+                message={otp.detail}
+                onVerify={verifyCode}
+                onBack={() => setOtp(null)}
+              />
+            </div>
+          ) : (
+            <>
+              <Tabs
+                className="mt-lg"
+                items={loginRoles}
+                value={role}
+                onChange={changeRole}
+                label="Sign in as"
+                idPrefix="login"
+              />
 
-            <TabPanel idPrefix="login" id={role} className="mt-lg">
-              <form noValidate onSubmit={onSubmit} className="flex flex-col gap-md">
-                <Input
-                  label="Email"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  error={errors.email}
-                />
-                <PasswordInput
-                  label="Password"
-                  name="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  error={errors.password}
-                />
-                {signedOutIdle && !formError && (
-                  <p
-                    role="status"
-                    className="rounded-nested bg-primary-soft px-md py-sm text-sm text-text"
-                  >
-                    You were signed out after 15 minutes without activity. Please sign in again.
-                  </p>
-                )}
-                {formError && (
-                  <p
-                    role="alert"
-                    className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
-                  >
-                    {formError}
-                  </p>
-                )}
-                <Button type="submit" fullWidth loading={submitting}>
-                  Sign in as {roleText}
-                </Button>
-              </form>
+              <TabPanel idPrefix="login" id={role} className="mt-lg">
+                <form noValidate onSubmit={onSubmit} className="flex flex-col gap-md">
+                  <Input
+                    label="Email"
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    error={errors.email}
+                  />
+                  <PasswordInput
+                    label="Password"
+                    name="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    error={errors.password}
+                  />
+                  {signedOutIdle && !formError && (
+                    <p
+                      role="status"
+                      className="rounded-nested bg-primary-soft px-md py-sm text-sm text-text"
+                    >
+                      You were signed out after 15 minutes without activity. Please sign in again.
+                    </p>
+                  )}
+                  {formError && (
+                    <p
+                      role="alert"
+                      className="rounded-nested bg-danger-soft px-md py-sm text-sm text-danger-text"
+                    >
+                      {formError}
+                    </p>
+                  )}
+                  <Button type="submit" fullWidth loading={submitting} loadingText="Signing in…">
+                    Sign in as {roleText}
+                  </Button>
+                </form>
 
-              {role === 'customer' ? (
-                <div className="mt-lg flex flex-col items-center gap-sm text-sm text-text-muted">
-                  <Link
-                    to="/forgot-password"
-                    className="font-medium text-primary-hover underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                  <p>
-                    New here?{' '}
+                {role === 'customer' ? (
+                  <div className="mt-lg flex flex-col items-center gap-sm text-sm text-text-muted">
                     <Link
-                      to={
-                        params.get('next')
-                          ? `/register?next=${encodeURIComponent(params.get('next') ?? '')}`
-                          : '/register'
-                      }
+                      to="/forgot-password"
                       className="font-medium text-primary-hover underline-offset-4 hover:underline"
                     >
-                      Create an account
+                      Forgot your password?
                     </Link>
+                    <p>
+                      New here?{' '}
+                      <Link
+                        to={
+                          params.get('next')
+                            ? `/register?next=${encodeURIComponent(params.get('next') ?? '')}`
+                            : '/register'
+                        }
+                        className="font-medium text-primary-hover underline-offset-4 hover:underline"
+                      >
+                        Create an account
+                      </Link>
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-lg flex items-start gap-sm rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
+                    <Info
+                      aria-hidden="true"
+                      className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover"
+                    />
+                    Staff accounts are created by the salon admin. If you can&apos;t sign in or
+                    forgot your password, ask your admin.
                   </p>
-                </div>
-              ) : (
-                <p className="mt-lg flex items-start gap-sm rounded-nested bg-primary-soft px-md py-sm text-sm text-text">
-                  <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary-hover" />
-                  Staff accounts are created by the salon admin. If you can&apos;t sign in or forgot
-                  your password, ask your admin.
-                </p>
-              )}
-            </TabPanel>
-          </>
-        )}
-      </Card>
+                )}
+              </TabPanel>
+            </>
+          )}
+        </Card>
+      </PendingArea>
     </PageContainer>
   );
 }

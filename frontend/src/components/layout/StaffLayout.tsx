@@ -14,6 +14,7 @@ import { DisplaySettings } from '../ui/DisplaySettings';
 import { DelayedLoader } from '../ui/Loader';
 import { PageTransition } from '../ui/PageTransition';
 import { useRouteTheme } from '../../design/display';
+import { usePendingAction } from '../../hooks/usePendingAction';
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -28,6 +29,10 @@ export function StaffLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   useRouteTheme('staff');
+  const [logout, loggingOut] = usePendingAction(async () => {
+    await signOut();
+    navigate('/');
+  });
   if (!user) return null;
   const menu = menuFor(user.role);
 
@@ -83,10 +88,9 @@ export function StaffLayout() {
             variant="ghost"
             size="sm"
             leftIcon={<LogOut className="h-4 w-4" />}
-            onClick={async () => {
-              await signOut();
-              navigate('/');
-            }}
+            loading={loggingOut}
+            loadingText="Signing out…"
+            onClick={() => void logout()}
           >
             Logout
           </Button>
@@ -97,10 +101,9 @@ export function StaffLayout() {
           size="sm"
           className="lg:hidden"
           leftIcon={<LogOut className="h-4 w-4" />}
-          onClick={async () => {
-            await signOut();
-            navigate('/');
-          }}
+          loading={loggingOut}
+          loadingText="Signing out…"
+          onClick={() => void logout()}
         >
           Logout
         </Button>

@@ -40,6 +40,7 @@ export function CancelModal({
   };
   return (
     <Modal
+      busy={cancel.isPending}
       open
       onClose={onClose}
       title="Cancel this booking?"

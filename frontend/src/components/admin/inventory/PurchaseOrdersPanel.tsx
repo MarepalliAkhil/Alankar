@@ -220,7 +220,12 @@ function OrderForm({
     save.mutate({ supplier, lines, expected_on: expected || null, notes: notes.trim() });
   };
   return (
-    <Modal open onClose={onClose} title={order ? `Change ${order.number}` : 'New purchase order'}>
+    <Modal
+      busy={save.isPending}
+      open
+      onClose={onClose}
+      title={order ? `Change ${order.number}` : 'New purchase order'}
+    >
       <form noValidate onSubmit={submit} className="flex flex-col gap-md">
         <div className="grid gap-md sm:grid-cols-2">
           <Select
@@ -367,7 +372,12 @@ function OrderDialog({
   const o = order.data;
   const open = o?.status === 'sent' || o?.status === 'partly_received';
   return (
-    <Modal open onClose={onClose} title={o ? `Purchase order ${o.number}` : 'Purchase order'}>
+    <Modal
+      busy={close.isPending || receive.isPending || send.isPending}
+      open
+      onClose={onClose}
+      title={o ? `Purchase order ${o.number}` : 'Purchase order'}
+    >
       {order.isPending ? (
         <LoadingState label="Loading the order…" />
       ) : order.isError || !o ? (
@@ -502,7 +512,12 @@ function OrderDialog({
                   <Button type="button" variant="secondary" onClick={() => onEdit(o)}>
                     Change
                   </Button>
-                  <Button type="button" variant="danger" onClick={() => close.mutate()}>
+                  <Button
+                    loading={close.isPending}
+                    type="button"
+                    variant="danger"
+                    onClick={() => close.mutate()}
+                  >
                     Cancel order
                   </Button>
                 </>

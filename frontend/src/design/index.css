@@ -136,6 +136,18 @@
     animation: sheet-in var(--motion-page) var(--motion-ease) both;
   }
 
+  /* Inline spinner (buttons, small areas). */
+  .spinner {
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Busy overlay over a form or card when an action takes more than 800 ms. */
+  .busy-overlay {
+    animation: fade-in var(--motion-page) var(--motion-ease) both;
+    /* Nearly solid so the message never fights with the form underneath; still blurred glass. */
+    background-color: color-mix(in srgb, var(--glass-fill-solid) 86%, transparent);
+  }
+
   .loader-fade {
     animation: fade-in 260ms var(--motion-ease) both;
   }
@@ -190,6 +202,16 @@
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spinner-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
 @keyframes shimmer {
   to {
     transform: translateX(100%);
@@ -376,6 +398,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* No spinning with reduced motion: a slow, gentle pulse still shows that work is going on. */
+  .spinner {
+    animation: spinner-pulse 1.6s ease-in-out infinite !important;
   }
 
   /* A cycling loader would otherwise stop on a blank frame: show the first mark only. */
