@@ -136,6 +136,37 @@
     animation: sheet-in var(--motion-page) var(--motion-ease) both;
   }
 
+  /* ---------------------------------------------------------------- image slots (ArtImage)
+     A photo fades in over a blurred preview (the tiny one from photos:optimize, or the artwork),
+     so a large photo never leaves an empty box while it loads. */
+  .art-frame[data-source='photo']::before,
+  .art-frame[data-source='admin']::before {
+    content: '';
+    position: absolute;
+    inset: -4%;
+    background-image: var(--art-preview, none);
+    background-size: cover;
+    background-position: center;
+    filter: blur(18px);
+  }
+  .art-photo {
+    opacity: 0;
+    transition: opacity var(--motion-page) var(--motion-ease);
+  }
+  .art-photo.is-loaded {
+    opacity: 1;
+  }
+  .art-scrim {
+    background-color: var(--color-art-overlay);
+  }
+  .art-frame[data-source='photo'] > .art-scrim,
+  .art-frame[data-source='admin'] > .art-scrim {
+    background-color: var(--color-photo-overlay);
+  }
+  .page-backdrop .art-frame > .art-scrim {
+    background-color: var(--color-backdrop-overlay);
+  }
+
   /* ---------------------------------------------------------------- home hero (Task 11b)
      The scroll position is turned into CSS variables by HomeHero (--hero-pos 0..2, --hero-w0..2
      the weight of each stage, and the blended theme colours). Only transform and opacity move. */
@@ -156,9 +187,6 @@
   .hero-layer-2 {
     opacity: var(--hero-w2, 0);
     transform: scale(calc(1.06 - 0.06 * var(--hero-w2, 0)));
-  }
-  .hero-scrim {
-    background-color: var(--color-art-overlay);
   }
   .hero-scene {
     perspective: 1600px;

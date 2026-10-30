@@ -14,11 +14,12 @@ import { DisplaySettings } from '../ui/DisplaySettings';
 import { DelayedLoader } from '../ui/Loader';
 import { PageTransition } from '../ui/PageTransition';
 import { useRouteTheme } from '../../design/display';
+import { PageBackdrop } from '../ui/PageBackdrop';
 import { usePendingAction } from '../../hooks/usePendingAction';
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'flex shrink-0 items-center justify-between gap-sm rounded-full px-md py-sm text-sm font-medium transition-colors duration-base ease-brand',
+    'flex shrink-0 items-center justify-between gap-sm whitespace-nowrap rounded-full px-md py-sm text-sm font-medium transition-colors duration-base ease-brand',
     'focus-visible:shadow-focus focus-visible:outline-none',
     isActive ? 'bg-primary text-on-primary' : 'text-text hover:bg-primary-soft',
   );
@@ -38,6 +39,7 @@ export function StaffLayout() {
 
   return (
     <div className="flex min-h-screen flex-col gap-md p-sm sm:p-md lg:flex-row">
+      <PageBackdrop slot="shopBackground" />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-md focus:top-md focus:z-toast focus:rounded-full focus:bg-surface focus:px-md focus:py-sm focus:text-text focus:shadow-raised"
@@ -63,7 +65,7 @@ export function StaffLayout() {
         >
           <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
             {menu.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} className="shrink-0">
                 <NavLink to={item.path} className={itemClass} end>
                   <span>{item.label}</span>
                   {item.status === 'planned' && (

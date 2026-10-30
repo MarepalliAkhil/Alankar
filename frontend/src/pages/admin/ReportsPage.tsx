@@ -17,6 +17,7 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonChart,
   Select,
   Table,
   useToast,
@@ -175,11 +176,11 @@ export default function ReportsPage() {
             {data.rows.length === 0 ? (
               <EmptyState title="Nothing in this range" description="Try a wider range of dates." />
             ) : data.chart.kind === 'heatmap' ? (
-              <Suspense fallback={<LoadingState label="Drawing the chart…" lines={3} />}>
+              <Suspense fallback={<SkeletonChart label="Drawing the chart…" />}>
                 <HeatmapView report={data} />
               </Suspense>
             ) : (
-              <Suspense fallback={<LoadingState label="Drawing the chart…" lines={3} />}>
+              <Suspense fallback={<SkeletonChart label="Drawing the chart…" />}>
                 <BarChartView
                   title={`${data.label} chart`}
                   valueLabel={data.columns.find((c) => c.key === data.chart.y)?.label ?? ''}

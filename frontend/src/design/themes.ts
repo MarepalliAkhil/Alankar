@@ -96,6 +96,9 @@ function theme(mode: Mode, color: Colors, artRange: [string, string]): ThemeToke
     color: {
       ...all,
       artOverlay: mode === 'light' ? alpha(color.background, 0.55) : alpha(color.background, 0.62),
+      photoOverlay:
+        mode === 'light' ? alpha(color.background, 0.62) : alpha(color.background, 0.66),
+      backdropOverlay: alpha(color.background, 0.88),
     },
     status: mode === 'dark' ? darkStatus : undefined,
     glass: glassFor(mode, color),

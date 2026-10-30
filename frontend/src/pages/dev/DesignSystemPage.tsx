@@ -69,6 +69,8 @@ const swatches = {
   accentSoft: 'bg-accent-soft',
   onAccent: 'bg-on-accent',
   artOverlay: 'bg-art-overlay',
+  photoOverlay: 'bg-photo-overlay',
+  backdropOverlay: 'bg-backdrop-overlay',
   success: 'bg-success',
   successSoft: 'bg-success-soft',
   successText: 'bg-success-text',
@@ -357,7 +359,8 @@ export default function DesignSystemPage() {
               <p className="text-sm font-semibold text-text">{id}</p>
               <p className="text-xs text-text-muted">{art[id].description}</p>
               <p className="text-xs text-text-muted">
-                Photo: public/photos/{art[id].photo}.jpg · {art[id].width}×{art[id].height}
+                Photo: public/photos/{art[id].photo}.webp / .jpg / .jpeg / .png · {art[id].width}×
+                {art[id].height}
               </p>
             </li>
           ))}

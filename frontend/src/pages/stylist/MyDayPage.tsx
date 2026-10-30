@@ -3,7 +3,7 @@ import { CalendarCheck } from 'lucide-react';
 import { startVisit, listAppointments } from '../../api/stylist';
 import { errorDetail } from '../../api/client';
 import { PageHeader } from '../../components/layout/PageContainer';
-import { EmptyState, LoadingState, useToast } from '../../components/ui';
+import { EmptyState, SkeletonCards, useToast } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { StylistError, VisitCardView } from './common';
 
@@ -38,7 +38,7 @@ export default function MyDayPage() {
         description="Today's visits. A visit can be started once the front desk has checked the guest in."
       />
       {visits.isPending ? (
-        <LoadingState label="Loading your day…" />
+        <SkeletonCards count={4} label="Loading your day…" />
       ) : visits.isError ? (
         <StylistError error={visits.error} onRetry={() => void visits.refetch()} />
       ) : visits.data.length === 0 ? (

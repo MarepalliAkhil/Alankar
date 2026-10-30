@@ -25,3 +25,8 @@ backend/backups/
 e2e-report/
 e2e-results/
 test-results/
+playwright-report/
+*.bundle
+
+# Original photos (large; photos:optimize writes the small copies into frontend/public/photos)
+frontend/photos-originals/

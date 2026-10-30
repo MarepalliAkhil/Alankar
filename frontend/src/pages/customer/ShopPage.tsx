@@ -30,6 +30,7 @@ import {
   IconButton,
   Input,
   LoadingState,
+  SkeletonCards,
   useToast,
   PendingArea,
 } from '../../components/ui';
@@ -54,7 +55,17 @@ export default function ShopPage() {
     return [{ value: 'all', label: 'All' }, ...names.map((n) => ({ value: n, label: n }))];
   }, [products.data]);
 
-  if (products.isPending) return <LoadingState label="Loading the shop…" />;
+  if (products.isPending) {
+    return (
+      <section className="flex flex-col gap-lg pb-xl">
+        <PageHeader
+          title="Shop"
+          description="Salon-grade hair, skin and spa products, delivered to your door."
+        />
+        <SkeletonCards count={6} label="Loading the shop…" />
+      </section>
+    );
+  }
   if (products.isError) {
     return (
       <ErrorState

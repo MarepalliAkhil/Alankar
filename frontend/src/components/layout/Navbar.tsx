@@ -66,7 +66,7 @@ export function Navbar() {
   const authArea =
     status === 'loading' ? null : isCustomer && user ? (
       <DropdownMenu
-        label="Account menu"
+        label={`Account menu, ${user.full_name.split(' ')[0] || 'Account'}`}
         trigger={
           <>
             <Avatar name={user.full_name || user.email} size="sm" />
@@ -116,7 +116,7 @@ export function Navbar() {
           {brand.logoText}
         </Link>
 
-        <ul className="hidden items-center gap-1 md:flex">
+        <ul className="hidden items-center gap-1 lg:flex">
           {divisions.map((division) => (
             <li key={division.id}>
               <NavLink to={division.path} className={linkClass}>
@@ -126,7 +126,7 @@ export function Navbar() {
           ))}
         </ul>
 
-        <div className="ml-auto hidden items-center gap-1 md:flex">
+        <div className="ml-auto hidden items-center gap-1 lg:flex">
           {!isStaff && (
             <ButtonLink to={bookPath} size="sm" className="mr-1">
               Book Now
@@ -140,9 +140,9 @@ export function Navbar() {
           <DisplaySettings className="ml-1" />
         </div>
 
-        <DisplaySettings className="ml-auto md:hidden" />
+        <DisplaySettings className="ml-auto lg:hidden" />
         <IconButton
-          className="md:hidden"
+          className="lg:hidden"
           label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -154,7 +154,7 @@ export function Navbar() {
       {open && (
         <div
           id="mobile-menu"
-          className="glass-dense mx-auto mt-sm flex max-w-6xl flex-col gap-1 rounded-card p-sm md:hidden"
+          className="glass-dense mx-auto mt-sm flex max-w-6xl flex-col gap-1 rounded-card p-sm lg:hidden"
         >
           {divisions.map((division) => (
             <NavLink key={division.id} to={division.path} className={linkClass}>

@@ -3,7 +3,7 @@ import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { listAppointments, type Scope } from '../../api/stylist';
 import { PageHeader } from '../../components/layout/PageContainer';
-import { EmptyState, LoadingState, TabPanel, Tabs } from '../../components/ui';
+import { EmptyState, SkeletonCards, TabPanel, Tabs } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { StylistError, VisitCardView } from './common';
 
@@ -35,7 +35,7 @@ export default function MyAppointmentsPage() {
       />
       <TabPanel idPrefix="stylist-appts" id={scope}>
         {visits.isPending ? (
-          <LoadingState label="Loading appointments…" />
+          <SkeletonCards count={4} label="Loading appointments…" />
         ) : visits.isError ? (
           <StylistError error={visits.error} onRetry={() => void visits.refetch()} />
         ) : visits.data.length === 0 ? (

@@ -33,6 +33,7 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonTable,
   Modal,
   Select,
   Table,
@@ -307,7 +308,7 @@ function ServicesTab({ options }: { options: CatalogueOptions }) {
   if (services.isPending || categories.isPending) {
     return (
       <Card variant="dense">
-        <LoadingState label="Loading services…" />
+        <SkeletonTable rows={6} columns={6} label="Loading services…" />
       </Card>
     );
   }
@@ -680,7 +681,7 @@ function CategoriesTab({ options }: { options: CatalogueOptions }) {
   if (categories.isPending) {
     return (
       <Card variant="dense">
-        <LoadingState label="Loading categories…" />
+        <SkeletonTable rows={5} columns={5} label="Loading categories…" />
       </Card>
     );
   }
@@ -887,7 +888,7 @@ function RoomsTab({ options }: { options: CatalogueOptions }) {
   if (rooms.isPending) {
     return (
       <Card variant="dense">
-        <LoadingState label="Loading rooms…" />
+        <SkeletonTable rows={4} columns={4} label="Loading rooms…" />
       </Card>
     );
   }

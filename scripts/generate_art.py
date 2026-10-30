@@ -294,10 +294,69 @@ def parlor(dark: bool) -> str:
     return svg("".join(parts), defs, title)
 
 
+# --------------------------------------------------------------------------- Shop
+
+
+def shop(dark: bool) -> str:
+    """Alankar (brand): three tall arches side by side -- one in each division's colour (gold,
+    sage, rose) -- in a soft violet room with glows, a floor line and sparkles."""
+    rnd = random.Random(53)
+    if dark:
+        bg = [(0, "#120D24", 1), (0.6, "#1B1433", 1), (1, "#0D0919", 1)]
+        violet, glow_op, line_op = "#8B5CF6", 0.32, 0.22
+        arches = ["#D4A853", "#9CC09F", "#F2A7BB"]
+    else:
+        bg = [(0, "#FBFAFF", 1), (0.6, "#F1ECFF", 1), (1, "#F8F4FF", 1)]
+        violet, glow_op, line_op = "#A78BFA", 0.38, 0.35
+        arches = ["#C9A25A", "#7FA383", "#D9779A"]
+    defs = linear("bg", bg, x2="1", y2="1") + radial("vg", violet, glow_op)
+    for i, colour in enumerate(arches):
+        defs += linear(f"a{i}", [(0, colour, 0.0), (0.45, colour, 0.22), (1, colour, 0.05)])
+    parts = [f'<rect width="{W}" height="{H}" fill="url(#bg)"/>']
+    parts.append(glow("vg", 800, 380, 760, 460))
+    parts.append(glow("vg", 150, 900, 420, 300))
+    parts.append(glow("vg", 1480, 120, 380, 280))
+    # Three arches, slightly overlapping.
+    for i, cx in enumerate((470, 800, 1130)):
+        w, top, bottom = 300, 180 + (i % 2) * 40, 820
+        r = w / 2
+        d = (
+            f"M{f(cx - r)} {bottom}V{f(top + r)}A{f(r)} {f(r)} 0 0 1 {f(cx + r)} {f(top + r)}"
+            f"V{bottom}Z"
+        )
+        parts.append(f'<path d="{d}" fill="url(#a{i})"/>')
+        parts.append(
+            f'<path d="{d}" fill="none" stroke="{arches[i]}" stroke-width="3" '
+            f'opacity="{f(line_op * 1.6)}"/>'
+        )
+    # Floor line and its reflection.
+    parts.append(
+        f'<path d="M0 822H{W}" stroke="{violet}" stroke-width="2" opacity="{f(line_op)}"/>'
+    )
+    for k in range(1, 5):
+        parts.append(
+            f'<path d="M{80 * k} {822 + k * 30}H{W - 80 * k}" stroke="{violet}" '
+            f'stroke-width="1" opacity="{f(line_op * (1 - k * 0.2))}"/>'
+        )
+    for _ in range(26):
+        parts.append(
+            sparkle(
+                rnd.uniform(40, W - 40),
+                rnd.uniform(40, 760),
+                rnd.uniform(4, 11),
+                rnd.choice(arches + [violet]),
+                round(rnd.uniform(0.3, 0.7), 2),
+            )
+        )
+    title = "Three softly lit arches in gold, sage and rose in a violet room"
+    return svg("".join(parts), defs, title)
+
+
 ART = {
     "salon-studio": salon,
     "spa-calm": spa,
     "parlor-glow": parlor,
+    "shop-arches": shop,
 }
 
 

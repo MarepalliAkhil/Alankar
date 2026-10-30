@@ -17,7 +17,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingState,
+  SkeletonRows,
   Modal,
   Select,
   Textarea,
@@ -87,7 +87,7 @@ export default function PackageRequestsPage() {
       <Card variant="dense" as="section" aria-label="Pending requests">
         <h2 className="text-lg font-semibold text-text">Pending</h2>
         {requests.isPending ? (
-          <LoadingState label="Loading requests…" />
+          <SkeletonRows count={3} label="Loading requests…" />
         ) : requests.isError ? (
           <ErrorState
             description="We couldn't load the requests."

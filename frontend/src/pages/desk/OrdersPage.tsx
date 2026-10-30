@@ -12,7 +12,7 @@ import {
   ErrorState,
   FilterChips,
   Input,
-  LoadingState,
+  SkeletonRows,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
@@ -69,7 +69,7 @@ export default function OrdersPage() {
         </div>
       </Card>
       {orders.isPending ? (
-        <LoadingState label="Loading orders…" />
+        <SkeletonRows count={4} label="Loading orders…" />
       ) : orders.isError ? (
         <ErrorState
           description="We couldn't load the orders."

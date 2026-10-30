@@ -22,6 +22,7 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonCards,
   Modal,
   Select,
   Table,
@@ -92,7 +93,7 @@ export default function PayrollRuns() {
         )}
       </Card>
       {runs.isPending ? (
-        <LoadingState label="Loading payroll runs…" />
+        <SkeletonCards count={4} label="Loading payroll runs…" />
       ) : runs.isError ? (
         <ErrorState
           description="We couldn't load payroll runs."

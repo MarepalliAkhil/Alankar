@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { listMyOrders } from '../../api/shop';
 import { PageHeader } from '../../components/layout/PageContainer';
 import { OrderStatusBadge } from '../../components/shop/OrderBits';
-import { ButtonLink, Card, EmptyState, ErrorState, LoadingState } from '../../components/ui';
+import { ButtonLink, Card, EmptyState, ErrorState, SkeletonRows } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINRExact } from '../../lib/format';
 
@@ -20,7 +20,7 @@ export default function OrdersPage() {
         actions={<ButtonLink to="/customer/shop">Go to the shop</ButtonLink>}
       />
       {orders.isPending ? (
-        <LoadingState label="Loading your orders…" />
+        <SkeletonRows count={3} label="Loading your orders…" />
       ) : orders.isError ? (
         <ErrorState
           description="We couldn't load your orders."

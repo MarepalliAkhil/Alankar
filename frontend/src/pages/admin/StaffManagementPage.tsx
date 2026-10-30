@@ -28,7 +28,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingState,
+  SkeletonTable,
   Modal,
   Select,
   Table,
@@ -360,7 +360,7 @@ export default function StaffManagementPage() {
         </h2>
         {staff.isPending ? (
           <Card variant="dense">
-            <LoadingState label="Loading staff…" />
+            <SkeletonTable rows={5} columns={5} label="Loading staff…" />
           </Card>
         ) : staff.isError ? (
           <Card variant="dense">
@@ -395,7 +395,7 @@ export default function StaffManagementPage() {
         </h2>
         {invites.isPending ? (
           <Card variant="dense">
-            <LoadingState label="Loading invites…" />
+            <SkeletonTable rows={4} columns={5} label="Loading invites…" />
           </Card>
         ) : invites.isError ? (
           <Card variant="dense">
@@ -455,7 +455,7 @@ export default function StaffManagementPage() {
         </h2>
         {audit.isPending ? (
           <Card variant="dense">
-            <LoadingState label="Loading activity…" />
+            <SkeletonTable rows={5} columns={4} label="Loading activity…" />
           </Card>
         ) : audit.isError ? (
           <Card variant="dense">

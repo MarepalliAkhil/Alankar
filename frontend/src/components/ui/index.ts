@@ -23,6 +23,7 @@ export {
   SkeletonCards,
   SkeletonChart,
   SkeletonChat,
+  SkeletonRows,
   SkeletonTable,
 } from './Skeleton';
 export { Spinner } from './Spinner';
@@ -49,4 +50,5 @@ export { BrandMark, DelayedLoader, FullScreenLoader, LOADER_DELAY_MS } from './L
 export { PageTransition } from './PageTransition';
 export { ThemeSwitcher } from './ThemeSwitcher';
 export { ArtImage } from './ArtImage';
+export { PageBackdrop } from './PageBackdrop';
 export { PendingArea, type PendingAreaProps } from './PendingArea';

@@ -27,9 +27,9 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingState,
   Modal,
   Select,
+  SkeletonTable,
   Table,
   TabPanel,
   Tabs,
@@ -209,7 +209,7 @@ function ProductsTab({ onHistory }: { onHistory: (id: string) => void }) {
   const set = <K extends keyof ProductForm>(key: K, value: ProductForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  if (products.isPending) return <LoadingState label="Loading products…" />;
+  if (products.isPending) return <SkeletonTable rows={5} columns={5} label="Loading products…" />;
   if (products.isError) {
     return (
       <ErrorState
@@ -566,7 +566,7 @@ function LedgerTab({ product, onProduct }: { product: string; onProduct: (id: st
         className="max-w-sm"
       />
       {ledger.isPending ? (
-        <LoadingState label="Loading the ledger…" />
+        <SkeletonTable rows={5} columns={5} label="Loading the ledger…" />
       ) : ledger.isError ? (
         <ErrorState
           description="We couldn't load the ledger."
@@ -677,7 +677,7 @@ function SuppliersTab() {
     save.mutate();
   };
 
-  if (suppliers.isPending) return <LoadingState label="Loading suppliers…" />;
+  if (suppliers.isPending) return <SkeletonTable rows={5} columns={5} label="Loading suppliers…" />;
   if (suppliers.isError) {
     return (
       <ErrorState

@@ -370,6 +370,38 @@ you've created. Never run this without confirming first.
 - **Memberships** (customer menu): renew (also takes back a cancellation), cancel, buy again after
   it ends. Admin > Memberships can end one early with a reason.
 
+## Design (Task 11 redesign)
+
+The whole app runs on one token-driven glass design system (`frontend/src/design/`): five themes
+(brand, salon, spa, parlor, staff) in light and dark, picked automatically by page and division, with
+a light/dark/system toggle remembered per browser. Everything is built from shared components in
+`frontend/src/components/ui` -- no inline styles or hard-coded colours in a page. In a dev build,
+`/design-system` shows every token, colour and component live.
+
+Highlights: a scroll-driven 3D home hero that blends Salon/Spa/Beauty Parlor colours as you scroll
+(stacked sections on phones and with reduced motion); themed division pages with the owner's own
+photos or generated artwork (see "Photos" below); skeleton loaders shaped like the real content
+(a card grid, a row list, a table, a chart) instead of a generic spinner; and reduced-motion /
+reduced-transparency support throughout. `docs/PROGRESS.md`'s "Task 11" entries have the full
+history, and `docs/ui-screenshots/` has screenshots of most of it in light and dark.
+
+## Photos (image slots)
+
+Put your own photos in `frontend/public/photos/` named after a slot (`salon-hero`, `spa-hero`,
+`parlor-hero`, `shop-background`, `salon-background`, `spa-background`, `parlor-background`).
+**PNG, JPG, JPEG and WebP are all accepted** (WebP is preferred, then JPG, JPEG, PNG). Empty
+slots show the generated artwork. Then, from the `frontend` folder:
+
+```
+npm install
+npm run photos:optimize
+npm run photos:check
+```
+
+`photos:optimize` resizes and compresses each photo (WebP plus a JPG fallback, under 200 KB) and
+keeps the untouched originals in `frontend/photos-originals/` (not committed). Full details,
+sizes and how it works: [docs/IMAGE_SLOTS.md](docs/IMAGE_SLOTS.md).
+
 ## Known limitations
 
 - Anyone can lock another person's account for 15 minutes by typing wrong passwords for that email; the owner can unlock it.

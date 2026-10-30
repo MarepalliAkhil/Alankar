@@ -36,9 +36,13 @@ export function CountUp({ value, suffix = '' }: { value: number; suffix?: string
   }, [value]);
 
   return (
-    <span ref={ref} aria-label={`${value}${suffix}`}>
+    <span ref={ref}>
       <span aria-hidden="true">
         {shown.toLocaleString('en-IN')}
+        {suffix}
+      </span>
+      <span className="sr-only">
+        {value.toLocaleString('en-IN')}
         {suffix}
       </span>
     </span>

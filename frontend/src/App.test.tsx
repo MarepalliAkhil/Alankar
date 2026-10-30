@@ -542,8 +542,8 @@ describe('route guards and role menus', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome, Test' })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).queryByRole('link', { name: 'Login' })).not.toBeInTheDocument();
-    await user.click(within(nav).getByRole('button', { name: 'Account menu' }));
-    const menu = screen.getByRole('menu', { name: 'Account menu' });
+    await user.click(within(nav).getByRole('button', { name: /^Account menu/ }));
+    const menu = screen.getByRole('menu', { name: /^Account menu/ });
     for (const label of ['My Appointments', 'Stylist Chat', 'Invoices', 'Profile', 'Logout']) {
       expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();
     }

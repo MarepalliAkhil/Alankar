@@ -1906,3 +1906,232 @@ Owner report: "nothing animates after I click Submit". One shared mechanism, use
   prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors; Playwright
   `full-workflow`, `basic-a11y`, `mobile`, `loading-states`, `home-hero`: 35 passed (4.9m). Not
   runnable here: `npm run build` and `e2e/axe.e2e.ts`.
+
+### Task 11 change request: owner photos as PNG, any format (DONE, committed)
+- One shared helper for every slot: `pickPhoto` in `frontend/vite-plugins/photo-slots.js`
+  (`.webp`, `.jpg`, `.jpeg`, `.png`, case-insensitive, first in that order wins), with the slot
+  sizes (heroes and `shop-background` 1920x1080, backgrounds 1600x1000). The app uses it through
+  `photoSources()` in `src/design/art.ts`; the scripts use it directly. Precedence: admin image
+  (home hero "Image URL" in the content editor) -> photo file -> generated artwork.
+- No 404s: the existing build-time manifest plugin lists `public/photos/` at build time and live
+  in `npm run dev` (add, change or remove reloads the page; restart if Windows misses it).
+  A second virtual module gives the blurred previews.
+- `ArtImage`: cover fit, centred, explicit width/height, optional readable overlay, WebP with JPG
+  fallback (`<picture>`), photo fades in over a blurred preview (from `photos:optimize`, or the
+  artwork), lazy below the fold, first hero image eager.
+- New slot `shop-background` with new generated artwork (`shop-arches-*.svg`: three arches in
+  gold, sage and rose). New `PageBackdrop`: division pages (in their division theme now) and the
+  staff portals sit on their photo under an 88% veil.
+- `npm run photos:optimize` (`frontend/scripts/photos-optimize.mjs`, needs the new dev-only
+  dependency `sharp`): originals -> `frontend/photos-originals/` (git-ignored), centre-cropped to
+  slot size, WebP + JPG under 200 KB each, tiny previews in `public/photos/placeholders.json`.
+  Tested here with the owner's seven PNGs (sharp was available in the sandbox's tool folder):
+  1.3-2.0 MB each -> 35-133 KB WebP, 61-183 KB JPG. All seven are 1376x768, so they are enlarged
+  to the slot size; larger originals would be sharper.
+- `npm run photos:check` (`frontend/scripts/photos-check.mjs`, no dependencies): file used,
+  dimensions, weight, warnings (over 200 KB, under recommended size, wrong aspect ratio, unused
+  extra files).
+- Overlays: hero photos get `photoOverlay` (62% light / 66% dark) with all text on dense glass;
+  page backdrops `backdropOverlay` (88%). `photo-contrast.test.ts` checks every theme in light and
+  dark against pure black and pure white photo pixels: body and secondary text stay at AA.
+- Docs: `docs/IMAGE_SLOTS.md` (new), README "Photos (image slots)", `public/photos/README.txt`.
+- The owner's photos and their optimised copies are NOT committed (they stay in the owner's
+  folder); decide whether to commit the optimised `public/photos/*.webp|jpg` and
+  `placeholders.json`.
+- Tests: `photo-slots.test.ts` (webp > jpg > jpeg > png, case, artwork fallback, WebP+JPG
+  fallback, slot sizes), `ArtImage.test.tsx`, `photo-contrast.test.ts`, `e2e/photo-slots.e2e.ts`
+  (no console errors, no failed requests, every image decodes; run here both with and without
+  photos). Screenshots with the photos: `docs/ui-screenshots/photo-{home,division,staff}-*.png`.
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint and
+  prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors; Playwright (6 files):
+  36 passed (5.8m). Not runnable here: `npm run build` (rollup native parser stub) and
+  `e2e/axe.e2e.ts`.
+
+### Task 11c: division pages (DONE, committed)
+- **`ServiceCard`** now shows a themed photo/artwork thumbnail (`DIVISION_ART`: the division's
+  `*Background` slot, admin's `service.image_url` as override), a division-icon badge on glass,
+  an audience badge, and a "Details ->" hover affordance; the whole card is one button so it is
+  reachable and operable with a single Tab + Enter.
+- **`DivisionPage`** gets a full-bleed themed hero header: the division's `*Hero` photo slot with
+  a readable overlay, a floating `glass-dense` intro card with the division's `BrandMark`, a
+  stats line (service count / category count), "Book Now" (routed through `bookingTarget()`, same
+  rule as the home hero: logged-out and staff visitors go to the right place) and "Call salon".
+  `useRouteTheme(divisionTheme[divisionId])` switches `data-theme` for the whole page (salon,
+  spa or parlor), closing a gap from before 11b where division pages did not theme-switch.
+- Loading state swapped from the old spinner-only `LoadingState` to `SkeletonCards` (matches the
+  rest of Task 11's skeleton style). The filtered-results row was restyled to match the new glass
+  look, with a "Reset filters" button (X icon) in place of the old plain-text "Clear filters" --
+  same control, same accessible name match in the existing `App.test.tsx` booking-flow test
+  (still 42/42 passing), just restyled.
+- Phone-width fix: the hero header's inner padding was `p-lg sm:p-xl`, too much on a 375px screen
+  once the floating card wraps to three lines; changed to `p-sm sm:p-xl`. Confirmed by screenshot
+  (`division-spa-375-dark.png`).
+- Tests: new `e2e/division-pages.e2e.ts` -- light/dark x 1280px/375px (4 cases): heading,
+  `data-theme` per division, `data-mode`, service cards visible, a filter chip then "Reset
+  filters" clears it, and `data-theme` reverts to `brand` after navigating away (e.g. to
+  `/register`). Screenshots: `docs/ui-screenshots/division-{salon,spa,parlor}-{1280,375}-
+  {light,dark}.png`.
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint
+  (`--max-warnings 0`) and prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors;
+  full Playwright suite (`basic-a11y`, `division-pages`, `full-workflow`, `home-hero`,
+  `loading-states`, `mobile`, `photo-slots` -- 40 tests): 40 passed (3.7m). Not runnable here:
+  `npm run build` (rollup native parser stub -- `error during build: native parse not available
+  in shim`) and `e2e/axe.e2e.ts` (`@axe-core/playwright` not installed in this sandbox).
+
+### Task 11d: customer portal and desk Orders/Memberships (DONE, committed)
+- These screens (`ShopPage`, customer `OrdersPage`/`OrderDetailPage`, `MembershipsPage`, desk
+  `OrdersPage`/`OrderDetailPage`, `MembersPage`) already used the shared `components/ui` library
+  (`Card`, `Badge`, `FilterChips`, `Modal`, `PendingArea`, etc.), so Task 11a's tokens and glass
+  styling already carried through to them with no code change. The one real gap against the look
+  established in 11b/11c was the loading state: these pages used the generic line-shaped
+  `LoadingState` for an initial list load, where the new pages show a skeleton shaped like the
+  real content.
+- New shared `SkeletonRows` (`components/ui/Skeleton.tsx`): a stack of row-card placeholders
+  (title + badge, two lines) for lists shown as one card per row -- orders and members, as
+  opposed to `SkeletonCards`' grid (used for the shop's product grid, which already matched that
+  shape).
+- Swapped the initial list-load skeleton in `ShopPage` (`SkeletonCards`, 6), customer `OrdersPage`
+  (`SkeletonRows`, 3), desk `OrdersPage` (`SkeletonRows`, 4) and desk `MembersPage` (`SkeletonRows`,
+  4). Left `OrderDetailPage` (both) and the `MembershipsPage` overview on the generic `LoadingState`
+  -- their loaded content is a few differently-shaped cards (timeline, items, address), not a
+  homogeneous list, so a lines skeleton previews that better than a card grid would.
+  No other behaviour, API, or permission changes.
+- Customer account pages (inside `CustomerShell`) do not get a themed photo backdrop like the
+  division pages do -- deliberately: this is dense list/form content, and a backdrop image under
+  it would hurt legibility rather than help it. Desk pages already sit on the shop photo backdrop
+  from the earlier photo-slot work (`StaffLayout`), confirmed still readable in both modes in
+  screenshots.
+- Checked by hand, logged in as the customer and as the receptionist, in light and dark, at
+  1280px: `docs/ui-screenshots/portal-{shop,orders,memberships}-{light,dark}.png` (customer) and
+  `portal-desk-{orders,memberships}-{light,dark}.png` (desk); the skeleton itself was captured by
+  delaying the API response: `portal-shop-skeleton.png`, `portal-orders-skeleton.png`.
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint
+  (`--max-warnings 0`) and prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors;
+  full Playwright suite re-run twice (the first run's `full-workflow` failure was test-data
+  collision from running the stateful suite twice against the same e2e database without
+  re-seeding between runs, not a regression -- confirmed by reseeding with `e2e_prepare` and
+  re-running `full-workflow` alone, 15/15 passed, then the other 6 files, 25/25 passed). Not
+  runnable here: `npm run build` and `e2e/axe.e2e.ts` (same reasons as above).
+
+### Task 11e: staff portals (DONE, committed)
+- Same finding as 11d, at larger scale: the stylist, receptionist and admin screens already used
+  the shared `components/ui` library, so 11a's tokens and glass styling already applied to all of
+  them. Went through every staff-facing page still on the generic `LoadingState` for a full list
+  load (29 files) and, where the loaded content is one homogeneous shape, swapped it for the
+  matching skeleton -- `SkeletonCards` for a card grid, `SkeletonRows` for a one-card-per-row list,
+  `SkeletonTable` for a real table or a dense aligned-column card, `SkeletonChart` for a chart's
+  `Suspense` fallback. Left the generic `LoadingState` wherever a page's loaded content mixes
+  different shapes (a detail page, a settings form, a dashboard combining stat cards + a table +
+  more, a drag-and-drop schedule board) -- a lines skeleton previews those better than forcing one
+  shape. Alankar Intelligence is skipped entirely, as agreed, since Task 10 isn't built yet.
+- Swapped: `admin/AdminInventoryPage` (`SkeletonTable`, products/ledger/suppliers tabs),
+  `AdminWaitlistPage` (`SkeletonRows`), `AuditLogPage` (`SkeletonTable`), `ChatbotInsightsPage`
+  (`SkeletonRows`), `GiftCardsPage` (`SkeletonRows`), `PackageRequestsPage` (`SkeletonRows`),
+  `PayrollPage` (`SkeletonTable`, the per-stylist breakdown only), `PayrollRuns` (`SkeletonCards`,
+  the runs grid only), `RatingsPage` (`SkeletonCards` for the stylist grid, `SkeletonChart` for the
+  trend), `ReportsPage` (`SkeletonChart`, both chart/heatmap fallbacks), `ServicesPage`
+  (`SkeletonTable`, services/categories/rooms tabs), `StaffManagementPage` (`SkeletonTable`,
+  staff/invites/activity), `StaffSummaryPage` (`SkeletonChart` for every chart, `SkeletonRows` for
+  reviews), `WorkHoursPage` (`SkeletonCards`, the receptionist-summary grid); `desk/CustomersPage`,
+  `DeskAppointmentsPage`, `stylist/MyAppointmentsPage`, `stylist/MyDayPage` (all `SkeletonCards`);
+  `desk/InventoryPage` (`SkeletonTable`); `desk/PosPage` (`SkeletonTable` for invoices,
+  `SkeletonCards` for refunds).
+- Left as `LoadingState`: `admin/ContentPage`, `SettingsPage`, `desk/CashClosePage`,
+  `CustomerProfilePage`, `MyHoursPage`, `OrderDetailPage`, `SchedulePage` (the drag-and-drop
+  board), `stylist/AppointmentDetailPage`, `EarningsPage`, `MySchedulePage` -- plus several small
+  inline sub-sections inside otherwise-swapped files (a modal's history panel, a per-stylist
+  comments detail, a per-person breakdown) where the surrounding page was swapped but that one
+  nested loading state stayed generic for the same reason.
+- No behaviour, API, or permission changes -- only the loading-state branch and its import in each
+  file.
+- Checked by hand: `docs/ui-screenshots/staff-myday-skeleton.png` / `staff-myday-loaded.png`
+  (stylist, `SkeletonCards` against the shop-photo backdrop) and `staff-services-skeleton.png`
+  (admin, `SkeletonTable`), both readable.
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint
+  (`--max-warnings 0`) and prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors.
+  Full Playwright suite re-run twice more after reseeding the e2e database (`manage.py
+  e2e_prepare`) between runs: `full-workflow` 15/15 both times; the other 6 files 25/25, except one
+  run where `photo-slots.e2e.ts`'s single test failed on dev-server load after several hours of
+  back-to-back suites (`frames.count()` came back 0) -- confirmed flaky, not a regression, by
+  re-running that one test alone immediately after: passed in 7s. Not runnable here: `npm run
+  build` and `e2e/axe.e2e.ts` (same reasons as above).
+
+### Task 11f: motion, polish and verification (DONE, committed)
+- Swept the whole redesign at the three required widths (375, 768, 1280), light and dark: the
+  public home page, a division page, the customer portal and a staff dashboard. Found and fixed
+  two real layout bugs at the 768px checkpoint that no earlier task had exercised:
+  - **`Navbar`**: the desktop link row (divisions, Book Now, account area, For Zenotians) switched
+    in at Tailwind's `md` breakpoint (768px) with no room to spare, so "Beauty Parlor" and the
+    auth buttons wrapped onto a second, cramped line right at that width. Moved the switch from
+    `md:` to `lg:` (1024px) throughout `Navbar.tsx`, so 768px now gets the hamburger menu instead
+    of a half-wrapped desktop row. Confirmed clean in both modes
+    (`docs/ui-screenshots/sweep-home-768-{light,dark}.png`) and that nothing in the 1280px or
+    375px views depends on the old `md` cutover (`playwright.config.ts`'s default viewport is
+    1280, `mobile.e2e.ts` uses 375 -- neither sits in the 768-1023px gap).
+  - **`StaffLayout`**: the staff side menu is a horizontally-scrollable row below `lg` (by design,
+    since the admin menu alone has 20 items). Its `<li>` items had no `shrink-0`/`whitespace-nowrap`,
+    so flexbox's default `min-width: auto` let the browser shrink each pill toward its *word*-wrap
+    width instead of honouring `overflow-x-auto` -- multi-word labels like "Staff Summary" and
+    "Audit Log" wrapped across two lines inside their own pill, breaking the menu's height and
+    making it look broken rather than scrollable. Added `shrink-0` to the `<li>` and
+    `whitespace-nowrap` to `itemClass`; confirmed via computed styles (`ul.scrollHeight` now equals
+    `clientHeight`, so the row genuinely stays one line) and screenshots at 768px and 375px
+    (`docs/ui-screenshots/staff-nav-fixed-768.png`, `staff-nav-375.png`).
+  - Both fixes are pure Tailwind utility changes (a breakpoint prefix, `shrink-0`,
+    `whitespace-nowrap`) -- no new tokens, no behaviour change, no new dependencies.
+  - Reduced motion and reduced transparency: already covered by existing tests
+    (`e2e/home-hero.e2e.ts`'s "reduced motion" case, the global `prefers-reduced-motion` CSS block,
+    and `data-transparency` handling from 11a) -- re-verified they still pass after 11b-11f's
+    changes; no further issues found during the sweep.
+  - `npm run build` could not be run in this sandbox at any point in Task 11 (the sandbox's rollup
+    native parser is a stub -- `error during build: native parse not available in shim`, unrelated
+    to this project). Exact commands for the owner's PC, covering everything Task 11 could not
+    verify here:
+    ```
+    cd salon-app\frontend
+    npm install
+    npm run build
+    npx playwright test e2e/axe.e2e.ts
+    ```
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint
+  (`--max-warnings 0`) and prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors.
+  Full Playwright suite after reseeding the e2e database: 39/40 passed in one run, with
+  `photo-slots.e2e.ts`'s single test failing on `frames.count()` returning 0 -- the dev server had
+  been running continuously for several hours across all of Task 11's verification passes by this
+  point; re-running that one test alone immediately after passed in 7s, confirming environmental
+  flakiness under sustained load in this sandbox, not a regression. Not runnable here: `npm run
+  build` and `e2e/axe.e2e.ts` (commands above).
+
+### Task 11g: wrap-up (DONE, committed)
+- **Zenotians page, 403, 404**: reviewed all three in light and dark
+  (`docs/ui-screenshots/{zenotians,notfound,forbidden}-{light,dark}.png`). All three already used
+  the shared `Card` + `EmptyState` pattern from 11a's foundation and sit inside `PublicLayout`, so
+  they already have the navbar, footer and theming -- no code change was needed. The Zenotians
+  page stays the one allowed content-pending shell (per `CLAUDE.md`); it will get its real design
+  when Task 9/10's content exists, not as a Task 11 restyle.
+- **README**: added a "Design (Task 11 redesign)" section summarising the token-driven glass
+  system, the five themes, the home hero, themed division pages, shaped skeleton loaders, and
+  reduced-motion/transparency support, with pointers to `/design-system` (dev-only), this file's
+  Task 11 history, and `docs/ui-screenshots/`. The existing "Photos (image slots)" section from
+  the earlier change request already covers that in full.
+- **Task 11 overall summary**: 11a (foundation: tokens, glass, art/photo-slot registry, display
+  settings, loader, skeletons), 11a-fix (immediate button feedback), 11b (scroll-driven home
+  hero), the owner-photos change request (PNG/JPG/JPEG/WebP slot resolution, optimise/check
+  scripts), 11c (division pages), 11d (customer portal + desk Orders/Memberships), 11e (staff
+  portals), 11f (768px Navbar/StaffLayout fixes found by the width sweep) and 11g (this entry) are
+  all done and committed. Two decisions are still open and intentionally left to the owner rather
+  than guessed at: whether to build a public, admin-approved reviews feed on the home page (flagged
+  in 11b -- needs a small backend API addition, out of UI-only scope), and whether to commit the
+  optimised photo files in `frontend/public/photos/*.webp|jpg` and `placeholders.json` (currently
+  untracked, kept only in the owner's own copy of the repo).
+- Checks in the sandbox: vitest Test Files 38 passed (38), Tests 480 passed (480); eslint
+  (`--max-warnings 0`) and prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors.
+  No new e2e tests needed (no behaviour changed); the existing full-workflow and basic-a11y suites
+  already exercise `/403` and the keyboard-navigation path, and nothing on these three pages
+  changed. Not runnable here: `npm run build` and `e2e/axe.e2e.ts` (same as 11f).
+
+Task 11 (UI redesign) is complete. Stage 2's custom UI work from the original build order (section
+11 of `CLAUDE.md`) is done; what remains for the product itself is Task 9's real Zenotians content
+(still on hold), Task 10's Alankar Intelligence admin assistant (not built -- style it with the
+Task 11 staff theme when it is, per the note above), and Task 12
+(deployment).

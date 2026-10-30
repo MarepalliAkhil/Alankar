@@ -11,7 +11,7 @@ import {
   EmptyState,
   ErrorState,
   FilterChips,
-  LoadingState,
+  SkeletonRows,
   useToast,
   type BadgeTone,
 } from '../../components/ui';
@@ -70,7 +70,7 @@ export default function AdminWaitlistPage() {
       />
       <Card variant="dense" as="section" aria-label="Waitlist">
         {rows.isPending ? (
-          <LoadingState label="Loading the waitlist…" />
+          <SkeletonRows count={3} label="Loading the waitlist…" />
         ) : rows.isError ? (
           <ErrorState
             description="We couldn't load the waitlist."

@@ -1,0 +1,65 @@
+{
+  "salon-hero": {
+    "file": "salon-hero.webp",
+    "bytes": 81942,
+    "outputs": [
+      "salon-hero.webp",
+      "salon-hero.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADQBACdASogABIAPtVWok2oJKMpN+gBIBqJZQC9WDJp9HrfkvKN+5r33dfTCiockAD+9Cptgjq08prYa2dRvgs9O4eU7VPctYmQ4ZQtiTvZHJhPdZbbbdyocHrw1Vsl+jIvIAAA"
+  },
+  "spa-hero": {
+    "file": "spa-hero.webp",
+    "bytes": 100934,
+    "outputs": [
+      "spa-hero.webp",
+      "spa-hero.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAACwBACdASogABIAPu1oq08ppiOiMBgIATAdiWUAwNwnQqTQoPnFDMGFFmvAbAcYAPxcjCFZo88dB4AG7Yr2to/a0wyOmIKenpE8gOdy6mz5c8ciez6JWjwm82wCoGt1RwGNu3hr0I5q4B5CWG48HwqC8iBj8immnjofJWNTAAA="
+  },
+  "parlor-hero": {
+    "file": "parlor-hero.webp",
+    "bytes": 68714,
+    "outputs": [
+      "parlor-hero.webp",
+      "parlor-hero.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAAAQBACdASogABIAPu1kqU2/paOiMAgD8B2JZQDE2Cm74/0YizDtZwzAAAD+6yrXNDcPE/2ksBe4g65dTrBDFEG8Q4Ya5m3NHel2S4UAAAA="
+  },
+  "shop-background": {
+    "file": "shop-background.webp",
+    "bytes": 136272,
+    "outputs": [
+      "shop-background.webp",
+      "shop-background.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADwBACdASogABIAPuFUpE2opCOiN/qoARAcCWcAwcwXhZwM5rvIwfm/B3NR3gHsmdQA9C7xtunuNvU0LGeTki6O+wvyJFd6V1+LZAcAHsPgUTOCW9xoFXvM/2y56bzgwkogPYLUDNUAAA=="
+  },
+  "salon-background": {
+    "file": "salon-background.webp",
+    "bytes": 73178,
+    "outputs": [
+      "salon-background.webp",
+      "salon-background.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAAAwBACdASogABQAPulgo02pJaMiMAwBIB0JZWeeV5kSICy76MGNLD5iH9AA/u83c39pmEwT5eGzJCdOUCmxgrgHs7sy3OowTqK9w+NZnjCJjuAqwa7v8AedGGNzFERICb0AAA=="
+  },
+  "spa-background": {
+    "file": "spa-background.webp",
+    "bytes": 36288,
+    "outputs": [
+      "spa-background.webp",
+      "spa-background.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAABwBACdASogABQAPuVmrU2pJiUiMAwBIByJZQDKACmH0RWVkjKyAGdVUTvmYAD+7D/7m19O9Exq9xvHkQtM+oZDFjnWztdXE341POwWtSe4vjbADDG7Jn8ml2tPggm7B96WiTJxVBJuq0tAAAA="
+  },
+  "parlor-background": {
+    "file": "parlor-background.webp",
+    "bytes": 54430,
+    "outputs": [
+      "parlor-background.webp",
+      "parlor-background.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAAAQBACdASogABQAPu1sq06ppiOiMBgIATAdiWUAwzQ8J+CJvBwf6kx6IAD+79W2tYYU/kN5SszasbYZ5j3+mqf3snpG6lkV402wSAZ/cRx0AAAA"
+  }
+}

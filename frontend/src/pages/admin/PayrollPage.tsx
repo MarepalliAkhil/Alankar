@@ -11,6 +11,7 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonTable,
   TabPanel,
   Table,
   Tabs,
@@ -183,7 +184,7 @@ function StylistEstimate() {
           )}
           {open &&
             (detail.isPending ? (
-              <LoadingState label="Loading the breakdown…" />
+              <SkeletonTable rows={6} columns={7} label="Loading the breakdown…" />
             ) : detail.isError ? (
               <ErrorState
                 description="We couldn't load the breakdown."

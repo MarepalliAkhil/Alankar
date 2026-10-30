@@ -20,6 +20,8 @@ import {
   ErrorState,
   FilterChips,
   LoadingState,
+  SkeletonCards,
+  SkeletonChart,
   useToast,
   type BadgeTone,
 } from '../../components/ui';
@@ -76,7 +78,7 @@ export default function RatingsPage() {
         description="Customers rate their stylist after every paid visit. Ratings are never edited or deleted; you can put an unfair one under review or exclude it, with a reason, and it stops counting."
       />
       {summaries.isPending ? (
-        <LoadingState label="Loading ratings…" />
+        <SkeletonCards count={4} label="Loading ratings…" />
       ) : summaries.isError ? (
         <ErrorState
           description="We couldn't load the ratings."
@@ -205,7 +207,7 @@ function StylistRatings({ id }: { id: string }) {
           {chart.length === 0 ? (
             <p className="mt-xs text-sm text-text-muted">No counting ratings yet.</p>
           ) : (
-            <Suspense fallback={<LoadingState label="Loading the graph…" />}>
+            <Suspense fallback={<SkeletonChart label="Loading the graph…" />}>
               <BarChartView
                 data={chart}
                 title={`Average rating by month for ${d.name}`}

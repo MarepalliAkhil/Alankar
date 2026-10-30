@@ -21,7 +21,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
-  LoadingState,
+  SkeletonCards,
   Modal,
   StatusBadge,
   Tabs,
@@ -147,7 +147,7 @@ export default function DeskAppointmentsPage() {
 
       <div role="tabpanel" id={`desk-panel-${filter}`} aria-labelledby={`desk-tab-${filter}`}>
         {list.isPending ? (
-          <LoadingState label="Loading appointments…" />
+          <SkeletonCards count={4} label="Loading appointments…" />
         ) : list.isError ? (
           <ErrorState
             description="We couldn't load the appointments."

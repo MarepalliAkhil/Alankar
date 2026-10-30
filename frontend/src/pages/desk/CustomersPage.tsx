@@ -12,7 +12,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingState,
+  SkeletonCards,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
@@ -57,7 +57,7 @@ export default function CustomersPage() {
       </div>
 
       {list.isPending ? (
-        <LoadingState label="Loading customers…" />
+        <SkeletonCards count={4} label="Loading customers…" />
       ) : list.isError ? (
         <ErrorState
           description="We couldn't load the customers."

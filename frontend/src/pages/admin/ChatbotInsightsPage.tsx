@@ -18,7 +18,7 @@ import {
   ErrorState,
   FilterChips,
   Input,
-  LoadingState,
+  SkeletonRows,
   Modal,
   Textarea,
   useToast,
@@ -192,7 +192,7 @@ export default function ChatbotInsightsPage() {
         </div>
         <div className="mt-md">
           {insights.isPending ? (
-            <LoadingState label="Loading the questions…" />
+            <SkeletonRows count={4} label="Loading the questions…" />
           ) : insights.isError ? (
             <ErrorState
               description="We couldn't load the chatbot insights."

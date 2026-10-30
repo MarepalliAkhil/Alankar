@@ -11,9 +11,9 @@ import {
   ErrorState,
   FilterChips,
   Input,
-  LoadingState,
   Modal,
   Select,
+  SkeletonRows,
   Textarea,
   useToast,
 } from '../../components/ui';
@@ -70,7 +70,7 @@ export default function MembersPage() {
         </div>
       </Card>
       {members.isPending ? (
-        <LoadingState label="Loading members…" />
+        <SkeletonRows count={4} label="Loading members…" />
       ) : members.isError ? (
         <ErrorState
           description="We couldn't load the members."

@@ -16,7 +16,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingState,
+  SkeletonTable,
   Select,
   Table,
   useToast,
@@ -150,7 +150,7 @@ export default function AuditLogPage() {
 
       {log.isPending ? (
         <Card variant="dense">
-          <LoadingState label="Loading the audit log…" />
+          <SkeletonTable rows={6} columns={6} label="Loading the audit log…" />
         </Card>
       ) : log.isError ? (
         <Card variant="dense">

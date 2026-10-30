@@ -26,6 +26,8 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonCards,
+  SkeletonTable,
   Modal,
   Select,
   Table,
@@ -207,7 +209,7 @@ function Invoices({ onOpen }: { onOpen: (id: string) => void }) {
         />
       </div>
       {list.isPending ? (
-        <LoadingState label="Loading invoices…" />
+        <SkeletonTable rows={5} columns={5} label="Loading invoices…" />
       ) : list.isError ? (
         <ErrorState
           description="We couldn't load the invoices."
@@ -249,7 +251,7 @@ function Refunds() {
     onError: (error) => setProblem(errorDetail(error) ?? 'Could not save the decision.'),
   });
 
-  if (list.isPending) return <LoadingState label="Loading refunds…" />;
+  if (list.isPending) return <SkeletonCards count={4} label="Loading refunds…" />;
   if (list.isError) {
     return (
       <ErrorState description="We couldn't load the refunds." onRetry={() => void list.refetch()} />

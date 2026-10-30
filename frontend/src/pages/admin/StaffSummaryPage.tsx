@@ -21,6 +21,8 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonChart,
+  SkeletonRows,
   Select,
   TabPanel,
   Tabs,
@@ -64,7 +66,7 @@ function Chart({ title, children }: { title: string; children: React.ReactNode }
   return (
     <Card className="flex flex-col gap-sm">
       <h3 className="text-base font-semibold text-text">{title}</h3>
-      <Suspense fallback={<LoadingState label="Loading the chart…" />}>{children}</Suspense>
+      <Suspense fallback={<SkeletonChart label="Loading the chart…" />}>{children}</Suspense>
     </Card>
   );
 }
@@ -366,7 +368,7 @@ function IndicatorLine({ name, ind, text }: { name: string; ind?: Indicator; tex
 function Reviews({ month }: { month: string }) {
   const [open, setOpen] = useState('');
   const data = useQuery({ queryKey: ['a-reviews', month], queryFn: () => getReviews(month) });
-  if (data.isPending) return <LoadingState label="Loading performance reviews…" />;
+  if (data.isPending) return <SkeletonRows count={4} label="Loading performance reviews…" />;
   if (data.isError)
     return (
       <ErrorState

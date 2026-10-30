@@ -19,6 +19,7 @@ import {
   ErrorState,
   LoadingState,
   Modal,
+  SkeletonRows,
   useToast,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -72,7 +73,7 @@ export default function GiftCardsPage() {
       />
       <Card variant="dense" as="section" aria-label="Gift cards">
         {cards.isPending ? (
-          <LoadingState label="Loading gift cards…" />
+          <SkeletonRows count={4} label="Loading gift cards…" />
         ) : cards.isError ? (
           <ErrorState
             description="We couldn't load the gift cards."

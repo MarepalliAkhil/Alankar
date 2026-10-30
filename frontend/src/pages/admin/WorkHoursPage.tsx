@@ -20,6 +20,7 @@ import {
   ErrorState,
   Input,
   LoadingState,
+  SkeletonCards,
   Modal,
   Table,
   Textarea,
@@ -89,7 +90,7 @@ export default function WorkHoursPage() {
         />
       </div>
       {list.isPending ? (
-        <LoadingState label="Loading work hours…" />
+        <SkeletonCards count={4} label="Loading work hours…" />
       ) : list.isError ? (
         <ErrorState
           description="We couldn't load work hours."

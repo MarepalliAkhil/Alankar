@@ -29,6 +29,10 @@ export const tokens = {
     onAccent: '#FFFFFF',
     // Laid over background artwork so text above it stays readable (Task 11).
     artOverlay: 'rgba(248, 246, 255, 0.55)',
+    /** Over the owner's photos, which are busier than the artwork: a stronger veil. */
+    photoOverlay: 'rgba(248, 246, 255, 0.62)',
+    /** Behind whole pages (PageBackdrop): strong, so plain page text stays readable. */
+    backdropOverlay: 'rgba(248, 246, 255, 0.88)',
     success: '#22C55E',
     successSoft: '#DCFCE7',
     successText: '#166534',

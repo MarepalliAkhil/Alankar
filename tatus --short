@@ -1,0 +1,5 @@
+[33mb10272a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Task 11b: scroll-driven home hero and restyled home sections
+[33m2439084[m Task 11a fix: immediate button spinners, slow-action glass overlay, Modal busy
+[33mab85132[m Task 11a: art generator runs on Python 3.11 (no 3.12-only f-strings) and passes ruff; output unchanged
+[33m1a9bedc[m Task 11a: theme foundation (five token sets in light and dark, glass tokens and components, display settings, delayed branded loader, skeletons, page transitions, art registry with photo slots, design-system page)
+[33m9efe97a[m docs: Task 8.5 done (owner confirmed and pushed); Task 10 not built (style its panel later); Task 11 started

@@ -64,6 +64,38 @@ export function SkeletonCards({
   );
 }
 
+/** A stack of row-card placeholders (a title and a badge, then two lines), for lists shown as
+ * one card per row rather than a grid -- orders, members and similar record lists. */
+export function SkeletonRows({
+  count = 3,
+  label = 'Loading…',
+  className,
+}: {
+  count?: number;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div role="status" aria-live="polite" className={cn('flex flex-col gap-sm', className)}>
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: count }, (_, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          className="glass-card flex flex-col gap-sm rounded-card p-lg"
+        >
+          <div className="flex items-center justify-between gap-sm">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-3 w-1/4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Placeholder shaped like a table. */
 export function SkeletonTable({
   rows = 5,

@@ -1,25 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
-import { Search, SearchX } from 'lucide-react';
+import { Phone, Search, SearchX, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCategories, getServices, getTeam, type Audience, type Service } from '../../api/public';
 import { ServiceCard } from '../../components/catalogue/ServiceCard';
 import { ServiceSheet } from '../../components/catalogue/ServiceSheet';
 import { TeamGrid } from '../../components/catalogue/TeamGrid';
-import { PageContainer, PageHeader } from '../../components/layout/PageContainer';
+import { PageContainer } from '../../components/layout/PageContainer';
+import { useRouteTheme } from '../../design/display';
+import { divisionTheme } from '../../design/themes';
 import {
+  ArtImage,
+  BrandMark,
   Button,
+  ButtonLink,
   Card,
   EmptyState,
   ErrorState,
   FilterChips,
   Input,
-  LoadingState,
+  SkeletonCards,
   type ChipOption,
 } from '../../components/ui';
+import { BOOK_NOW_PATH } from '../../config/paths';
+import type { ArtId } from '../../design/art';
+import { useSite } from '../../hooks/useSite';
+import { bookingTarget } from '../../routes/booking';
+import { useSession } from '../../session/session-context';
 import { getDivision, type DivisionId } from '../../config/divisions';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 type AudienceFilter = Audience | 'all';
+
+const HERO: Record<DivisionId, ArtId> = {
+  salon: 'salonHero',
+  spa: 'spaHero',
+  'beauty-parlor': 'parlorHero',
+};
 
 const audienceOptions: ChipOption<AudienceFilter>[] = [
   { value: 'all', label: 'All' },
@@ -40,6 +56,7 @@ function useDebounced<T>(value: T, delay = 250): T {
 
 /** Division page: services from the database with filters, search and a detail sheet. */
 export default function DivisionPage({ divisionId }: { divisionId: DivisionId }) {
+  useRouteTheme(divisionTheme[divisionId]);
   const division = getDivision(divisionId);
   useDocumentTitle(division.label);
   const [audience, setAudience] = useState<AudienceFilter>('all');
@@ -64,6 +81,11 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
     placeholderData: (previous) => previous,
   });
   const team = useQuery({ queryKey: ['team', divisionId], queryFn: () => getTeam(divisionId) });
+  const site = useSite();
+  const { user } = useSession();
+  const book = bookingTarget(user) ?? (user ? null : BOOK_NOW_PATH);
+  const tel = site.data?.contact?.phone?.replace(/[^\d+]/g, '');
+  const total = site.data?.stats?.divisions[divisionId];
 
   const filtered = audience !== 'all' || category !== 'all' || q !== '';
   const clearFilters = () => {
@@ -78,8 +100,50 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
   ];
 
   return (
-    <PageContainer className="pb-xl">
-      <PageHeader eyebrow="Services" title={division.label} description={division.summary} />
+    <PageContainer className="flex flex-col gap-lg pb-2xl pt-lg">
+      <header className="relative overflow-hidden rounded-modal shadow-raised">
+        <ArtImage
+          slot={HERO[divisionId]}
+          priority
+          overlay
+          className="absolute inset-0 h-full w-full"
+        />
+        <div className="relative flex flex-col gap-md p-sm sm:p-xl md:flex-row md:items-end md:justify-between">
+          <div className="glass-dense flex max-w-2xl flex-col gap-sm rounded-card p-lg">
+            <div className="flex items-center gap-sm">
+              <BrandMark theme={divisionTheme[divisionId]} className="mark-still h-12 w-12" />
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-hover">
+                Services
+              </p>
+            </div>
+            <h1 className="text-4xl font-bold text-text sm:text-5xl">{division.label}</h1>
+            <p className="text-lg text-text-muted">{division.summary}</p>
+            <p className="text-sm text-text">
+              {total !== undefined && (
+                <>
+                  {total} {total === 1 ? 'service' : 'services'}
+                  {categories.data && categories.data.length > 0
+                    ? ` in ${categories.data.length} ${categories.data.length === 1 ? 'category' : 'categories'}`
+                    : ''}
+                  {' · '}
+                </>
+              )}
+              Every price includes GST.
+            </p>
+            <div className="mt-xs flex flex-wrap items-center gap-sm">
+              {book && <ButtonLink to={book}>Book Now</ButtonLink>}
+              {tel && (
+                <a
+                  href={`tel:${tel}`}
+                  className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                >
+                  <Phone aria-hidden="true" className="h-4 w-4" /> Call the salon
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       <Card variant="dense" className="flex flex-col gap-md">
         <div className="relative max-w-md">
@@ -112,11 +176,9 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
         )}
       </Card>
 
-      <section aria-label={`${division.label} services`} className="mt-lg">
+      <section aria-label={`${division.label} services`}>
         {services.isPending ? (
-          <Card variant="dense">
-            <LoadingState label="Loading services…" lines={4} />
-          </Card>
+          <SkeletonCards count={6} label="Loading services…" />
         ) : services.isError ? (
           <Card variant="dense">
             <ErrorState
@@ -145,9 +207,21 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
           </Card>
         ) : (
           <>
-            <p className="mb-sm text-sm text-text-muted" aria-live="polite">
-              {services.data.length} {services.data.length === 1 ? 'service' : 'services'}
-            </p>
+            <div className="mb-sm flex flex-wrap items-center justify-between gap-sm">
+              <p className="text-sm font-medium text-text" aria-live="polite">
+                {services.data.length} {services.data.length === 1 ? 'service' : 'services'}
+                {filtered ? ' match your filters' : ''}
+              </p>
+              {filtered && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1 rounded-full px-sm py-1 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" /> Reset filters
+                </button>
+              )}
+            </div>
             <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
               {services.data.map((service) => (
                 <li key={service.id}>
@@ -160,8 +234,8 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
       </section>
 
       {team.data && team.data.length > 0 && (
-        <section aria-labelledby="division-team" className="mt-2xl">
-          <h2 id="division-team" className="mb-md text-2xl font-bold text-text">
+        <section aria-labelledby="division-team" className="mt-xl">
+          <h2 id="division-team" className="mb-md text-2xl font-bold text-text sm:text-3xl">
             Our {division.label.toLowerCase()} team
           </h2>
           <TeamGrid team={team.data} />

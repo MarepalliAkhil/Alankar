@@ -227,10 +227,15 @@ function ScrollStage(props: HomeHeroProps) {
             aria-hidden="true"
             className={cn('hero-layer absolute inset-0', LAYER[i])}
           >
-            <ArtImage slot={HERO_ART[theme]} priority={i === 0} className="h-full w-full" />
+            <ArtImage
+              slot={HERO_ART[theme]}
+              priority={i === 0}
+              override={i === 0 ? props.site?.hero?.image_url : null}
+              overlay
+              className="h-full w-full"
+            />
           </div>
         ))}
-        <div aria-hidden="true" className="hero-scrim absolute inset-0" />
 
         <div className="relative mx-auto grid h-full w-full max-w-6xl grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] items-center gap-xl px-lg pt-24 pb-xl">
           <div className="hero-intro glass-dense rounded-modal p-xl">
@@ -282,7 +287,7 @@ function ScrollStage(props: HomeHeroProps) {
         <p
           aria-hidden="true"
           className={cn(
-            'hero-hint absolute bottom-xl left-1/2 flex -translate-x-1/2 items-center gap-1 text-sm font-medium text-text',
+            'hero-hint glass-dense absolute bottom-xl left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full px-md py-xs text-sm font-medium text-text',
             stage === divisions.length - 1 && 'opacity-0',
           )}
         >
@@ -296,11 +301,13 @@ function ScrollStage(props: HomeHeroProps) {
 function Band({
   theme,
   priority,
+  override,
   className,
   children,
 }: {
   theme: (typeof HERO_THEMES)[number];
   priority?: boolean;
+  override?: string | null;
   className?: string;
   children: ReactNode;
 }) {
@@ -312,9 +319,10 @@ function Band({
       <ArtImage
         slot={HERO_ART[theme]}
         priority={priority}
+        override={override}
+        overlay
         className="absolute inset-0 h-full w-full"
       />
-      <div aria-hidden="true" className="hero-scrim absolute inset-0" />
       <div className="relative mx-auto w-full max-w-6xl px-md py-xl sm:px-lg">{children}</div>
     </ThemeScope>
   );
@@ -324,7 +332,12 @@ function StackedStage(props: HomeHeroProps) {
   const counts = props.site?.stats?.divisions;
   return (
     <section aria-labelledby="hero-title" data-hero="stacked">
-      <Band theme="salon" priority className="flex min-h-[70svh] items-center">
+      <Band
+        theme="salon"
+        priority
+        override={props.site?.hero?.image_url}
+        className="flex min-h-[70svh] items-center"
+      >
         <div className="glass-dense rounded-modal p-lg sm:p-xl">
           <Intro {...props} stage={null} />
         </div>

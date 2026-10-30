@@ -6,7 +6,7 @@ import {
   Badge,
   EmptyState,
   ErrorState,
-  LoadingState,
+  SkeletonTable,
   Table,
   type Column,
 } from '../../components/ui';
@@ -38,7 +38,7 @@ export default function InventoryPage() {
         description="Stock levels for retail products. Levels fall automatically when a product is sold."
       />
       {inventory.isPending ? (
-        <LoadingState label="Loading stock…" />
+        <SkeletonTable rows={6} columns={6} label="Loading stock…" />
       ) : inventory.isError ? (
         <ErrorState
           description="We couldn't load the stock."

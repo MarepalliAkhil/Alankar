@@ -1,46 +1,74 @@
-import { Clock } from 'lucide-react';
+import { ArrowRight, Clock } from 'lucide-react';
 import type { Service } from '../../api/public';
+import type { DivisionId } from '../../config/divisions';
+import type { ArtId } from '../../design/art';
 import { formatDurationRange, formatINR } from '../../lib/format';
+import { ArtImage } from '../ui/ArtImage';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
 import { divisionIcon } from './icons';
 
 const audienceLabel = { men: 'Men', women: 'Women', kids: 'Kids', unisex: 'Unisex' } as const;
 
+/** The picture on a service card: the admin's service image, else the division's photo/artwork. */
+const DIVISION_ART: Record<DivisionId, ArtId> = {
+  salon: 'salonBackground',
+  spa: 'spaBackground',
+  'beauty-parlor': 'parlorBackground',
+};
+
 export function ServiceCard({ service, onOpen }: { service: Service; onOpen: () => void }) {
   return (
-    <Card as="article" padding="none" className="flex h-full flex-col overflow-hidden">
+    <Card
+      as="article"
+      padding="none"
+      className="group flex h-full flex-col overflow-hidden transition-transform duration-base ease-brand hover:-translate-y-1 focus-within:-translate-y-1"
+    >
       <button
         type="button"
         onClick={onOpen}
         aria-label={`${service.name}: see details and book`}
         className="flex h-full flex-col text-left focus-visible:shadow-focus focus-visible:outline-none"
       >
-        {service.image_url ? (
-          <img src={service.image_url} alt="" className="h-36 w-full object-cover" />
-        ) : (
-          <div
+        <div className="relative h-32 w-full overflow-hidden">
+          <ArtImage
+            slot={DIVISION_ART[service.division]}
+            override={service.image_url || null}
+            className="h-full w-full transition-transform duration-slow ease-brand group-hover:scale-105"
+          />
+          <span
             aria-hidden="true"
-            className="flex h-24 w-full items-center justify-center bg-primary-soft text-primary-hover"
+            className="glass-dense absolute bottom-sm left-sm inline-flex h-10 w-10 items-center justify-center rounded-full text-primary-hover"
           >
             {divisionIcon[service.division]}
-          </div>
-        )}
+          </span>
+          <Badge tone="neutral" className="absolute right-sm top-sm">
+            {audienceLabel[service.audience]}
+          </Badge>
+        </div>
         <div className="flex flex-1 flex-col gap-sm p-md">
-          <div className="flex items-start justify-between gap-sm">
-            <h3 className="font-semibold text-text">{service.name}</h3>
-            <Badge tone="neutral">{audienceLabel[service.audience]}</Badge>
-          </div>
+          <h3 className="font-semibold text-text">{service.name}</h3>
           <p className="text-sm text-text-muted">{service.summary}</p>
           <div className="mt-auto flex items-end justify-between gap-sm pt-sm">
             <p className="text-sm text-text">
               <span className="text-text-muted">from </span>
-              <span className="text-base font-bold">{formatINR(service.from_price)}</span>
+              <span className="text-lg font-bold text-primary-hover">
+                {formatINR(service.from_price)}
+              </span>
               <span className="block text-xs text-text-muted">incl. GST</span>
             </p>
-            <span className="inline-flex items-center gap-1 text-xs text-text-muted">
-              <Clock aria-hidden="true" className="h-3.5 w-3.5" />
-              {formatDurationRange(service.min_duration, service.max_duration)}
+            <span className="flex flex-col items-end gap-1 text-xs text-text-muted">
+              <span className="inline-flex items-center gap-1">
+                <Clock aria-hidden="true" className="h-3.5 w-3.5" />
+                {formatDurationRange(service.min_duration, service.max_duration)}
+              </span>
+              <span
+                aria-hidden="true"
+                className="inline-flex items-center gap-1 font-medium text-primary-hover"
+              >
+                Details
+                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-base ease-brand group-hover:translate-x-1" />
+              </span>
             </span>
           </div>
         </div>
