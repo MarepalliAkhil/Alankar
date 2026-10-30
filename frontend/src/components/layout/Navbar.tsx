@@ -7,6 +7,7 @@ import { BOOK_NOW_PATH } from '../../config/paths';
 import { cn } from '../../lib/cn';
 import { menuFor } from '../../policy/policy';
 import { usePendingAction } from '../../hooks/usePendingAction';
+import { useScrolled } from '../../hooks/useScrolled';
 import { useSession } from '../../session/session-context';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
@@ -33,6 +34,7 @@ const zenotiansClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const bar = useScrolled<HTMLElement>();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { status, user, signOut } = useSession();
@@ -66,7 +68,7 @@ export function Navbar() {
   const authArea =
     status === 'loading' ? null : isCustomer && user ? (
       <DropdownMenu
-        label={`Account menu, ${user.full_name.split(' ')[0] || 'Account'}`}
+        label="Account menu"
         trigger={
           <>
             <Avatar name={user.full_name || user.email} size="sm" />
@@ -106,8 +108,9 @@ export function Navbar() {
   return (
     <header data-hero-follow className="sticky top-0 z-nav px-sm pt-sm sm:px-lg">
       <nav
+        ref={bar}
         aria-label="Main"
-        className="glass mx-auto flex max-w-6xl items-center gap-sm rounded-card px-md py-sm"
+        className="glass-bar mx-auto flex max-w-6xl items-center gap-sm rounded-card px-md py-sm"
       >
         <Link
           to="/"

@@ -262,7 +262,7 @@ export function ChatWidget() {
         ref={launcher}
         type="button"
         aria-expanded={open}
-        aria-label={open ? 'Close chat' : `Open ${CHATBOT_NAME}`}
+        aria-label={`${open ? 'Close' : 'Open'} ${CHATBOT_NAME}`}
         onClick={() => (open ? close() : setOpen(true))}
         className="glass-dense inline-flex h-14 items-center gap-sm rounded-full px-lg text-sm font-semibold text-text shadow-raised hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
       >

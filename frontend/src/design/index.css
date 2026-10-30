@@ -106,6 +106,41 @@
     }
   }
 
+  /* Transparent bars (navbar, footer, staff sidebar): a light tint, blur and a thin border so the
+     page photo shows through; the tint grows a little once the page has scrolled. */
+  .glass-bar {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--glass-border);
+    background-color: color-mix(in srgb, var(--glass-fill) 40%, transparent);
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+    transition: background-color var(--motion-base, 200ms) var(--motion-ease);
+  }
+  .glass-bar[data-scrolled='true'] {
+    background-color: color-mix(in srgb, var(--glass-fill) 72%, transparent);
+  }
+  @media (max-width: 640px) {
+    .glass-bar {
+      -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+      backdrop-filter: blur(var(--glass-blur-sm));
+    }
+  }
+
+  /* Home page background: three pictures stacked, cross-faded by scroll (opacity only). */
+  .bg-layer {
+    will-change: opacity;
+  }
+  .bg-layer-0 {
+    opacity: var(--bg-w0, 1);
+  }
+  .bg-layer-1 {
+    opacity: var(--bg-w1, 0);
+  }
+  .bg-layer-2 {
+    opacity: var(--bg-w2, 0);
+  }
+
   /* ---------------------------------------------------------------- loading
      Shimmer skeletons and the branded loader animate only transform and opacity. */
   .skeleton {
@@ -485,12 +520,25 @@
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+  .glass-bar,
+  .glass-bar[data-scrolled='true'] {
+    background-color: var(--glass-fill-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 [data-transparency='reduced']
   :is(.glass, .glass-dense, .glass-card, .glass-panel, .glass-nav, .glass-button, .glass-input) {
   background-color: var(--glass-fill-solid);
   background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-transparency='reduced'] .glass-bar,
+[data-transparency='reduced'] .glass-bar[data-scrolled='true'] {
+  background-color: var(--glass-fill-solid);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }

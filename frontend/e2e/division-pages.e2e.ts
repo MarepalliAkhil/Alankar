@@ -22,7 +22,7 @@ for (const mode of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-theme', division.theme);
         await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
         await expect(
-          page.getByRole('button', { name: /see details and book/ }).first(),
+          page.getByRole('button', { name: /see details and book/i }).first(),
         ).toBeVisible();
         // The service list can be filtered and reset.
         await page.getByRole('button', { name: 'Kids', exact: true }).click();
@@ -33,9 +33,9 @@ for (const mode of ['light', 'dark'] as const) {
           fullPage: width < 400,
         });
       }
-      // Leaving a division page gives the page back to the brand theme.
+      // Pages outside the divisions wear the division viewed last (here the Beauty Parlor).
       await page.goto('/register');
-      await expect(page.locator('html')).toHaveAttribute('data-theme', 'brand');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'parlor');
       await context.close();
     });
   }

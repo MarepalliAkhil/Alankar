@@ -18,7 +18,10 @@ export function Footer() {
 
   return (
     <footer className="mt-2xl px-sm pb-lg sm:px-lg">
-      <div className="glass mx-auto flex max-w-6xl flex-col gap-lg rounded-card px-lg py-lg">
+      <div
+        data-scrolled="true"
+        className="glass-bar mx-auto flex max-w-6xl flex-col gap-lg rounded-card px-lg py-lg"
+      >
         {data && (
           <div className="grid gap-lg text-sm sm:grid-cols-3">
             <div className="flex flex-col gap-sm">

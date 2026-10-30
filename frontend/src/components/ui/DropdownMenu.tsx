@@ -7,7 +7,8 @@ export type DropdownItem =
   | { label: string; onSelect: () => void; to?: never };
 
 export interface DropdownMenuProps {
-  /** Accessible name of the trigger button. */
+  /** Name of the menu; also read out after the trigger's visible content (the button's name comes
+   * from that content, so it always contains the visible text). */
   label: string;
   trigger: ReactNode;
   items: readonly DropdownItem[];
@@ -45,7 +46,6 @@ export function DropdownMenu({ label, trigger, items, className }: DropdownMenuP
     <div ref={rootRef} className={cn('relative', className)}>
       <button
         type="button"
-        aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -53,6 +53,7 @@ export function DropdownMenu({ label, trigger, items, className }: DropdownMenuP
         className="inline-flex items-center gap-sm rounded-full p-1 pr-3 text-sm font-medium text-text hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
       >
         {trigger}
+        <span className="sr-only">{label}</span>
       </button>
       {open && (
         <ul

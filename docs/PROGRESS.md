@@ -2135,3 +2135,24 @@ Task 11 (UI redesign) is complete. Stage 2's custom UI work from the original bu
 (still on hold), Task 10's Alankar Intelligence admin assistant (not built -- style it with the
 Task 11 staff theme when it is, per the note above), and Task 12
 (deployment).
+
+### Task 11h: full-page backgrounds, transparent navbar and footer (DONE, not yet committed by owner)
+
+- New shared `PageBackground` (`components/ui/PageBackground.tsx`), rendered by `PublicLayout` and
+  `StaffLayout` (no per-page code): fixed behind everything, under the readability overlay, using
+  the photo-slot helper (generated artwork if there is no photo).
+  - Home below the hero: salon / spa / parlor backgrounds cross-fade with scroll (opacity only,
+    scroll writes CSS variables, no React re-render). Reduced motion: instant switch.
+  - /salon, /spa, /beauty-parlor: that division's background for the whole page.
+  - Login, register, forgot/reset password, 403, 404, Zenotians and every customer page: the division
+    viewed last (`salon-last-division` in localStorage, default spa) with that division's theme/accent.
+  - Receptionist, stylist, admin: `shopBackground`.
+- Transparent glass bars: new `.glass-bar` (light tint, blur, thin border; tint rises once the page
+  is scrolled via `useScrolled`; lighter blur on phones; solid with reduced transparency). Used by
+  the navbar, footer, staff sidebar and customer menu.
+- Fixed: customer menu tabs wrapped inside their pills (same flex-shrink bug as the staff menu).
+- Accessibility: every `label-content-name-mismatch` fixed (account menu, chatbot launcher, service
+  cards now take their names from content); `e2e/axe.e2e.ts` prints rule, selector and HTML.
+- Verified here: vitest 480/480, eslint, tsc (only the 2 known recharts-stub errors), prettier,
+  Playwright (non-axe suite), screenshots `docs/ui-screenshots/bg-*.png`.
+- NOT run here (no network for axe-core): `npx playwright test e2e/axe.e2e.ts`, `npm run build`.

@@ -27,7 +27,6 @@ export function ServiceCard({ service, onOpen }: { service: Service; onOpen: () 
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`${service.name}: see details and book`}
         className="flex h-full flex-col text-left focus-visible:shadow-focus focus-visible:outline-none"
       >
         <div className="relative h-32 w-full overflow-hidden">
@@ -48,6 +47,7 @@ export function ServiceCard({ service, onOpen }: { service: Service; onOpen: () 
         </div>
         <div className="flex flex-1 flex-col gap-sm p-md">
           <h3 className="font-semibold text-text">{service.name}</h3>
+          <span className="sr-only">See details and book</span>
           <p className="text-sm text-text-muted">{service.summary}</p>
           <div className="mt-auto flex items-end justify-between gap-sm pt-sm">
             <p className="text-sm text-text">

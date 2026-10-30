@@ -14,10 +14,13 @@ async function scan(page: import('@playwright/test').Page, path: string) {
   await page.waitForLoadState('networkidle');
   const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   const worst = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(
-    worst.map((v) => `${path}: ${v.id} (${v.impact}) x${v.nodes.length}`),
-    `axe violations on ${path}`,
-  ).toEqual([]);
+  // For every violating node print the rule id, the CSS selector and the (trimmed) HTML, so the
+  // failing element can be found without guessing.
+  const lines = worst.flatMap((v) => [
+    `${path}: ${v.id} (${v.impact}) x${v.nodes.length}`,
+    ...v.nodes.map((n) => `    ${v.id} @ ${n.target.join(' ')}\n      ${n.html.slice(0, 300)}`),
+  ]);
+  expect(lines, `axe violations on ${path}`).toEqual([]);
 }
 
 test('public pages have no serious accessibility violations', async ({ page }) => {

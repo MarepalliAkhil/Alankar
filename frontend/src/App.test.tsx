@@ -197,7 +197,7 @@ describe('website content from the database', () => {
       }),
     );
 
-    await user.click(screen.getByRole('button', { name: /Women's Haircut: see details/ }));
+    await user.click(screen.getByRole('button', { name: /Women's Haircut/ }));
     const sheet = screen.getByRole('dialog', { name: "Women's Haircut" });
     expect(within(sheet).getByText('Long hair')).toBeInTheDocument();
     expect(within(sheet).getByText('₹900')).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('website content from the database', () => {
     vi.mocked(publicApi.getServices).mockResolvedValue([haircut]);
     const user = userEvent.setup();
     renderAt('/salon');
-    await user.click(await screen.findByRole('button', { name: /Women's Haircut: see details/ }));
+    await user.click(await screen.findByRole('button', { name: /Women's Haircut/ }));
     expect(screen.getByRole('link', { name: 'Book this service' })).toHaveAttribute(
       'href',
       '/customer/book?service=womens-haircut',
@@ -542,7 +542,7 @@ describe('route guards and role menus', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome, Test' })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).queryByRole('link', { name: 'Login' })).not.toBeInTheDocument();
-    await user.click(within(nav).getByRole('button', { name: /^Account menu/ }));
+    await user.click(within(nav).getByRole('button', { name: /Account menu/ }));
     const menu = screen.getByRole('menu', { name: /^Account menu/ });
     for (const label of ['My Appointments', 'Stylist Chat', 'Invoices', 'Profile', 'Logout']) {
       expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();

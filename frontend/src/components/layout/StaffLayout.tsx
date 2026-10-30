@@ -14,7 +14,7 @@ import { DisplaySettings } from '../ui/DisplaySettings';
 import { DelayedLoader } from '../ui/Loader';
 import { PageTransition } from '../ui/PageTransition';
 import { useRouteTheme } from '../../design/display';
-import { PageBackdrop } from '../ui/PageBackdrop';
+import { PageBackground } from '../ui/PageBackground';
 import { usePendingAction } from '../../hooks/usePendingAction';
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
@@ -39,14 +39,14 @@ export function StaffLayout() {
 
   return (
     <div className="flex min-h-screen flex-col gap-md p-sm sm:p-md lg:flex-row">
-      <PageBackdrop slot="shopBackground" />
+      <PageBackground fixed="shopBackground" />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-md focus:top-md focus:z-toast focus:rounded-full focus:bg-surface focus:px-md focus:py-sm focus:text-text focus:shadow-raised"
       >
         Skip to content
       </a>
-      <aside className="glass flex flex-col gap-md rounded-card p-md lg:sticky lg:top-md lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
+      <aside className="glass-bar flex flex-col gap-md rounded-card p-md lg:sticky lg:top-md lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
         <div className="flex items-center justify-between gap-sm">
           <Link
             to="/"

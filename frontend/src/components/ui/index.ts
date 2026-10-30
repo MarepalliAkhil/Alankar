@@ -51,4 +51,5 @@ export { PageTransition } from './PageTransition';
 export { ThemeSwitcher } from './ThemeSwitcher';
 export { ArtImage } from './ArtImage';
 export { PageBackdrop } from './PageBackdrop';
+export { PageBackground } from './PageBackground';
 export { PendingArea, type PendingAreaProps } from './PendingArea';
