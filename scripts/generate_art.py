@@ -30,11 +30,12 @@ def svg(body: str, defs: str, title: str) -> str:
     )
 
 
+def _opacity(a: float) -> str:
+    return "" if a == 1 else f' stop-opacity="{a}"'
+
+
 def linear(id_: str, stops: list[tuple[float, str, float]], x2="0", y2="1") -> str:
-    s = "".join(
-        f'<stop offset="{o}" stop-color="{c}"{"" if a == 1 else f" stop-opacity=\"{a}\""}/>'
-        for o, c, a in stops
-    )
+    s = "".join(f'<stop offset="{o}" stop-color="{c}"{_opacity(a)}/>' for o, c, a in stops)
     return f'<linearGradient id="{id_}" x1="0" y1="0" x2="{x2}" y2="{y2}">{s}</linearGradient>'
 
 
@@ -47,7 +48,9 @@ def radial(id_: str, color: str, opacity: float) -> str:
 
 
 def glow(id_: str, cx, cy, rx, ry=None) -> str:
-    return f'<ellipse cx="{f(cx)}" cy="{f(cy)}" rx="{f(rx)}" ry="{f(ry or rx)}" fill="url(#{id_})"/>'
+    return (
+        f'<ellipse cx="{f(cx)}" cy="{f(cy)}" rx="{f(rx)}" ry="{f(ry or rx)}" fill="url(#{id_})"/>'
+    )
 
 
 def sparkle(x, y, r, color, opacity) -> str:
@@ -97,16 +100,15 @@ def salon(dark: bool) -> str:
             f'opacity="{line_op}"/>'
         )
         parts.append(
-            f'<path d="M{x - 34} 150Q{x} 96 {x + 34} 150Z" fill="{gold}" opacity="{line_op + 0.25}"/>'
+            f'<path d="M{x - 34} 150Q{x} 96 {x + 34} 150Z" '
+            f'fill="{gold}" opacity="{line_op + 0.25}"/>'
         )
         parts.append(glow("g1", x, 156, 70, 40))
     # Arched mirrors on the back wall.
     for x0 in (200, 1260):
         w, top, bottom = 220, 300, 760
         r = w / 2
-        d = (
-            f"M{x0} {bottom}V{top + r}A{f(r)} {f(r)} 0 0 1 {x0 + w} {top + r}V{bottom}Z"
-        )
+        d = f"M{x0} {bottom}V{top + r}A{f(r)} {f(r)} 0 0 1 {x0 + w} {top + r}V{bottom}Z"
         parts.append(
             f'<path d="{d}" fill="{mirror_fill}" opacity="0.55" stroke="{gold}" '
             f'stroke-width="3" stroke-opacity="{line_op + 0.15}"/>'
@@ -183,7 +185,7 @@ def spa(dark: bool) -> str:
             f'stroke="{sage}" stroke-width="2" opacity="{f(op * (1 - k * 0.2))}"/>'
         )
     # A large lotus outline.
-    cx, cy, s = 1170, 560, 1.0
+    cx, cy = 1170, 560
     petals = [
         f"M{cx} {cy - 220}C{cx + 70} {cy - 120} {cx + 70} {cy - 30} {cx} {cy + 40}"
         f"C{cx - 70} {cy - 30} {cx - 70} {cy - 120} {cx} {cy - 220}Z",
@@ -244,7 +246,8 @@ def parlor(dark: bool) -> str:
 
     def petal(x, y, size, angle, color, opacity):
         d = (
-            f"M0 0C{f(size * 0.55)} {f(-size * 0.35)} {f(size * 0.6)} {f(-size)} 0 {f(-size * 1.25)}"
+            f"M0 0C{f(size * 0.55)} {f(-size * 0.35)} {f(size * 0.6)} {f(-size)} "
+            f"0 {f(-size * 1.25)}"
             f"C{f(-size * 0.6)} {f(-size)} {f(-size * 0.55)} {f(-size * 0.35)} 0 0Z"
         )
         return (
@@ -304,7 +307,8 @@ def main() -> None:
         for mode in ("light", "dark"):
             path = OUT / f"{name}-{mode}.svg"
             path.write_text(draw(mode == "dark"), encoding="utf-8")
-            print(f"{path.relative_to(OUT.parent.parent.parent.parent)}  {path.stat().st_size // 1024} KB")
+            size_kb = path.stat().st_size // 1024
+            print(f"{path.relative_to(OUT.parent.parent.parent.parent)}  {size_kb} KB")
 
 
 if __name__ == "__main__":
