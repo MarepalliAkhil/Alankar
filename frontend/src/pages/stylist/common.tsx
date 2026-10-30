@@ -1,5 +1,8 @@
-import { Link } from 'react-router-dom';
-import { Badge, Button, Card, ErrorState } from '../../components/ui';
+import { ArrowRight } from 'lucide-react';
+import { Badge, Button, ButtonLink, Card, ErrorState } from '../../components/ui';
+import { statusEdge } from '../../components/ui/status-styles';
+import { cn } from '../../lib/cn';
+import type { AppointmentStatus } from '../../types/appointment';
 import { formatDateTime, formatTime } from '../../lib/format';
 import type { StylistCard } from '../../api/stylist';
 import { isNotLinked } from './not-linked';
@@ -33,7 +36,9 @@ export function VisitTitle({ visit }: { visit: StylistCard }) {
   );
 }
 
-/** One visit as a card. The stylist sees the guest's first name only. */
+/** One visit as a card with a status edge. The stylist sees the guest's first name only.
+ * Buttons use the actions that exist today: Start (checked in), Complete (in progress, opens the
+ * visit where completing lives), Open, and Chat (while the visit is live). */
 export function VisitCardView({
   visit,
   withDate = false,
@@ -45,13 +50,15 @@ export function VisitCardView({
   onStart?: (id: string) => void;
   starting?: boolean;
 }) {
+  const live = ['scheduled', 'checked_in', 'in_progress'].includes(visit.status);
+  const edge = statusEdge[visit.status as AppointmentStatus] ?? '';
   return (
-    <Card padding="md" className="flex h-full flex-col gap-sm">
+    <Card padding="md" className={cn('flex h-full flex-col gap-sm', edge)}>
       <div className="flex items-start justify-between gap-sm">
-        <h3 className="font-semibold text-text">{visit.customer_first_name}</h3>
+        <h3 className="text-lg font-semibold text-text">{visit.customer_first_name}</h3>
         <Badge tone={tones[visit.status] ?? 'neutral'}>{visit.status_label}</Badge>
       </div>
-      <p className="text-sm text-text">
+      <p className="text-base font-medium text-text">
         <VisitTitle visit={visit} />
       </p>
       {visit.addon_labels.length > 0 && (
@@ -64,16 +71,28 @@ export function VisitCardView({
       </p>
       {visit.allergy_alert && <Badge tone="danger">Allergy alert: open the visit to read it</Badge>}
       <div className="mt-auto flex flex-wrap gap-sm pt-sm">
-        <Link
-          className="text-sm font-semibold text-primary-hover underline"
-          to={`/my-appointments/${visit.id}`}
-        >
-          Open visit
-        </Link>
         {onStart && visit.actions.includes('start') && (
           <Button size="sm" loading={starting} onClick={() => onStart(visit.id)}>
-            Start service
+            Start
           </Button>
+        )}
+        {visit.actions.includes('complete') && (
+          <ButtonLink size="sm" to={`/my-appointments/${visit.id}`}>
+            Complete
+          </ButtonLink>
+        )}
+        <ButtonLink
+          size="sm"
+          variant="secondary"
+          to={`/my-appointments/${visit.id}`}
+          aria-label={`Open visit with ${visit.customer_first_name}`}
+        >
+          Open <ArrowRight aria-hidden="true" className="h-4 w-4" />
+        </ButtonLink>
+        {live && (
+          <ButtonLink size="sm" variant="ghost" to="/chat">
+            Chat
+          </ButtonLink>
         )}
       </div>
     </Card>

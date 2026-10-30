@@ -15,7 +15,7 @@ export default function UnsubscribePage() {
   return (
     <PageContainer className="flex justify-center py-xl">
       <Card variant="dense" padding="lg" className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-text">Stop offers by email</h1>
+        <h1 className="text-2xl font-semibold text-text">Stop offers by email</h1>
         {!token ? (
           <p role="alert" className="mt-md text-sm text-danger-text">
             This link is not complete. Open the link from the email again.

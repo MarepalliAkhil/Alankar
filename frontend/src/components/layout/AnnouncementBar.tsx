@@ -8,7 +8,7 @@ export function AnnouncementBar() {
   if (items.length === 0) return null;
   return (
     <aside aria-label="Announcements" className="bg-primary-soft text-center text-sm text-text">
-      <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-md py-sm">
+      <ul className="mx-auto flex max-w-7xl flex-col gap-1 px-md py-sm">
         {items.map((item) => (
           <li key={item.text}>
             {item.link.startsWith('/') ? (

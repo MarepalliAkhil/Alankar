@@ -5,14 +5,15 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-on-primary hover:bg-primary-hover',
-  secondary: 'border border-border bg-primary-soft text-primary-hover hover:bg-surface',
+  secondary:
+    'glass-button border border-border text-primary-hover hover:bg-primary-soft hover:text-text',
   ghost: 'bg-transparent text-text hover:bg-primary-soft',
   danger: 'bg-danger-strong text-on-primary hover:bg-danger-text',
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'h-9 px-4 text-sm',
-  md: 'h-11 px-5 text-sm',
+  sm: 'h-8 px-3 text-sm',
+  md: 'h-10 px-4 text-sm',
   lg: 'h-12 px-6 text-base',
 };
 
@@ -22,7 +23,7 @@ export function buttonClasses(
   fullWidth = false,
 ): string {
   return cn(
-    'inline-flex select-none items-center justify-center gap-2 rounded-full font-medium',
+    'inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold',
     'transition-colors duration-base ease-brand',
     'focus-visible:shadow-focus focus-visible:outline-none',
     'disabled:cursor-not-allowed disabled:opacity-60',

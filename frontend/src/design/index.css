@@ -5,6 +5,14 @@
 /* Every value below comes from CSS variables written by applyTokens() (src/design/tokens.ts). */
 
 @layer base {
+  /* Body text is 15px (token --text-base); phones get 16px. !important beats the value
+     applyTokens() writes onto <html>. */
+  @media (max-width: 640px) {
+    :root {
+      --text-base: 16px !important;
+    }
+  }
+
   html {
     font-family: var(--font-sans);
     color: var(--color-text);
@@ -14,6 +22,8 @@
 
   body {
     min-height: 100vh;
+    font-size: var(--text-base);
+    line-height: 1.5;
     background-image:
       radial-gradient(circle at 8% 12%, var(--color-orb-one), transparent 42%),
       radial-gradient(circle at 92% 18%, var(--color-orb-two), transparent 40%),
@@ -112,13 +122,15 @@
     position: relative;
     isolation: isolate;
     border: 1px solid var(--glass-border);
-    background-color: color-mix(in srgb, var(--glass-fill) 40%, transparent);
-    -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+    background-color: color-mix(in srgb, var(--glass-fill) 45%, transparent);
+    -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
     transition: background-color var(--motion-base, 200ms) var(--motion-ease);
   }
   .glass-bar[data-scrolled='true'] {
-    background-color: color-mix(in srgb, var(--glass-fill) 72%, transparent);
+    background-color: color-mix(in srgb, var(--glass-fill) 80%, transparent);
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
   }
   @media (max-width: 640px) {
     .glass-bar {
@@ -602,5 +614,26 @@
   }
   .no-print {
     display: none !important;
+  }
+}
+
+/* Equal-height card grid: as many 300px+ columns as fit (Task 11i). */
+@layer components {
+  .card-grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+  .card-grid > * {
+    min-width: 0;
+  }
+  /* Short stat tiles: auto-fit so the row always fills evenly. */
+  .card-grid-stat {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .card-grid-stat > * {
+    min-width: 0;
   }
 }

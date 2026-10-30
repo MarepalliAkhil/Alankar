@@ -134,7 +134,7 @@ export default function LoginPage() {
     return (
       <PageContainer className="flex justify-center py-xl">
         <Card variant="dense" padding="lg" className="w-full max-w-md text-center">
-          <h1 className="text-2xl font-bold text-text">You&apos;re signed in</h1>
+          <h1 className="text-2xl font-semibold text-text">You&apos;re signed in</h1>
           <p className="mt-1 text-sm text-text-muted">
             Signed in as {user.full_name || user.email} ({roleLabel(user.role)}).
           </p>
@@ -159,7 +159,7 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         <Card variant="dense" padding="lg" className="w-full">
-          <h1 className="text-2xl font-bold text-text">Sign in</h1>
+          <h1 className="text-2xl font-semibold text-text">Sign in</h1>
           <p className="mt-1 text-sm text-text-muted">
             {bookingIntent
               ? 'Sign in to your customer account to book an appointment.'

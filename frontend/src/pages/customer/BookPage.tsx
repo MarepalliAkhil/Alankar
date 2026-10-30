@@ -44,6 +44,7 @@ import {
   SHOP_TIME_ZONE,
 } from '../../lib/format';
 import { fieldErrors, isIndianMobile } from '../../lib/validation';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 
 /** /customer/book: pick a service first, then the booking sheet for it. */
 export default function BookPage() {
@@ -108,7 +109,7 @@ function ServicePicker() {
           description="Try another division or search term."
         />
       ) : (
-        <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="card-grid">
           {shown.map((s) => (
             <li key={s.id}>
               <Card variant="plain" padding="md" className="flex h-full flex-col gap-sm">
@@ -119,13 +120,14 @@ function ServicePicker() {
                   <span className="text-sm font-semibold text-text">
                     from {formatINR(s.from_price)}
                   </span>
-                  <Link
+                  <ButtonLink
                     to={`/customer/book?service=${encodeURIComponent(s.slug)}`}
-                    className="text-sm font-semibold text-primary-hover hover:underline"
+                    variant="secondary"
+                    size="sm"
                     aria-label={`Book ${s.name}`}
                   >
                     Book
-                  </Link>
+                  </ButtonLink>
                 </div>
               </Card>
             </li>

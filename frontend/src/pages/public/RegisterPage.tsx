@@ -112,7 +112,7 @@ export default function RegisterPage() {
     return (
       <PageContainer className="flex justify-center py-xl">
         <Card variant="dense" padding="lg" className="w-full max-w-md">
-          <h1 className="text-2xl font-bold text-text">Verify your email</h1>
+          <h1 className="text-2xl font-semibold text-text">Verify your email</h1>
           <p className="mb-lg mt-1 text-sm text-text-muted">
             One last step to finish creating your account.
           </p>
@@ -154,7 +154,7 @@ export default function RegisterPage() {
         className="w-full max-w-md"
       >
         <Card variant="dense" padding="lg" className="w-full">
-          <h1 className="text-2xl font-bold text-text">Create your account</h1>
+          <h1 className="text-2xl font-semibold text-text">Create your account</h1>
           <p className="mt-1 text-sm text-text-muted">
             Register as a customer to book appointments at {brand.shopName}.
           </p>

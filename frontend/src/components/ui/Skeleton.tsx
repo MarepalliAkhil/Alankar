@@ -43,11 +43,7 @@ export function SkeletonCards({
   className?: string;
 }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={cn('grid gap-md sm:grid-cols-2 lg:grid-cols-3', className)}
-    >
+    <div role="status" aria-live="polite" className={cn('card-grid', className)}>
       <span className="sr-only">{label}</span>
       {Array.from({ length: count }, (_, i) => (
         <div

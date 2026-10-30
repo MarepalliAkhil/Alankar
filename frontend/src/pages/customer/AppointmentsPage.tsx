@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 import { genericErrorMessage } from '../../api/auth-messages';
 import {
   actOnAppointment,
@@ -110,12 +110,9 @@ export default function AppointmentsPage() {
         title="My appointments"
         description="Your booking requests and visits. Pay, reschedule, cancel or tell us you've arrived."
         actions={
-          <Link
-            to="/customer/book"
-            className="text-sm font-semibold text-primary-hover hover:underline"
-          >
+          <ButtonLink to="/customer/book" size="sm">
             Book a new appointment
-          </Link>
+          </ButtonLink>
         }
       />
       <RatingPrompt />
@@ -131,11 +128,7 @@ export default function AppointmentsPage() {
           icon={<CalendarDays className="h-6 w-6" />}
           title="No appointments yet"
           description="Pick a service and send a booking request. It will show up here."
-          action={
-            <Link to="/customer/book" className="font-semibold text-primary-hover hover:underline">
-              Book an appointment
-            </Link>
-          }
+          action={<ButtonLink to="/customer/book">Book an appointment</ButtonLink>}
         />
       ) : (
         <>
@@ -299,12 +292,14 @@ function AppointmentCard({
       <VisitProducts appt={appt} />
 
       {appt.chat_thread_id && (
-        <Link
+        <ButtonLink
           to={`/customer/chat/${appt.chat_thread_id}`}
-          className="w-fit text-sm font-semibold text-primary-hover underline"
+          variant="secondary"
+          size="sm"
+          className="w-fit"
         >
           Message {appt.stylist_name ?? 'your stylist'}
-        </Link>
+        </ButtonLink>
       )}
 
       {appt.status === 'requested' && (
@@ -350,14 +345,7 @@ function AppointmentCard({
       )}
 
       <div className="mt-auto flex flex-wrap gap-sm">
-        {has('pay') && (
-          <Link
-            to={`/customer/pay/${appt.id}`}
-            className="inline-flex h-10 items-center rounded-full bg-primary px-lg text-sm font-semibold text-on-primary hover:bg-primary-hover focus-visible:shadow-focus focus-visible:outline-none"
-          >
-            Pay now
-          </Link>
-        )}
+        {has('pay') && <ButtonLink to={`/customer/pay/${appt.id}`}>Pay now</ButtonLink>}
         {has('resend_link') && (
           <Button
             size="sm"

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, CreditCard, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { getPayment, payAppointment } from '../../api/booking';
 import { checkMyGiftCard } from '../../api/wallet';
@@ -19,6 +19,7 @@ import {
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINR, formatINRExact } from '../../lib/format';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 
 /**
  * Mock payment gateway (v1). No card details are ever asked for: the two buttons simulate a
@@ -95,26 +96,16 @@ export default function PayPage() {
         <ErrorState
           title="We couldn't find this payment"
           description="Open it from My Appointments, or check that you are signed in with the account that made the booking."
-          action={
-            <Link
-              to="/customer/appointments"
-              className="font-semibold text-primary-hover hover:underline"
-            >
-              Go to My Appointments
-            </Link>
-          }
+          action={<ButtonLink to="/customer/appointments">Go to My Appointments</ButtonLink>}
         />
       );
     }
     const { state, amount: listed, expires_at: expires, appointment, quote } = payment.data;
     const amount = quote?.total ?? listed;
     const back = (
-      <Link
-        to="/customer/appointments"
-        className="font-semibold text-primary-hover hover:underline"
-      >
+      <ButtonLink to="/customer/appointments" variant="secondary" size="sm" className="w-fit">
         Go to My Appointments
-      </Link>
+      </ButtonLink>
     );
     if (state === 'paid') {
       return (

@@ -10,6 +10,8 @@ export default {
     borderRadius: tailwindTheme.borderRadius,
     boxShadow: tailwindTheme.boxShadow,
     fontFamily: tailwindTheme.fontFamily,
+    fontSize: tailwindTheme.fontSize,
+    fontWeight: tailwindTheme.fontWeight,
     extend: {
       spacing: tailwindTheme.spacing,
       zIndex: tailwindTheme.zIndex,

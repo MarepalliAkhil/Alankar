@@ -116,7 +116,7 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
                 Services
               </p>
             </div>
-            <h1 className="text-4xl font-bold text-text sm:text-5xl">{division.label}</h1>
+            <h1 className="text-3xl font-semibold text-text">{division.label}</h1>
             <p className="text-lg text-text-muted">{division.summary}</p>
             <p className="text-sm text-text">
               {total !== undefined && (
@@ -222,7 +222,7 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
                 </button>
               )}
             </div>
-            <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="card-grid">
               {services.data.map((service) => (
                 <li key={service.id}>
                   <ServiceCard service={service} onOpen={() => setOpen(service)} />
@@ -235,7 +235,7 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
 
       {team.data && team.data.length > 0 && (
         <section aria-labelledby="division-team" className="mt-xl">
-          <h2 id="division-team" className="mb-md text-2xl font-bold text-text sm:text-3xl">
+          <h2 id="division-team" className="mb-md text-2xl font-semibold text-text">
             Our {division.label.toLowerCase()} team
           </h2>
           <TeamGrid team={team.data} />

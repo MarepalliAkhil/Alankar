@@ -50,7 +50,10 @@ export function Tabs<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn('flex flex-wrap gap-1 rounded-card bg-primary-soft p-1', className)}
+      className={cn(
+        'glass-button inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1',
+        className,
+      )}
     >
       {items.map((item, index) => {
         const selected = item.id === value;
@@ -69,10 +72,10 @@ export function Tabs<T extends string>({
             onClick={() => onChange(item.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cn(
-              'flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-base ease-brand',
+              'inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors duration-base ease-brand',
               'focus-visible:shadow-focus focus-visible:outline-none',
               selected
-                ? 'bg-surface text-primary-hover shadow-card'
+                ? 'bg-primary-soft text-primary-hover ring-1 ring-primary-light'
                 : 'text-text-muted hover:text-text',
             )}
           >

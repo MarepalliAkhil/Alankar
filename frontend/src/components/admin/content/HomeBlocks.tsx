@@ -40,7 +40,7 @@ export function HeroEditor({ block }: { block: ContentBlock<'hero'> }) {
           {form.image_url && (
             <img src={form.image_url} alt="" className="h-32 w-full rounded-nested object-cover" />
           )}
-          <p className="text-2xl font-bold text-text">{form.headline || 'Your headline'}</p>
+          <p className="text-2xl font-semibold text-text">{form.headline || 'Your headline'}</p>
           <p className="text-text-muted">{form.subtitle || 'A short line under it.'}</p>
           {form.cta_label && (
             <span className="mt-xs w-fit rounded-full bg-primary px-md py-sm text-sm font-medium text-on-primary">

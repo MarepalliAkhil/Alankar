@@ -19,6 +19,7 @@ import { useScrollProgress } from '../../hooks/useScrollProgress';
 import { cn } from '../../lib/cn';
 import { ArtImage } from '../ui/ArtImage';
 import { ButtonLink } from '../ui/ButtonLink';
+import { buttonClasses } from '../ui/button-styles';
 import { BrandMark } from '../ui/Loader';
 import { Skeleton } from '../ui/Skeleton';
 import { Reveal } from './Reveal';
@@ -75,7 +76,7 @@ function Intro({
       <p className="text-sm font-semibold uppercase tracking-wide text-primary-hover">
         {brand.shopTagline}
       </p>
-      <h1 id="hero-title" className="text-4xl font-bold text-text sm:text-5xl lg:text-6xl">
+      <h1 id="hero-title" className="text-4xl font-semibold text-text">
         {brand.shopName}
       </h1>
       {loading ? (
@@ -135,7 +136,7 @@ function DivisionPanel({
   return (
     <>
       <BrandMark theme={theme} className="mark-still h-16 w-16" />
-      <Heading className="text-3xl font-bold text-text">{division.label}</Heading>
+      <Heading className="text-2xl font-semibold text-text">{division.label}</Heading>
       <p className="text-base text-text-muted">{division.summary}</p>
       {count !== undefined && (
         <p className="text-sm font-medium text-text">
@@ -145,7 +146,7 @@ function DivisionPanel({
       <Link
         to={division.path}
         tabIndex={hidden ? -1 : undefined}
-        className="mt-auto inline-flex items-center gap-1 self-start rounded-full text-sm font-semibold text-primary-hover underline-offset-4 hover:underline focus-visible:shadow-focus focus-visible:outline-none"
+        className={cn(buttonClasses('secondary', 'sm'), 'mt-auto self-start')}
       >
         See {division.label} services <ArrowRight aria-hidden="true" className="h-4 w-4" />
       </Link>
@@ -237,7 +238,7 @@ function ScrollStage(props: HomeHeroProps) {
           </div>
         ))}
 
-        <div className="relative mx-auto grid h-full w-full max-w-6xl grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] items-center gap-xl px-lg pt-24 pb-xl">
+        <div className="relative mx-auto grid h-full w-full max-w-7xl grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] items-center gap-xl px-lg pt-24 pb-xl">
           <div className="hero-intro glass-dense rounded-modal p-xl">
             <Intro {...props} stage={divisions[stage]} />
           </div>
@@ -323,7 +324,7 @@ function Band({
         overlay
         className="absolute inset-0 h-full w-full"
       />
-      <div className="relative mx-auto w-full max-w-6xl px-md py-xl sm:px-lg">{children}</div>
+      <div className="relative mx-auto w-full max-w-7xl px-md py-xl sm:px-lg">{children}</div>
     </ThemeScope>
   );
 }

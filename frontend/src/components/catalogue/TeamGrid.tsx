@@ -6,7 +6,7 @@ import { Card } from '../ui/Card';
 /** Public team profiles. Ratings appear only once real ratings exist (Task 6). */
 export function TeamGrid({ team }: { team: readonly TeamMember[] }) {
   return (
-    <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+    <ul className="card-grid">
       {team.map((member) => (
         <Card as="li" key={member.id} className="flex flex-col items-center gap-sm text-center">
           <Avatar name={member.display_name} src={member.photo_url || undefined} size="lg" />

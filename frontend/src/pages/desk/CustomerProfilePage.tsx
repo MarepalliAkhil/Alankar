@@ -28,6 +28,7 @@ import {
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINR } from '../../lib/format';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 
 const sourceLabels: Record<string, string> = {
   online: 'Online',
@@ -61,11 +62,7 @@ export default function CustomerProfilePage() {
       <EmptyState
         title="Customer not found"
         description="This customer does not exist or was removed."
-        action={
-          <Link to="/customers" className="text-sm font-medium text-primary-hover underline">
-            Back to customers
-          </Link>
-        }
+        action={<ButtonLink to="/customers">Back to customers</ButtonLink>}
       />
     ) : (
       <ErrorState

@@ -207,7 +207,7 @@ export default function StaffSummaryPage() {
             </p>
             {tab === 'team' && (
               <>
-                <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+                <div className="card-grid">
                   <Kpi
                     title="Appointments done"
                     value={String(summary.data.team.kpis.appointments)}
@@ -263,7 +263,7 @@ export default function StaffSummaryPage() {
                           }))}
                         />
                       </div>
-                      <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="card-grid">
                         <Kpi title="Appointments done" value={String(k.appointments)} />
                         <Kpi title="Revenue" value={formatINRExact(k.revenue)} />
                         <Kpi
@@ -312,7 +312,7 @@ export default function StaffSummaryPage() {
                           }))}
                         />
                       </div>
-                      <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="card-grid">
                         <Kpi
                           title="Hours"
                           value={`${d.kpis.hours} hours`}

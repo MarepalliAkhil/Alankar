@@ -145,7 +145,7 @@ describe('stylist pages', () => {
     expect(await screen.findByRole('heading', { name: 'Priya' })).toBeInTheDocument();
     expect(screen.getByText(/Allergy alert/)).toBeInTheDocument();
     const start = vi.mocked(stylistApi.startVisit).mockResolvedValue({ ...detail });
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Start service' }));
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Start' }));
     await waitFor(() => expect(start).toHaveBeenCalledWith('v1', expect.anything()));
   });
 

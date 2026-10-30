@@ -3,7 +3,7 @@ import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { listAppointments, type Scope } from '../../api/stylist';
 import { PageHeader } from '../../components/layout/PageContainer';
-import { EmptyState, SkeletonCards, TabPanel, Tabs } from '../../components/ui';
+import { EmptyState, SkeletonCards, TabPanel, Tabs, TodayBar } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { StylistError, VisitCardView } from './common';
 
@@ -26,6 +26,7 @@ export default function MyAppointmentsPage() {
         title="My Appointments"
         description="Your confirmed visits and the ones you have completed. Open one to see allergies, preferences and history."
       />
+      {visits.data && <TodayBar visits={visits.data} />}
       <Tabs
         items={tabs}
         value={scope}
@@ -44,7 +45,7 @@ export default function MyAppointmentsPage() {
             title={scope === 'upcoming' ? 'No upcoming visits' : 'No past visits yet'}
           />
         ) : (
-          <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="card-grid">
             {visits.data.map((visit) => (
               <li key={visit.id}>
                 <VisitCardView visit={visit} withDate />

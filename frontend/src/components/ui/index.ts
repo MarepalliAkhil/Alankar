@@ -52,4 +52,7 @@ export { ThemeSwitcher } from './ThemeSwitcher';
 export { ArtImage } from './ArtImage';
 export { PageBackdrop } from './PageBackdrop';
 export { PageBackground } from './PageBackground';
+export { Stat, TodayBar } from './TodayBar';
+export { CommandBar, CommandButton } from './CommandBar';
+export { openCommandBar } from './command-events';
 export { PendingArea, type PendingAreaProps } from './PendingArea';

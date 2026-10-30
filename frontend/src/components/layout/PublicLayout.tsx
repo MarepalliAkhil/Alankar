@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
+import { CommandBar } from '../ui/CommandBar';
 import { DelayedLoader } from '../ui/Loader';
 import { PageBackground } from '../ui/PageBackground';
 import { PageTransition } from '../ui/PageTransition';
@@ -32,6 +33,7 @@ export function PublicLayout() {
         </ErrorBoundary>
       </main>
       <Footer />
+      <CommandBar />
       <ChatWidget />
     </div>
   );

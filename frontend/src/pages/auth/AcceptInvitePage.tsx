@@ -50,7 +50,7 @@ export default function AcceptInvitePage() {
     const fields = accept.isError ? serverFieldErrors(accept.error) : {};
     content = (
       <>
-        <h1 className="text-2xl font-bold text-text">Welcome, {invite.data.full_name}</h1>
+        <h1 className="text-2xl font-semibold text-text">Welcome, {invite.data.full_name}</h1>
         <p className="mb-lg mt-1 text-sm text-text-muted">
           You&apos;ve been invited to {brand.shopName} as a{' '}
           {roleLabel(invite.data.role).toLowerCase()} ({invite.data.email}). Choose a password to

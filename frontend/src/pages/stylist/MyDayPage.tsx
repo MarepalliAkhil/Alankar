@@ -3,7 +3,7 @@ import { CalendarCheck } from 'lucide-react';
 import { startVisit, listAppointments } from '../../api/stylist';
 import { errorDetail } from '../../api/client';
 import { PageHeader } from '../../components/layout/PageContainer';
-import { EmptyState, SkeletonCards, useToast } from '../../components/ui';
+import { EmptyState, SkeletonCards, TodayBar, useToast } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { StylistError, VisitCardView } from './common';
 
@@ -37,6 +37,7 @@ export default function MyDayPage() {
         title="My Day"
         description="Today's visits. A visit can be started once the front desk has checked the guest in."
       />
+      {visits.data && <TodayBar visits={visits.data} />}
       {visits.isPending ? (
         <SkeletonCards count={4} label="Loading your day…" />
       ) : visits.isError ? (
@@ -48,7 +49,7 @@ export default function MyDayPage() {
           description="Visits appear here once they are scheduled with you."
         />
       ) : (
-        <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="card-grid">
           {visits.data.map((visit) => (
             <li key={visit.id}>
               <VisitCardView

@@ -52,7 +52,7 @@ export function ServiceCard({ service, onOpen }: { service: Service; onOpen: () 
           <div className="mt-auto flex items-end justify-between gap-sm pt-sm">
             <p className="text-sm text-text">
               <span className="text-text-muted">from </span>
-              <span className="text-lg font-bold text-primary-hover">
+              <span className="text-lg font-semibold text-primary-hover">
                 {formatINR(service.from_price)}
               </span>
               <span className="block text-xs text-text-muted">incl. GST</span>

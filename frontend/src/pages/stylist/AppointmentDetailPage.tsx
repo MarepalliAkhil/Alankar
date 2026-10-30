@@ -1,6 +1,7 @@
+import { ArrowLeft } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { errorDetail } from '../../api/client';
 import { completeVisit, getAppointment, startVisit } from '../../api/stylist';
 import { PageHeader } from '../../components/layout/PageContainer';
@@ -17,6 +18,7 @@ import {
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime } from '../../lib/format';
 import { StylistError } from './common';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 
 /** One visit: what to know about the guest, Start, and Complete (with the services really done). */
 export default function AppointmentDetailPage() {
@@ -88,9 +90,10 @@ export default function AppointmentDetailPage() {
           )
         }
       />
-      <Link className="text-sm font-semibold text-primary-hover underline" to="/my-appointments">
+      <ButtonLink to="/my-appointments" variant="ghost" size="sm" className="w-fit">
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         Back to My Appointments
-      </Link>
+      </ButtonLink>
       {visit.isPending ? (
         <LoadingState label="Loading the visit…" />
       ) : visit.isError || !data ? (

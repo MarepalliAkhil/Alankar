@@ -105,6 +105,10 @@ export const tokens = {
     xl: '32px',
     '2xl': '48px',
   },
+  text: {
+    /** Body text; phones get 16px (see index.css). */
+    base: '15px',
+  },
   font: {
     sans: "'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   },
@@ -235,6 +239,22 @@ export const tailwindTheme = {
   borderRadius: flatVars('radius', tokens.radius),
   boxShadow: flatVars('shadow', tokens.shadow),
   fontFamily: { sans: ['var(--font-sans)'] },
+  // One type scale for the whole app. Body 15px (16px on phones, --text-base), small 13px,
+  // h1/h2 fluid, card titles 1.0625rem; line-height 1.5 for text and 1.2 for headings.
+  fontSize: {
+    xs: ['0.75rem', { lineHeight: '1.5' }],
+    sm: ['0.8125rem', { lineHeight: '1.5' }],
+    base: ['var(--text-base)', { lineHeight: '1.5' }],
+    lg: ['1.0625rem', { lineHeight: '1.5' }],
+    xl: ['1.125rem', { lineHeight: '1.3' }],
+    '2xl': ['clamp(1.25rem, 1.8vw, 1.5rem)', { lineHeight: '1.2' }],
+    '3xl': ['clamp(1.75rem, 2.5vw, 2.25rem)', { lineHeight: '1.2' }],
+    '4xl': ['clamp(2rem, 3.2vw, 2.5rem)', { lineHeight: '1.2' }],
+    '5xl': ['clamp(2.25rem, 4vw, 3rem)', { lineHeight: '1.2' }],
+    '6xl': ['clamp(2.5rem, 5vw, 3.5rem)', { lineHeight: '1.2' }],
+  },
+  // Only three weights exist: 400, 500 and 600 ("bold" is 600).
+  fontWeight: { normal: '400', medium: '500', semibold: '600', bold: '600' },
   spacing: flatVars('space', tokens.space),
   zIndex: flatVars('z', tokens.z),
   transitionDuration: flatVars('motion', {

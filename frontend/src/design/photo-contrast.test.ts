@@ -9,12 +9,16 @@ import { resolvedColors } from './tokens';
 const cases = THEMES.flatMap((theme) => MODES.map((mode) => [theme, mode] as const));
 
 describe('text over photos', () => {
-  it.each(cases)('%s / %s: page text on a photo backdrop meets AA', (theme, mode) => {
+  // The page photo is only lightly tinted, so text always sits on glass (cards, headers, bars).
+  it.each(cases)('%s / %s: text on glass over a page backdrop meets AA', (theme, mode) => {
     const c = resolvedColors(theme, mode);
-    for (const pixel of ['#000000', '#FFFFFF']) {
-      const backdrop = composite(c.backdropOverlay, pixel);
-      for (const fg of ['text', 'textMuted'] as const) {
-        expect(contrast(c[fg], backdrop), `${fg} over ${pixel}`).toBeGreaterThanOrEqual(4.5);
+    const glass = themes[theme][mode].glass;
+    for (const fill of [glass.fill, glass.fillDense]) {
+      for (const pixel of ['#000000', '#FFFFFF']) {
+        const behind = composite(fill, composite(c.backdropOverlay, pixel));
+        for (const fg of ['text', 'textMuted'] as const) {
+          expect(contrast(c[fg], behind), `${fg} over ${pixel}`).toBeGreaterThanOrEqual(4.5);
+        }
       }
     }
   });

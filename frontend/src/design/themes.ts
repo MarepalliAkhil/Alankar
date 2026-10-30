@@ -79,7 +79,7 @@ export function alpha(hex: string, a: number): string {
 function glassFor(mode: Mode, c: Colors): Record<string, string> {
   const light = mode === 'light';
   return {
-    fill: alpha(c.surface, light ? 0.66 : 0.6),
+    fill: alpha(c.surface, light ? 0.78 : 0.72),
     fillDense: alpha(c.surface, light ? 0.88 : 0.86),
     fillSolid: c.surface,
     tint: alpha(c.primary, light ? 0.06 : 0.08),
@@ -98,7 +98,8 @@ function theme(mode: Mode, color: Colors, artRange: [string, string]): ThemeToke
       artOverlay: mode === 'light' ? alpha(color.background, 0.55) : alpha(color.background, 0.62),
       photoOverlay:
         mode === 'light' ? alpha(color.background, 0.62) : alpha(color.background, 0.66),
-      backdropOverlay: alpha(color.background, 0.88),
+      // The page photo stays recognisable (about 34% tint in light, 52% in dark); text sits on glass.
+      backdropOverlay: alpha(color.background, mode === 'light' ? 0.34 : 0.52),
     },
     status: mode === 'dark' ? darkStatus : undefined,
     glass: glassFor(mode, color),

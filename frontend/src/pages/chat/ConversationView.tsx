@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, CheckCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { ChatMessage } from '../../api/chat';
 import {
   Avatar,
@@ -14,6 +13,7 @@ import {
 } from '../../components/ui';
 import { useChat } from '../../hooks/useChat';
 import { formatDateTime, formatTime } from '../../lib/format';
+import { ButtonLink } from '../../components/ui/ButtonLink';
 
 function Ticks({ status }: { status: ChatMessage['status'] }) {
   if (status === 'read') {
@@ -81,11 +81,7 @@ export default function ConversationView({ id, base }: { id: string; base: strin
       <ErrorState
         title="This conversation is not available"
         description="It may not exist, or it is not yours to read."
-        action={
-          <Link className="text-sm font-semibold text-primary-hover underline" to={base}>
-            Back to conversations
-          </Link>
-        }
+        action={<ButtonLink to={base}>Back to conversations</ButtonLink>}
       />
     );
   }
@@ -100,13 +96,10 @@ export default function ConversationView({ id, base }: { id: string; base: strin
 
   return (
     <section className="flex flex-col gap-md">
-      <Link
-        to={base}
-        className="inline-flex w-fit items-center gap-xs text-sm font-semibold text-primary-hover underline"
-      >
+      <ButtonLink to={base} variant="ghost" size="sm" className="w-fit">
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         All conversations
-      </Link>
+      </ButtonLink>
       <Card className="flex items-center gap-md">
         <Avatar name={card?.other.name ?? ''} src={card?.other.photo_url || undefined} />
         <div className="flex-1">

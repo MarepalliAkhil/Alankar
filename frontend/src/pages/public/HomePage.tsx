@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '../../lib/cn';
+import { buttonClasses } from '../../components/ui/button-styles';
 import { ArrowRight, CalendarCheck, CreditCard, MapPin, Sparkles, Star, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -71,7 +73,7 @@ function featured(services: readonly Service[]): Service[] {
   return divisions.flatMap((d) => services.filter((s) => s.division === d.id).slice(0, 2));
 }
 
-const sectionTitle = 'text-2xl font-bold text-text sm:text-3xl';
+const sectionTitle = 'text-2xl font-semibold text-text';
 
 export default function HomePage() {
   useDocumentTitle();
@@ -116,7 +118,7 @@ export default function HomePage() {
               <p className="line-clamp-3 max-w-3xl text-text-muted">{data.about.body}</p>
               <button
                 type="button"
-                className="self-start rounded-full text-sm font-medium text-primary-hover underline-offset-4 hover:underline focus-visible:shadow-focus focus-visible:outline-none"
+                className={cn(buttonClasses('secondary', 'sm'), 'self-start')}
                 onClick={() =>
                   setSheet({
                     kind: 'about',
@@ -135,7 +137,7 @@ export default function HomePage() {
           <h2 id="divisions-title" className={sectionTitle}>
             Our divisions
           </h2>
-          <ul className="mt-md grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-md card-grid">
             {divisions.map((division) => (
               <li key={division.id}>
                 <ThemeScope theme={divisionTheme[division.id]} className="h-full">
@@ -189,7 +191,7 @@ export default function HomePage() {
               </h2>
               <p className="text-sm text-text-muted">Prices include GST.</p>
             </div>
-            <ul className="mt-md grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-md card-grid">
               {picks.map((service) => (
                 <li key={service.id}>
                   <ThemeScope theme={divisionTheme[service.division]} className="h-full">
@@ -219,7 +221,7 @@ export default function HomePage() {
                 { key: 'divisions', value: divisions.length, suffix: '', label: 'Divisions' },
               ].map((item) => (
                 <Card as="li" key={item.key} variant="dense" className="text-center">
-                  <p className="text-3xl font-bold text-primary-hover sm:text-4xl">
+                  <p className="text-3xl font-semibold text-primary-hover">
                     <CountUp value={item.value} suffix={item.suffix} />
                   </p>
                   <p className="mt-1 text-sm text-text-muted">{item.label}</p>
@@ -234,7 +236,7 @@ export default function HomePage() {
             <h2 id="offers-title" className={sectionTitle}>
               Offers
             </h2>
-            <ul className="mt-md grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-md card-grid">
               {data.offers.map((offer) => (
                 <li key={offer.id}>
                   <button
@@ -273,7 +275,7 @@ export default function HomePage() {
           <h2 id="steps-title" className={sectionTitle}>
             How booking works
           </h2>
-          <ol className="mt-md grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-md card-grid">
             {steps.map((step, index) => (
               <Card as="li" key={step.title} variant="dense" className="flex flex-col gap-sm">
                 <span className="inline-flex items-center gap-sm text-sm font-semibold text-primary-hover">

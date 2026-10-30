@@ -30,7 +30,9 @@ import {
   type TabItem,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { cn } from '../../lib/cn';
 import { formatDateTime, formatDuration, formatINR } from '../../lib/format';
+import { statusEdge } from '../../components/ui/status-styles';
 
 const tabLabels: Record<DeskFilter, string> = {
   requested: 'New requests',
@@ -160,7 +162,7 @@ export default function DeskAppointmentsPage() {
             description="New booking requests from customers appear here."
           />
         ) : (
-          <ul className="grid gap-md lg:grid-cols-2">
+          <ul className="card-grid">
             {list.data.results.map((appt) => (
               <li key={appt.id}>
                 <RequestCard
@@ -234,7 +236,12 @@ function RequestCard({
 }) {
   const can = (action: DeskAppointment['actions'][number]) => appt.actions.includes(action);
   return (
-    <Card variant="plain" padding="lg" as="article" className="flex h-full flex-col gap-md">
+    <Card
+      variant="plain"
+      padding="lg"
+      as="article"
+      className={cn('flex h-full flex-col gap-md', statusEdge[appt.status])}
+    >
       <div className="flex items-start justify-between gap-md">
         <div>
           <h2 className="text-base font-semibold text-text">{appt.service_name}</h2>

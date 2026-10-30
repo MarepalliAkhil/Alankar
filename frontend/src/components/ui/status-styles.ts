@@ -13,3 +13,17 @@ export const statusClasses: Record<AppointmentStatus, string> = {
   cancelled: 'bg-status-cancelled-bg text-status-cancelled-fg',
   no_show: 'bg-status-no-show-bg text-status-no-show-fg',
 };
+
+/** A coloured left edge for appointment cards, one per status (static classes for Tailwind). */
+export const statusEdge: Record<AppointmentStatus, string> = {
+  requested: 'border-l-4 border-l-status-requested-fg',
+  awaiting_payment: 'border-l-4 border-l-status-awaiting-payment-fg',
+  scheduled: 'border-l-4 border-l-status-scheduled-fg',
+  checked_in: 'border-l-4 border-l-status-checked-in-fg',
+  in_progress: 'border-l-4 border-l-status-in-progress-fg',
+  completed: 'border-l-4 border-l-status-completed-fg',
+  rejected: 'border-l-4 border-l-status-rejected-fg',
+  payment_expired: 'border-l-4 border-l-status-payment-expired-fg',
+  cancelled: 'border-l-4 border-l-status-cancelled-fg',
+  no_show: 'border-l-4 border-l-status-no-show-fg',
+};

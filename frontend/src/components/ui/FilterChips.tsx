@@ -32,10 +32,10 @@ export function FilterChips<T extends string>({
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              'rounded-full border px-md py-1.5 text-sm font-medium transition-colors duration-base ease-brand',
+              'inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors duration-base ease-brand',
               'focus-visible:shadow-focus focus-visible:outline-none',
               selected
-                ? 'border-primary bg-primary text-on-primary'
+                ? 'border-primary bg-primary-soft text-primary-hover'
                 : 'border-border bg-surface text-text hover:border-primary-light',
             )}
           >

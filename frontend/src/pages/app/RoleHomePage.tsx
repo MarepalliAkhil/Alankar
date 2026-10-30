@@ -51,7 +51,7 @@ export default function RoleHomePage() {
       )}
 
       <section aria-labelledby="menu-overview">
-        <h2 id="menu-overview" className="text-xl font-bold text-text">
+        <h2 id="menu-overview" className="text-xl font-semibold text-text">
           Your menu
         </h2>
         <ul className="mt-md grid gap-md sm:grid-cols-2 xl:grid-cols-3">

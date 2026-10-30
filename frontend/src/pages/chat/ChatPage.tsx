@@ -90,7 +90,7 @@ export default function ChatPage({ base }: { base: '/chat' | '/customer/chat' })
           }
         />
       ) : (
-        <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="card-grid">
           {threads.data.map((card) => (
             <li key={card.id}>
               <PersonCard card={card} base={base} />

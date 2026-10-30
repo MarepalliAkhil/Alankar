@@ -20,7 +20,7 @@ export function Footer() {
     <footer className="mt-2xl px-sm pb-lg sm:px-lg">
       <div
         data-scrolled="true"
-        className="glass-bar mx-auto flex max-w-6xl flex-col gap-lg rounded-card px-lg py-lg"
+        className="glass-bar mx-auto flex max-w-7xl flex-col gap-lg rounded-card px-lg py-lg"
       >
         {data && (
           <div className="grid gap-lg text-sm sm:grid-cols-3">

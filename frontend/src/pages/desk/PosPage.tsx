@@ -121,7 +121,7 @@ function Counter({
             description="Guests appear here once they are checked in from Appointments."
           />
         ) : (
-          <ul className="grid gap-md sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="card-grid">
             {ready.map((visit) => (
               <li key={visit.id}>
                 <Card padding="md" className="flex h-full flex-col gap-sm">

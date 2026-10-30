@@ -2156,3 +2156,26 @@ Task 11 staff theme when it is, per the note above), and Task 12
 - Verified here: vitest 480/480, eslint, tsc (only the 2 known recharts-stub errors), prettier,
   Playwright (non-axe suite), screenshots `docs/ui-screenshots/bg-*.png`.
 - NOT run here (no network for axe-core): `npx playwright test e2e/axe.e2e.ts`, `npm run build`.
+
+### Task 11i: type scale, controls, layouts, backgrounds, staff portals (DONE, not yet committed by owner)
+- Tokens/shared components: one font, weights 400/500/600, 15px base (16px phones), fixed heading
+  scale; buttons sm32/md40/lg48; one Tabs control; one chip/badge size; 1280px container (staff
+  1440), 8px scale, `card-grid` / `card-grid-stat`; `glass-bar` navbar/top bars/footer.
+- Backgrounds: `PageBackground` in every layout (home crossfade, division pages, last-viewed
+  division on auth/error/Zenotians/customer, shop photo on staff). Navbar: 64px, drawer <1024px.
+- Staff: shared PageHeader, collapsible glass sidebar + drawer, Ctrl+K command bar (navigation and
+  theme only; `assistant` prop is the hook for Alankar Intelligence), TodayBar, status-edge visit
+  and request cards, themed EmptyState. Link-style actions are now small buttons.
+- Tests changed only for old labels: App.test (account menu, service name), stylist.test
+  ('Start service' to 'Start'), e2e/division-pages (see details; register theme).
+
+| Page(s) checked at 375/768/1280, light + dark | Result / what was fixed |
+|---|---|
+| `/`, `/salon`, `/spa`, `/beauty-parlor` | no horizontal scroll; hero/background layers, buttons, tabs aligned |
+| `/login`, `/register`, `/zenotians`, 404 | last-viewed division background; same card/type scale |
+| Customer appointments, book, invoices, profile | menu tabs scroll on phones; actions are buttons |
+| Receptionist dashboard, appointments | stat tiles fill rows (`card-grid-stat`); status edges |
+| Stylist My Day, My Appointments | TodayBar, visit cards with Start/Open/Complete/Chat |
+| Admin dashboard, staff, appointments | collapsible sidebar, top bar fits at 375 (icon-only search) |
+Pages not reachable with seeded data (visits with real cards, OTP and reset pages beyond the form) were
+checked structurally only.

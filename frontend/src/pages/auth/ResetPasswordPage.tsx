@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
           />
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-text">Choose a new password</h1>
+            <h1 className="text-2xl font-semibold text-text">Choose a new password</h1>
             <p className="mb-lg mt-1 text-sm text-text-muted">
               For your security, you&apos;ll be signed out on other devices.
             </p>

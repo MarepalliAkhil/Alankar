@@ -14,7 +14,7 @@ const variants = {
   plain: 'border border-border bg-surface shadow-card',
 };
 
-const paddings = { none: '', sm: 'p-md', md: 'p-lg', lg: 'p-lg sm:p-xl' };
+const paddings = { none: '', sm: 'p-5', md: 'p-5 sm:p-lg', lg: 'p-5 sm:p-lg' };
 
 export function Card({
   variant = 'glass',

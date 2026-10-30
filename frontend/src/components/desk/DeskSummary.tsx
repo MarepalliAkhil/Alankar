@@ -24,10 +24,10 @@ export function DeskSummary() {
   const c = counts.data.counts;
   return (
     <section aria-labelledby="desk-today" className="flex flex-col gap-md">
-      <h2 id="desk-today" className="text-xl font-bold text-text">
+      <h2 id="desk-today" className="text-xl font-semibold text-text">
         Today at the desk
       </h2>
-      <ul className="grid gap-md sm:grid-cols-2 xl:grid-cols-4">
+      <ul className="card-grid-stat">
         <Tile icon={<Inbox />} label="New requests" value={c.requested} to="/appointments" />
         <Tile
           icon={<Hourglass />}
@@ -74,7 +74,7 @@ function Tile({
             {icon}
           </span>
           <div>
-            <p className="text-2xl font-bold text-text">{value}</p>
+            <p className="text-2xl font-semibold text-text">{value}</p>
             <p className="text-sm text-text-muted">{label}</p>
           </div>
         </Card>

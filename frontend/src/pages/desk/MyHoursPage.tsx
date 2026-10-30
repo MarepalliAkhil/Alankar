@@ -82,7 +82,7 @@ export default function MyHoursPage() {
         />
       ) : (
         <>
-          <div className="grid gap-md sm:grid-cols-2 lg:grid-cols-4">
+          <div className="card-grid">
             <Card className="flex flex-col gap-xs">
               <h2 className="text-sm font-semibold text-text-muted">Today</h2>
               <p className="text-xl font-semibold text-text">{hours.data.today_hours} h</p>
