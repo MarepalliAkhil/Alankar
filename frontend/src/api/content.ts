@@ -1,4 +1,7 @@
 import { api } from './client';
+import type { ZenotiansContent } from './zenotians';
+
+export type { ZenotiansContent };
 
 /** Task 5c: the admin's public-content editor (drafts, preview, publish). */
 
@@ -24,16 +27,6 @@ export interface AnnouncementItem {
 export interface AnnouncementsContent {
   items: AnnouncementItem[];
 }
-export interface ZenotianSection {
-  key: string;
-  title: string;
-  body: string;
-  image_url?: string;
-}
-export interface ZenotiansContent {
-  sections: ZenotianSection[];
-}
-
 export interface BlockValues {
   hero: HeroContent;
   about: AboutContent;

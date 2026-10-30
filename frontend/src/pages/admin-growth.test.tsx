@@ -9,6 +9,7 @@ import * as publicApi from '../api/public';
 import * as reportsApi from '../api/reports';
 import * as workApi from '../api/work';
 import { haircut, site } from '../test/fixtures';
+import { fullContent } from '../test/zenotians-fixture';
 import { renderAt } from '../test/render';
 import { userFor } from '../test/session';
 
@@ -117,7 +118,7 @@ const zenotians: contentApi.ContentBlock<'zenotians'> = {
   key: 'zenotians',
   label: 'For Zenotians page',
   can_unpublish: true,
-  published: { sections: [] },
+  published: {},
   draft: null,
   has_draft: false,
   is_published: false,
@@ -281,6 +282,31 @@ describe('website content editor', () => {
     await user.click(await screen.findByRole('tab', { name: 'Zenotians page' }));
     expect(await screen.findByText('Not published')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled();
+  });
+
+  it('edits the Zenotians page: the phone stays off and blank demo rows are not sent', async () => {
+    const user = userEvent.setup();
+    vi.mocked(contentApi.listBlocks).mockResolvedValue([
+      hero,
+      about,
+      announcements,
+      { ...zenotians, is_published: true, published: fullContent },
+    ]);
+    vi.mocked(contentApi.saveDraft).mockResolvedValue({ ...zenotians, has_draft: true });
+    renderAt('/content');
+    await user.click(await screen.findByRole('tab', { name: 'Zenotians page' }));
+    expect(await screen.findByText('Menu visitors will see')).toBeInTheDocument();
+    expect(screen.queryByText('Try the demo')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Resume' }));
+    const phone = screen.getAllByRole('checkbox', { name: 'Show publicly' }).at(-1)!;
+    expect(phone).not.toBeChecked();
+    await user.click(screen.getByRole('tab', { name: 'Demo logins' }));
+    await user.click(screen.getByRole('button', { name: /Add demo login/ }));
+    await user.click(screen.getAllByRole('button', { name: 'Save draft' })[0]);
+    await waitFor(() => expect(contentApi.saveDraft).toHaveBeenCalled());
+    const sent = vi.mocked(contentApi.saveDraft).mock.calls.at(-1)![1] as typeof fullContent;
+    expect(sent.demo?.logins).toEqual([]);
+    expect(sent.resume?.contacts?.find((c) => c.key === 'phone')?.public).toBe(false);
   });
 
   it('adds an FAQ as a draft and publishes it from the list', async () => {

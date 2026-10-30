@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 
 from inventory.models import Product, StockMovement
@@ -137,6 +138,13 @@ class Command(BaseCommand):
         for key, value in SITE_CONTENT.items():
             _, made = SiteContent.objects.get_or_create(key=key, defaults={"value": value})
             created["content"] += int(made)
+        # The For Zenotians page: written once, never over the admin's own edits.
+        from website.zenotians_seed import SEED as ZENOTIANS
+
+        _, made = SiteContent.objects.get_or_create(
+            key="zenotians", defaults={"value": ZENOTIANS, "published_at": timezone.now()}
+        )
+        created["content"] += int(made)
         for order, (question, answer) in enumerate(FAQS):
             _, made = KnowledgeEntry.objects.get_or_create(
                 question=question, defaults={"answer": answer, "sort_order": order}

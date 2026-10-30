@@ -1,5 +1,5 @@
 import { Clock, MapPin, Phone } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { brand, poweredBy } from '../../config/brand';
 import { useSite } from '../../hooks/useSite';
 
@@ -13,6 +13,7 @@ const policyPaths = {
 export function Footer() {
   const year = new Date().getFullYear();
   const { data } = useSite();
+  const onZenotians = useLocation().pathname.startsWith('/zenotians');
   const contact = data?.contact;
   const telephone = contact?.phone?.replace(/[^\d+]/g, '');
 
@@ -36,7 +37,7 @@ export function Footer() {
                 <a
                   href={contact.map_url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="font-medium text-primary-hover underline-offset-4 hover:underline"
                 >
                   Open in Maps
@@ -78,7 +79,7 @@ export function Footer() {
                   key={link.url}
                   href={link.url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="text-primary-hover underline-offset-4 hover:underline"
                 >
                   {link.label}
@@ -103,6 +104,9 @@ export function Footer() {
             ))}
           </nav>
           <p className="text-xs">{poweredBy}</p>
+          {onZenotians && (
+            <p className="text-xs">Independent portfolio project, not affiliated with Zenoti</p>
+          )}
         </div>
       </div>
     </footer>

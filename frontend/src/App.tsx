@@ -9,6 +9,7 @@ import { DelayedLoader, ToastProvider } from './components/ui';
 import { divisions } from './config/divisions';
 import { ThemeProvider } from './design/ThemeProvider';
 import { routerFuture } from './config/router';
+import { zenotiansRoutes } from './pages/zenotians/routes';
 import { rolePaths } from './policy/policy';
 import { RequireRole } from './routes/RequireRole';
 import { SessionProvider } from './session/SessionProvider';
@@ -18,7 +19,6 @@ const DivisionPage = lazy(() => import('./pages/public/DivisionPage'));
 const LoginPage = lazy(() => import('./pages/public/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/public/RegisterPage'));
 const UnsubscribePage = lazy(() => import('./pages/public/UnsubscribePage'));
-const ZenotiansPage = lazy(() => import('./pages/public/ZenotiansPage'));
 const ForbiddenPage = lazy(() => import('./pages/public/ForbiddenPage'));
 const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
 const PolicyPage = lazy(() => import('./pages/public/PolicyPage'));
@@ -50,7 +50,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
-        <Route path="/zenotians" element={<ZenotiansPage />} />
+        {zenotiansRoutes}
         <Route path="/privacy" element={<PolicyPage policy="privacy" />} />
         <Route path="/terms" element={<PolicyPage policy="terms" />} />
         <Route path="/cancellation-policy" element={<PolicyPage policy="cancellation" />} />

@@ -637,3 +637,98 @@
     min-width: 0;
   }
 }
+
+/* For Zenotians (Task 9): hero that morphs through the three division themes, and print rules. */
+@layer components {
+  .zen-morph-layer {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        60% 90% at 88% 0%,
+        color-mix(in srgb, var(--color-primary) 38%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        50% 80% at 0% 100%,
+        color-mix(in srgb, var(--color-primary-light) 45%, transparent),
+        transparent 70%
+      );
+    animation-duration: 24s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  .zen-morph-layer[data-i='0'] {
+    animation-name: cycle-1;
+  }
+  .zen-morph-layer[data-i='1'] {
+    animation-name: cycle-2;
+  }
+  .zen-morph-layer[data-i='2'] {
+    animation-name: cycle-3;
+  }
+  /* Flow diagram connectors: a dash that travels along the arrow (transform-free, opacity-free). */
+  .zen-flow-line {
+    stroke-dasharray: 6 6;
+    animation: zen-dash 1.4s linear infinite;
+  }
+  .zen-flow-node {
+    animation: zen-pulse 4.8s ease-in-out infinite;
+    transform-origin: center;
+  }
+}
+@keyframes zen-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+@keyframes zen-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zen-morph-layer {
+    animation: none;
+  }
+  .zen-morph-layer[data-i='0'] {
+    opacity: 1;
+  }
+  .zen-flow-line,
+  .zen-flow-node {
+    animation: none;
+  }
+}
+@media print {
+  body:has(.zen-print-area) * {
+    visibility: visible;
+  }
+  body:has(.zen-print-area)
+    :is(.page-backdrop, header[data-hero-follow], footer, aside, .zen-noprint) {
+    display: none !important;
+  }
+  body:has(.zen-print-area) {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body:has(.zen-print-area) .glass,
+  body:has(.zen-print-area) .glass-dense,
+  body:has(.zen-print-area) .glass-bar {
+    background: #fff !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  body:has(.zen-print-area) * {
+    color: #000 !important;
+  }
+  .zen-print-area > div {
+    display: block !important;
+  }
+}

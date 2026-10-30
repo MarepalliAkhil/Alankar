@@ -341,7 +341,7 @@ export default function HomePage() {
                   <a
                     href={data.contact.map_url}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex h-12 items-center gap-2 rounded-full px-6 text-base font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
                   >
                     <MapPin aria-hidden="true" className="h-4 w-4" /> Get directions

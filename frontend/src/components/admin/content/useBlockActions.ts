@@ -30,7 +30,7 @@ export function useBlockActions<K extends BlockKey>(key: K) {
     setFields(server);
     setProblem(
       Object.keys(server).length > 0
-        ? 'Check the highlighted fields.'
+        ? `Check the highlighted fields (${Object.keys(server).join(', ')}).`
         : (errorDetail(error) ?? 'That did not work. Please try again.'),
     );
   };

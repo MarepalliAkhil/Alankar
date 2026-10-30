@@ -27,6 +27,7 @@ from website.serializers import (
     ServiceSerializer,
     TeamMemberSerializer,
 )
+from website.zenotians import published as zenotians_published
 
 
 def active_services():
@@ -90,6 +91,14 @@ class SiteView(PublicView):
             }
         )
         return Response(body)
+
+
+class ZenotiansView(PublicView):
+    policy_action = "public.zenotians"
+
+    @extend_schema(summary="The published For Zenotians page content", responses={200: None})
+    def get(self, request: Request) -> Response:
+        return Response(zenotians_published())
 
 
 class CategoryListView(PublicView):

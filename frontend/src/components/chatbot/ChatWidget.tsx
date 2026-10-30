@@ -126,7 +126,7 @@ export function ChatWidget() {
   ];
 
   return (
-    <div className="fixed bottom-md right-md z-nav flex flex-col items-end gap-sm">
+    <div className="no-print fixed bottom-md right-md z-nav flex flex-col items-end gap-sm">
       {open && (
         <section
           role="dialog"

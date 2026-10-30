@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
+    "stats": "node ../scripts/repo-stats.mjs",
+    "prebuild": "node ../scripts/repo-stats.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

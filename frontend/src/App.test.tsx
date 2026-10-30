@@ -57,6 +57,10 @@ vi.mock('./api/staff', () => ({
   setHourlyRate: vi.fn(),
 }));
 
+vi.mock('./api/zenotians', () => ({
+  getZenotians: vi.fn().mockResolvedValue({ overview: { headline: 'Built for Zenotians' } }),
+}));
+
 vi.mock('./api/public', () => ({
   getSite: vi.fn(),
   getCategories: vi.fn(),
@@ -126,8 +130,9 @@ describe('public site shell', () => {
   it('shows the For Zenotians page with the platform name', async () => {
     renderAt('/zenotians');
     expect(
-      await screen.findByRole('heading', { level: 1, name: brand.platformName }),
+      await screen.findByRole('heading', { level: 1, name: 'Built for Zenotians' }),
     ).toBeInTheDocument();
+    expect(screen.getAllByText(new RegExp(brand.platformName)).length).toBeGreaterThan(0);
   });
 
   it('shows 404 for unknown routes', async () => {

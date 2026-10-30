@@ -8,7 +8,6 @@ PUBLIC_KEYS = (
     "social",
     "video",
     "announcements",
-    "zenotians",
 )
 POLICY_PAGES = {
     "privacy": "Privacy notice",

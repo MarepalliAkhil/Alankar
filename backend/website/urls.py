@@ -5,6 +5,7 @@ from website import views
 
 urlpatterns = [
     path("site/", views.SiteView.as_view(), name="public-site"),
+    path("zenotians/", views.ZenotiansView.as_view(), name="public-zenotians"),
     path("categories/", views.CategoryListView.as_view(), name="public-categories"),
     path("services/", views.ServiceListView.as_view(), name="public-services"),
     path("services/<slug:slug>/", views.ServiceDetailView.as_view(), name="public-service"),

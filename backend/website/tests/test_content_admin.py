@@ -110,12 +110,12 @@ def test_hero_and_about_cannot_be_hidden(admin):
     assert call(admin[0], "post", f"{BASE}/nothing/unpublish/").status_code == 400
 
 
-def test_zenotians_sections_are_stored_as_a_draft_first(admin, client):
-    sections = {"sections": [{"key": "overview", "title": "Overview", "body": "Hello"}]}
-    call(admin[0], "put", f"{BASE}/zenotians/", sections)
-    assert not site(client).get("zenotians")
+def test_zenotians_content_is_stored_as_a_draft_first(admin, client):
+    before = client.get("/api/public/zenotians/").json()["overview"]["headline"]
+    call(admin[0], "put", f"{BASE}/zenotians/", {"overview": {"headline": "Changed"}})
+    assert client.get("/api/public/zenotians/").json()["overview"]["headline"] == before
     call(admin[0], "post", f"{BASE}/zenotians/")
-    assert site(client)["zenotians"]["sections"][0]["title"] == "Overview"
+    assert client.get("/api/public/zenotians/").json()["overview"]["headline"] == "Changed"
 
 
 def test_faqs_are_drafts_until_published_and_feed_the_site(admin, client):

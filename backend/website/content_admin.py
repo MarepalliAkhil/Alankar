@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from accounts.audit import audit
 from accounts.models import AuditLog
 from website.models import Achievement, KnowledgeEntry, SiteContent
+from website.zenotians import ZenotiansSerializer
 
 IMAGE = {"allow_blank": True, "required": False}
 
@@ -72,23 +73,12 @@ class AnnouncementsSerializer(serializers.Serializer):
     items = AnnouncementItem(many=True, max_length=5)
 
 
-class ZenotianSection(serializers.Serializer):
-    key = serializers.SlugField(max_length=40)
-    title = serializers.CharField(max_length=120)
-    body = serializers.CharField(max_length=6000, allow_blank=True)
-    image_url = ImageUrl(**IMAGE)
-
-
-class ZenotiansSerializer(serializers.Serializer):
-    sections = ZenotianSection(many=True, max_length=12)
-
-
 # key -> (serializer, label, can be unpublished, how it looks before anything is written)
 BLOCKS = {
     "hero": (HeroSerializer, "Home page banner", False, {}),
     "about": (AboutSerializer, "About us", False, {}),
     "announcements": (AnnouncementsSerializer, "Announcement banner", True, {"items": []}),
-    "zenotians": (ZenotiansSerializer, "For Zenotians page", True, {"sections": []}),
+    "zenotians": (ZenotiansSerializer, "For Zenotians page", True, {}),
 }
 
 

@@ -1750,8 +1750,31 @@ typecheck, build, Playwright) and the browser walkthrough.
 ### Task 8.5: DONE (2026-10-30)
 The owner confirmed the PC run and pushed (`c912df6` on GitHub `main`). Task 8.5 is complete.
 
-## Task 9: Zenotians page ON HOLD
-Only its existing content-pending shell is restyled in Task 11g; no content is added.
+## Task 9: the For Zenotians page (DONE 2026-10-30, not yet committed by owner)
+The old content-pending shell is gone: `/zenotians` is a full page with a sidebar (a drawer on phones) and a
+URL per section. Content is admin-editable data (draft, preview, publish, audit), seeded from the owner's brief.
+- **Routes** (all in `shared/policy.json` public routes): `/zenotians`, `/zenotians/about/{summary,education,projects,
+  experience,skills,certifications,achievements}`, `about-zenoti`, `project`, `mapping`, `decisions`, `vision`, `demo`,
+  `contact`. A section with no content is hidden from the menu and its URL redirects to the overview.
+- **Backend:** `website/zenotians.py` (validation: plain text, http(s) links only, demo logins must be example.com
+  addresses, contact fields public only when their switch is on, the public endpoint strips the rest),
+  `GET /api/public/zenotians/` (policy action `public.zenotians`), seed in `website/zenotians_seed.py` written by
+  migration `website.0003_seed_zenotians` and by `seed_demo` (never over the admin's edits; `e2e_prepare` flushes, so
+  it goes through `seed_demo`). Admin edits use the existing `/api/admin/content/zenotians/` draft/publish flow.
+- **Frontend:** `pages/zenotians/*` (layout, sections, lazy SVG/CSS diagrams, hero that morphs through the three
+  division themes, print rules, page title and Open Graph/Twitter tags per section, skip link), admin editor
+  `components/admin/content/ZenotiansEditor.tsx` (tabs for overview, resume, Zenoti facts, project, mapping,
+  decisions, future vision, demo logins).
+- **Numbers on the overview** come from `scripts/repo-stats.mjs` -> `frontend/src/generated/repo-stats.json`
+  (runs as `prebuild`; a unit test fails if the file is stale: run `npm run stats` after adding tests/endpoints).
+- **Tests:** backend `website/tests/test_zenotians.py` (allowed, denied, validation, hidden phone, seed), vitest
+  `pages/zenotians.test.tsx`, `generated/repo-stats.test.mjs`, admin editor test in `admin-growth.test.tsx`, Playwright
+  `e2e/zenotians.e2e.ts`; all sub-routes are also in `e2e/pages.ts` so the axe, phone-width and basic a11y suites cover them.
+- **Resume TODOs not published** (fields exist and are empty in the editor): W.A.N.D. tech stack and outcome; fraud
+  project libraries, dataset and metric; "/1000" for the Intermediate marks (shows "Marks 944").
+- **Not set yet (buttons and sections stay hidden):** Watch demo link, GitHub repo link, resume PDF, Try the demo logins.
+- **Sources to confirm:** offices and investors are attributed to https://www.zenoti.com/company (the brief named no page).
+- Screenshots: `docs/ui-screenshots/zen-*` (every sub-route, light and dark, 375 and 1280 px; `zen-print-*` for print).
 
 ## Task 10: NOT built yet
 **Style the Alankar Intelligence screens when Task 10 is built.**

@@ -1,0 +1,19 @@
+{
+  "roles": 4,
+  "pages": 66,
+  "apiEndpoints": 240,
+  "automatedTests": 1331,
+  "testBreakdown": {
+    "backend": 865,
+    "frontendUnit": 426,
+    "endToEnd": 40
+  },
+  "migrations": 86,
+  "method": {
+    "roles": "roles in shared/policy.json",
+    "pages": "frontend/src/pages/**/*Page.tsx files",
+    "apiEndpoints": "path() routes in backend urls.py files, not counting include()",
+    "automatedTests": "test functions: pytest def test_, Vitest it/test, Playwright test",
+    "migrations": "numbered files in backend/*/migrations"
+  }
+}
