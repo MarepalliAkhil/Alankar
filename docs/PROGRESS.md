@@ -1861,3 +1861,48 @@ Owner report: "nothing animates after I click Submit". One shared mechanism, use
   prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors; Playwright
   `full-workflow`, `basic-a11y`, `mobile` and `loading-states`: 31 passed (4.0m). Not runnable
   here: `npm run build` and `e2e/axe.e2e.ts`.
+
+### Task 11b: home hero (DONE, committed)
+- **Scroll-driven hero** (`components/home/HomeHero.tsx`, maths in `design/hero.ts`). On screens
+  768 px and wider, with motion allowed, the hero is a 320vh track with a sticky stage: scrolling
+  walks Salon "Midnight Studio" -> Spa "Sage Calm" -> Beauty Parlor "Rose Glow". Each theme rests
+  for 70% of its stretch and blends over the other 30%. `useScrollProgress` (one
+  requestAnimationFrame per scroll, no React re-render per frame) writes `--hero-pos`, the stage
+  weights `--hero-w0..2` and every colour/glass variable mixed between the two neighbouring
+  themes onto the hero. The background artwork cross-fades with a slight zoom, and the three
+  division panels sit on a 3D drum (`perspective` + `rotateX`, transform and opacity only) that
+  rolls as you scroll. Stage dots on the right ("Show Salon / Spa / Beauty Parlor") jump to a
+  stage; only the front panel is exposed to screen readers and keyboard.
+- **Navbar**: the existing sticky glass navbar (same links, display toggle) takes the hero's
+  colours while the hero is behind it and returns to the page theme below it (`data-hero-follow`
+  on the navbar header; only CSS variables change).
+- **Intro card**: tagline, the shop name (h1), the headline and subtitle from the database,
+  "Book Now" (or "Go to dashboard" for staff), "Explore <current division>" and "Call salon".
+- **Phones and reduced motion**: no scroll stage. The intro card sits on the Salon artwork, then
+  one band per division in its own theme (ThemeScope) with its artwork; bands fade up as they
+  enter the screen (`Reveal`, IntersectionObserver), instantly with reduced motion.
+- **Below the hero** (all glass, each section fades up once): About, Our divisions (cards in each
+  division's theme with its artwork; still open the division popup), Featured services (new: the
+  first two services of each division from the database, opening the usual price sheet with
+  Book), numbers, offers, how booking works, team, questions, and a closing "Ready when you are"
+  band (Book Now, Get directions). Contact details and hours stay in the footer right below, with
+  "Powered by ZenFlow".
+- **Image slots** added: `salon-hero`, `spa-hero`, `parlor-hero` (1600 x 1000) in
+  `design/art.ts`; until photos are added they show the division artwork.
+- **Contrast**: `design/hero.test.ts` samples the blend every 2% in light and dark and checks
+  body text, secondary text and button text (AA 4.5:1), plus text on the dense glass card over the
+  darkest and lightest artwork of both neighbouring themes. All pass.
+- **Decision for the owner (not built):** a "Reviews" section needs real review text, and there
+  is no public endpoint for rating comments (ratings are private to the shop today). Adding one
+  is an API change, so it is left out; team cards still show each stylist's average rating.
+  Say if you want a public, admin-approved reviews feed.
+- Tests: `components/home/HomeHero.test.tsx` (scroll stage changes theme, CTA and exposed panel;
+  stacked mode uses each division's theme), `design/hero.test.ts`, `e2e/home-hero.e2e.ts`
+  (desktop light and dark: three stages, three different colours, navbar follows and lets go,
+  stage dots; phone; reduced motion). Screenshots in `docs/ui-screenshots/`:
+  `home-hero-{salon,spa,parlor}-{light,dark}.png`, `home-sections-{light,dark}.png`,
+  `home-hero-phone.png`.
+- Checks in the sandbox: vitest Test Files 35 passed (35), Tests 450 passed (450); eslint and
+  prettier clean; `tsc --noEmit` only the 2 known `recharts` stub errors; Playwright
+  `full-workflow`, `basic-a11y`, `mobile`, `loading-states`, `home-hero`: 35 passed (4.9m). Not
+  runnable here: `npm run build` and `e2e/axe.e2e.ts`.

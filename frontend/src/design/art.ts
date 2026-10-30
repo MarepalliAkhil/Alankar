@@ -71,6 +71,45 @@ export const art = {
       dark: 'assets/art/parlor-glow-dark.svg',
     },
   },
+  salonHero: {
+    description:
+      'Home hero, Salon stage: the night styling studio (same artwork as the Salon background until a photo is added).',
+    decorative: true,
+    alt: '',
+    photo: 'salon-hero',
+    width: 1600,
+    height: 1000,
+    art: { light: salonLight, dark: salonDark },
+    files: {
+      light: 'assets/art/salon-studio-light.svg',
+      dark: 'assets/art/salon-studio-dark.svg',
+    },
+  },
+  spaHero: {
+    description:
+      'Home hero, Spa stage: still water, lotus and stones (same artwork as the Spa background until a photo is added).',
+    decorative: true,
+    alt: '',
+    photo: 'spa-hero',
+    width: 1600,
+    height: 1000,
+    art: { light: spaLight, dark: spaDark },
+    files: { light: 'assets/art/spa-calm-light.svg', dark: 'assets/art/spa-calm-dark.svg' },
+  },
+  parlorHero: {
+    description:
+      'Home hero, Beauty Parlor stage: petals, bokeh and a brush stroke (same artwork as the Beauty Parlor background until a photo is added).',
+    decorative: true,
+    alt: '',
+    photo: 'parlor-hero',
+    width: 1600,
+    height: 1000,
+    art: { light: parlorLight, dark: parlorDark },
+    files: {
+      light: 'assets/art/parlor-glow-light.svg',
+      dark: 'assets/art/parlor-glow-dark.svg',
+    },
+  },
 } satisfies Record<string, ArtSlot>;
 
 export type ArtId = keyof typeof art;

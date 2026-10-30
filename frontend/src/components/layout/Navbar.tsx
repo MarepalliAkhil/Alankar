@@ -104,7 +104,7 @@ export function Navbar() {
     );
 
   return (
-    <header className="sticky top-0 z-nav px-sm pt-sm sm:px-lg">
+    <header data-hero-follow className="sticky top-0 z-nav px-sm pt-sm sm:px-lg">
       <nav
         aria-label="Main"
         className="glass mx-auto flex max-w-6xl items-center gap-sm rounded-card px-md py-sm"
