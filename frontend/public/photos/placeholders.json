@@ -1,0 +1,232 @@
+{
+  "salon-hero": {
+    "file": "salon-hero.webp",
+    "bytes": 81942,
+    "outputs": [
+      "salon-hero.webp",
+      "salon-hero.jpg",
+      "salon-hero-960.webp",
+      "salon-hero-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADQBACdASogABIAPtVWok2oJKMpN+gBIBqJZQC9WDJp9HrfkvKN+5r33dfTCiockAD+9Cptgjq08prYa2dRvgs9O4eU7VPctYmQ4ZQtiTvZHJhPdZbbbdyocHrw1Vsl+jIvIAAA"
+  },
+  "spa-hero": {
+    "file": "spa-hero.webp",
+    "bytes": 100934,
+    "outputs": [
+      "spa-hero.webp",
+      "spa-hero.jpg",
+      "spa-hero-960.webp",
+      "spa-hero-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAACwBACdASogABIAPu1oq08ppiOiMBgIATAdiWUAwNwnQqTQoPnFDMGFFmvAbAcYAPxcjCFZo88dB4AG7Yr2to/a0wyOmIKenpE8gOdy6mz5c8ciez6JWjwm82wCoGt1RwGNu3hr0I5q4B5CWG48HwqC8iBj8immnjofJWNTAAA="
+  },
+  "parlor-hero": {
+    "file": "parlor-hero.webp",
+    "bytes": 68714,
+    "outputs": [
+      "parlor-hero.webp",
+      "parlor-hero.jpg",
+      "parlor-hero-960.webp",
+      "parlor-hero-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAAAQBACdASogABIAPu1kqU2/paOiMAgD8B2JZQDE2Cm74/0YizDtZwzAAAD+6yrXNDcPE/2ksBe4g65dTrBDFEG8Q4Ya5m3NHel2S4UAAAA="
+  },
+  "shop-background": {
+    "file": "shop-background.webp",
+    "bytes": 136272,
+    "outputs": [
+      "shop-background.webp",
+      "shop-background.jpg",
+      "shop-background-960.webp",
+      "shop-background-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADwBACdASogABIAPuFUpE2opCOiN/qoARAcCWcAwcwXhZwM5rvIwfm/B3NR3gHsmdQA9C7xtunuNvU0LGeTki6O+wvyJFd6V1+LZAcAHsPgUTOCW9xoFXvM/2y56bzgwkogPYLUDNUAAA=="
+  },
+  "salon-background": {
+    "file": "salon-background.webp",
+    "bytes": 73178,
+    "outputs": [
+      "salon-background.webp",
+      "salon-background.jpg",
+      "salon-background-960.webp",
+      "salon-background-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAAAwBACdASogABQAPulgo02pJaMiMAwBIB0JZWeeV5kSICy76MGNLD5iH9AA/u83c39pmEwT5eGzJCdOUCmxgrgHs7sy3OowTqK9w+NZnjCJjuAqwa7v8AedGGNzFERICb0AAA=="
+  },
+  "spa-background": {
+    "file": "spa-background.webp",
+    "bytes": 36288,
+    "outputs": [
+      "spa-background.webp",
+      "spa-background.jpg",
+      "spa-background-960.webp",
+      "spa-background-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAABwBACdASogABQAPuVmrU2pJiUiMAwBIByJZQDKACmH0RWVkjKyAGdVUTvmYAD+7D/7m19O9Exq9xvHkQtM+oZDFjnWztdXE341POwWtSe4vjbADDG7Jn8ml2tPggm7B96WiTJxVBJuq0tAAAA="
+  },
+  "parlor-background": {
+    "file": "parlor-background.webp",
+    "bytes": 54430,
+    "outputs": [
+      "parlor-background.webp",
+      "parlor-background.jpg",
+      "parlor-background-960.webp",
+      "parlor-background-960.jpg"
+    ],
+    "data": "data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAAAQBACdASogABQAPu1sq06ppiOiMBgIATAdiWUAwzQ8J+CJvBwf6kx6IAD+79W2tYYU/kN5SszasbYZ5j3+mqf3snpG6lkV402wSAZ/cRx0AAAA"
+  },
+  "meera": {
+    "file": "meera/meera.webp",
+    "bytes": 15248,
+    "outputs": [
+      "meera.webp",
+      "meera-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACQAwCdASoQABQAPu1orU6ppiSiMAgBMB2JaQAASoMsPaWJOPUAAP7TlnHlVv8jSxSLz1uF2GNUD0cg3YSGadaUsmXq5QpKgAAAAA=="
+  },
+  "meera-wave": {
+    "file": "meera/meera-wave.webp",
+    "bytes": 15392,
+    "outputs": [
+      "meera-wave.webp",
+      "meera-wave-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoQABQAPu1kqk2ppaQiMAgBMB2JaQAAUqml3y3Sti7IAAD+04iYuztCx0qL91RzwQFusZ/w0pfP9T6Hcc9pdzgAAAA="
+  },
+  "meera-point": {
+    "file": "meera/meera-point.webp",
+    "bytes": 14974,
+    "outputs": [
+      "meera-point.webp",
+      "meera-point-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACQAwCdASoQABQAPu1kqU2ppaQiMAgBMB2JaQAAUrlZfRtKe7zIAP7TiJi7O0mSY5NfBngGlm6D8SSL1hxDHuGR55jHz89lZAAAAA=="
+  },
+  "meera-phone": {
+    "file": "meera/meera-phone.webp",
+    "bytes": 14444,
+    "outputs": [
+      "meera-phone.webp",
+      "meera-phone-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACQAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAAUqfs2nfjhlggAP7TiJi7O0h/ngOI486FJ6ZedRUi9B8H0pPoAAA="
+  },
+  "meera-approve": {
+    "file": "meera/meera-approve.webp",
+    "bytes": 14384,
+    "outputs": [
+      "meera-approve.webp",
+      "meera-approve-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAABwAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAASoMH74p53+gA/tOWceVW/yJR8VoVEE050vCkbp+rGf7J7K9arWaBSTAgAAA="
+  },
+  "meera-chat": {
+    "file": "meera/meera-chat.webp",
+    "bytes": 15688,
+    "outputs": [
+      "meera-chat.webp",
+      "meera-chat-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACQAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAAUqfs2nfj2xmAAP7TiJi7O0h/18RL2KXe0505QYbaVpmLAniiu2npOTLv/gAAAA=="
+  },
+  "meera-wallet": {
+    "file": "meera/meera-wallet.webp",
+    "bytes": 16182,
+    "outputs": [
+      "meera-wallet.webp",
+      "meera-wallet-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACQAwCdASoQABQAPu1kq04ppaQiMAgBMB2JaQAAUqmlh24WWp8QAP7TiJi7O0MCfr38uQAnKQmIccKvNOLVc4Ymn1Zp9QBAAAA="
+  },
+  "meera-stars": {
+    "file": "meera/meera-stars.webp",
+    "bytes": 16736,
+    "outputs": [
+      "meera-stars.webp",
+      "meera-stars-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACQAwCdASoQABQAPu1mq04ppaQiMAgBMB2JZwAASoYCDCgzooHQAP7TlnHlVv8lnNT4OFuKmzQTXG7lpMCscVfYMFMvpYAAAAA="
+  },
+  "meera-shield": {
+    "file": "meera/meera-shield.webp",
+    "bytes": 15766,
+    "outputs": [
+      "meera-shield.webp",
+      "meera-shield-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACwAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAASoq9bIXZqkFoAAD+05Zx5Vb/aRLulH49aDufEggsCTAZF0rH0jyE72PmMIwAAA=="
+  },
+  "meera-celebrate": {
+    "file": "meera/meera-celebrate.webp",
+    "bytes": 17686,
+    "outputs": [
+      "meera-celebrate.webp",
+      "meera-celebrate-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAACwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JaQDLLBujBEzvWPQDoAD+w/Jtx6AfcUmpKwj7fQhbDJRxjThVwLsj201YUptG9CaaXhgAAAA="
+  },
+  "meera-namaste": {
+    "file": "meera/meera-namaste.webp",
+    "bytes": 13840,
+    "outputs": [
+      "meera-namaste.webp",
+      "meera-namaste-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACQAwCdASoQABQAPu1orU6ppiSiMAgBMB2JaQAAUqfs2nfj2zpAAP7TiJi7O0h/18RL2ld9ctIIPukF4oQl8xK592QAAA=="
+  },
+  "meera-scissors": {
+    "file": "meera/meera-scissors.webp",
+    "bytes": 16032,
+    "outputs": [
+      "meera-scissors.webp",
+      "meera-scissors-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACQAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAASoMsPaWJQCgAAP7TlnHlVv8jSxSLz1uF2GNUD0cgoJfzQfAWt7kcxDkcAAAAAA=="
+  },
+  "meera-calendar": {
+    "file": "meera/meera-calendar.webp",
+    "bytes": 15418,
+    "outputs": [
+      "meera-calendar.webp",
+      "meera-calendar-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAABwAwCdASoQABQAPu1mqk2ppaQiMAgBMB2JaQAAUqiuWCOkZwAA/tOImLs7SH/MYbN7dDc8uCbIzl/O6i2ig5oluT2q7qe0vbGAAA=="
+  },
+  "meera-waiting": {
+    "file": "meera/meera-waiting.webp",
+    "bytes": 15466,
+    "outputs": [
+      "meera-waiting.webp",
+      "meera-waiting-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoQABQAPu1krU6ppaSiMAgBMB2JaQAASoYBkLVfbd3AAAD+05Zx5Vb/I0upM7A+CUU6oAJNBNFMv9k+p6ZAZqptGAA="
+  },
+  "meera-sorry": {
+    "file": "meera/meera-sorry.webp",
+    "bytes": 15046,
+    "outputs": [
+      "meera-sorry.webp",
+      "meera-sorry-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAABwAwCdASoQABQAPu1iqk2ppaQiMAgBMB2JaQAASoMX+xbDwBAA/tOWceVW/yJR8VWWwpB4bbbMfh3s7scn9AXD4dpu3roAAAA="
+  },
+  "meera-gift": {
+    "file": "meera/meera-gift.webp",
+    "bytes": 15548,
+    "outputs": [
+      "meera-gift.webp",
+      "meera-gift-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACQAwCdASoQABQAPu1orU6ppiSiMAgBMB2JaQAASoR3VoO45nYAAP7TlnHlVv9FldwH8pz0lsqvY/LxqPorvJWC2TZwAAAA"
+  },
+  "meera-package": {
+    "file": "meera/meera-package.webp",
+    "bytes": 15528,
+    "outputs": [
+      "meera-package.webp",
+      "meera-package-512.webp"
+    ],
+    "data": "data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADQAwCdASoQABQAPu1kqk2ppaQiMAgBMB2JaQDGfBulPeuQn4PGzZwA/tOWceVW/ypeJPvq8rkBQbN/Thi3SeH9F3gTLXkjSamzBAAA"
+  }
+}

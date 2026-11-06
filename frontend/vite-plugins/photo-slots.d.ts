@@ -1,0 +1,10 @@
+export declare const PHOTO_EXTENSIONS: readonly string[];
+export declare const PHOTO_SLOTS: Readonly<Record<string, { width: number; height: number }>>;
+export declare const HOME_PHOTOS: readonly string[];
+export declare const SLOT_SHOWS: Readonly<Record<string, string>>;
+export declare const MEERA_POSES: readonly string[];
+export declare const MEERA_FOLDER: string;
+export declare const MEERA_DEFAULT: string;
+export declare const MAX_PHOTO_BYTES: number;
+export declare function isTransparentSlot(slot: string): boolean;
+export declare function pickPhoto(base: string, files: readonly string[]): string | null;

@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+package-lock.json
+e2e-results
+e2e-report
+test-results
+.pytest_cache
+public/photos/

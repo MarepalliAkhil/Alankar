@@ -1,0 +1,28 @@
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["*/migrations/*", ".venv", "venv", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ"]
+
+[tool.ruff.lint.per-file-ignores]
+# These tests reuse the fixtures of the booking tests by importing them.
+"billing/tests/*" = ["F401", "F811"]
+"people/tests/*" = ["F401", "F811"]
+"chat/tests/*" = ["F401", "F811"]
+"scheduling/tests/*" = ["F401", "F811"]
+"wallet/tests/*" = ["F401", "F811"]
+"waitlist/tests/*" = ["F401", "F811"]
+"chatbot/tests/*" = ["F401", "F811", "E501"]
+# Ported from reference/chatbot_reference: long rule tables and answer texts are kept readable.
+"chatbot/defaults.py" = ["E501"]
+# Customer-facing message texts read better on one line each.
+"notifications/templates.py" = ["E501"]
+"chatbot/engine/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "config", "core", "accounts", "people", "scheduling",
+  "billing", "inventory", "chat", "marketing", "website", "chatbot", "wallet", "waitlist",
+]

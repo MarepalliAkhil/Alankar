@@ -1,0 +1,480 @@
+"""Service catalogue (Task 2a), rooms and appointments (Task 2b). Working hours arrive later."""
+
+import uuid
+from decimal import Decimal
+
+from django.conf import settings
+from django.db import models
+
+from core.fields import EncryptedTextField
+
+
+class Division(models.TextChoices):
+    SALON = "salon", "Salon"
+    SPA = "spa", "Spa"
+    BEAUTY_PARLOR = "beauty-parlor", "Beauty Parlor"
+
+
+class Audience(models.TextChoices):
+    MEN = "men", "Men"
+    WOMEN = "women", "Women"
+    KIDS = "kids", "Kids"
+    UNISEX = "unisex", "Unisex"
+
+
+class ServiceCategory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    division = models.CharField(max_length=20, choices=Division.choices, db_index=True)
+    name = models.CharField(max_length=80)
+    slug = models.SlugField(max_length=90, unique=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    # Products the admin suggests with services in this category (Task 8.5 part 4); offered in the
+    # booking sheet's "Add products" step.
+    recommended_products = models.ManyToManyField(
+        "inventory.Product", blank=True, related_name="recommended_for"
+    )
+
+    class Meta:
+        ordering = ["division", "sort_order", "name"]
+        verbose_name_plural = "service categories"
+
+    def __str__(self) -> str:
+        return f"{self.get_division_display()} / {self.name}"
+
+
+class Service(models.Model):
+    """Prices are in INR and include GST (shown as "from ₹X incl. GST")."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    category = models.ForeignKey(ServiceCategory, on_delete=models.PROTECT, related_name="services")
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(max_length=140, unique=True)
+    summary = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.UNISEX)
+    duration_minutes = models.PositiveSmallIntegerField(default=30)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0"))
+    # GST rate in percent for this service. Empty means the salon-wide rate from the settings.
+    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    image_url = models.URLField(blank=True)
+    # Flat pay for the stylist per completed task (admin sets it, Task 5/6). Empty means the
+    # commission percentage from the pay rules is used instead.
+    task_payout = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category__division", "category__sort_order", "sort_order", "name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def active_variants(self) -> list["ServiceVariant"]:
+        return [v for v in self.variants.all() if v.is_active]
+
+    @property
+    def from_price(self) -> Decimal:
+        variants = self.active_variants()
+        return min(v.price for v in variants) if variants else self.price
+
+    @property
+    def min_duration(self) -> int:
+        variants = self.active_variants()
+        return min(v.duration_minutes for v in variants) if variants else self.duration_minutes
+
+    @property
+    def max_duration(self) -> int:
+        variants = self.active_variants()
+        return max(v.duration_minutes for v in variants) if variants else self.duration_minutes
+
+
+class ServiceVariant(models.Model):
+    """E.g. hair length short / medium / long, each with its own price and duration."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="variants")
+    label = models.CharField(max_length=80)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    duration_minutes = models.PositiveSmallIntegerField()
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sort_order", "price"]
+
+    def __str__(self) -> str:
+        return f"{self.service.name} – {self.label}"
+
+
+class ServiceAddon(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="addons")
+    label = models.CharField(max_length=80)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    duration_minutes = models.PositiveSmallIntegerField(default=0)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sort_order", "label"]
+
+    def __str__(self) -> str:
+        return f"{self.service.name} + {self.label}"
+
+
+class Room(models.Model):
+    """A chair, bed or room. Managed by admin (Task 5); demo rooms come from seed_demo."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=60, unique=True)
+    division = models.CharField(max_length=20, choices=Division.choices, db_index=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["division", "sort_order", "name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class AppointmentStatus(models.TextChoices):
+    REQUESTED = "requested", "Requested"
+    AWAITING_PAYMENT = "awaiting_payment", "Awaiting payment"
+    SCHEDULED = "scheduled", "Scheduled"
+    CHECKED_IN = "checked_in", "Checked in"
+    IN_PROGRESS = "in_progress", "In progress"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+    REJECTED = "rejected", "Rejected"
+    PAYMENT_EXPIRED = "payment_expired", "Payment expired"
+    NO_SHOW = "no_show", "No-show"
+    # Task 13A: a request needs BOTH the front desk and the stylist to accept. These are the
+    # three ways it can end without a booking. `requested` itself carries two sub-states
+    # (`reception_status`, `stylist_status`) so every place that lists states stays the same.
+    DECLINED_BY_STYLIST = "declined_by_stylist", "Declined by the stylist"
+    DECLINED_BY_RECEPTION = "declined_by_reception", "Declined by the front desk"
+    EXPIRED = "expired", "Expired"
+
+
+class ApprovalStatus(models.TextChoices):
+    """One side's answer to a booking request."""
+
+    NOT_ASKED = "not_asked", "Not asked yet"
+    PENDING = "pending", "Waiting"
+    ACCEPTED = "accepted", "Accepted"
+    DECLINED = "declined", "Declined"
+
+
+# Statuses that hold a stylist's (and room's) time. Requests do not hold time.
+BLOCKING_STATUSES = (
+    AppointmentStatus.AWAITING_PAYMENT,
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CHECKED_IN,
+    AppointmentStatus.IN_PROGRESS,
+)
+
+NOTES_CONTEXT = "scheduling.appointment.notes"
+COMPLETION_NOTE_CONTEXT = "scheduling.completion.note"
+ALLERGIES_CONTEXT = "scheduling.appointment.allergies"
+CONTACT_PHONE_CONTEXT = "scheduling.appointment.contact_phone"
+
+
+class Appointment(models.Model):
+    """One visit. Service, price and duration are snapshots taken when the request is sent."""
+
+    class Source(models.TextChoices):
+        ONLINE = "online", "Online"
+        WALK_IN = "walk_in", "Walk-in"
+        PHONE = "phone", "Phone"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="appointments"
+    )
+    service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="appointments")
+    variant = models.ForeignKey(
+        ServiceVariant, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    addons = models.ManyToManyField(ServiceAddon, blank=True, related_name="+")
+    service_name = models.CharField(max_length=120)
+    variant_label = models.CharField(max_length=80, blank=True)
+    addon_labels = models.JSONField(default=list, blank=True)
+    duration_minutes = models.PositiveSmallIntegerField()
+    price_total = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_payable = models.DecimalField(max_digits=10, decimal_places=2)
+    # Task 8.5 part 5: a package code redeemed at booking makes the service line Rs 0. The
+    # session itself is tracked on wallet.PackageEntry (reason reserved/consumed/released); this
+    # FK is only so the appointment/request cards can show which package was used.
+    # Task 8.5 part 3: a coupon and membership discount taken off the online payment. Checkout
+    # carries them over so the bill matches what was paid.
+    prepay_coupon = models.ForeignKey(
+        "marketing.Coupon", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    prepay_coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    prepay_member_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    package_purchase = models.ForeignKey(
+        "wallet.PackagePurchase",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="appointments",
+    )
+
+    preferred_start = models.DateTimeField()
+    preferred_stylist = models.ForeignKey(
+        "people.StylistProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    stylist = models.ForeignKey(
+        "people.StylistProfile",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="appointments",
+    )
+    room = models.ForeignKey(
+        Room, null=True, blank=True, on_delete=models.PROTECT, related_name="appointments"
+    )
+    start = models.DateTimeField(null=True, blank=True, db_index=True)
+    end = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(
+        max_length=24,
+        choices=AppointmentStatus.choices,
+        default=AppointmentStatus.REQUESTED,
+        db_index=True,
+    )
+    # Task 13A: while `status` is requested, each side answers on its own. Both accepted moves
+    # the booking to awaiting_payment; one decline (or running out of time) ends the request.
+    reception_status = models.CharField(
+        max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING
+    )
+    stylist_status = models.CharField(
+        max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.NOT_ASKED
+    )
+    # When a request that nobody finished answering runs out; always before the visit starts.
+    approval_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    # The tentative hold on the stylist's time while the request is pending (not on the room).
+    hold_stylist = models.ForeignKey(
+        "people.StylistProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    hold_start = models.DateTimeField(null=True, blank=True)
+    hold_end = models.DateTimeField(null=True, blank=True)
+    # The stylist's PRIVATE reason category (busy, personal_plans, outside_hours, other). Only
+    # the stylist and the front desk ever see it; no customer response carries it.
+    stylist_decline_reason = models.CharField(max_length=20, blank=True)
+    approval_reminders = models.PositiveSmallIntegerField(default=0)
+    # Package session / products stay reserved after a stylist decline (the front desk may hand
+    # the request to another stylist). They are given back when this is set.
+    resources_released_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(max_length=10, choices=Source.choices, default=Source.ONLINE)
+    awaiting_payment_until = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    contact_name = models.CharField(max_length=120)
+    contact_email = models.EmailField()
+    contact_phone = EncryptedTextField(context=CONTACT_PHONE_CONTEXT, blank=True, default="")
+    notes = EncryptedTextField(context=NOTES_CONTEXT, blank=True, default="")
+    allergies = EncryptedTextField(context=ALLERGIES_CONTEXT, blank=True, default="")
+    policy_accepted_at = models.DateTimeField()
+
+    # Customer flags: they never change the status.
+    arrived_at = models.DateTimeField(null=True, blank=True)
+    reschedule_requested = models.BooleanField(default=False)
+    reschedule_preferred = models.DateTimeField(null=True, blank=True)
+    reschedule_note = models.CharField(max_length=300, blank=True)
+    cancel_requested = models.BooleanField(default=False)
+
+    reject_reason = models.CharField(max_length=300, blank=True)
+    cancel_reason = models.CharField(max_length=300, blank=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["stylist", "start"]),
+            models.Index(fields=["room", "start"]),
+            models.Index(fields=["customer", "-created_at"], name="appt_customer_recent_idx"),
+            models.Index(fields=["status", "start"], name="appt_status_start_idx"),
+            models.Index(fields=["hold_stylist", "hold_start"], name="appt_hold_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end__isnull=True)
+                | models.Q(start__isnull=True)
+                | models.Q(end__gt=models.F("start")),
+                name="appointment_ends_after_start",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(duration_minutes__gt=0), name="appointment_duration_positive"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_payable__gte=0), name="appointment_payable_not_negative"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.service_name} for {self.contact_name} ({self.status})"
+
+    @property
+    def when(self):
+        """The confirmed start, or the preferred one while it is still a request."""
+        return self.start or self.preferred_start
+
+
+class AppointmentEvent(models.Model):
+    """Status history (who moved the appointment, from what, to what)."""
+
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="events")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    from_status = models.CharField(max_length=24, blank=True)
+    to_status = models.CharField(max_length=24, blank=True)
+    action = models.CharField(max_length=40)
+    note = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.action}: {self.from_status} -> {self.to_status}"
+
+
+class VisitCompletion(models.Model):
+    """What the stylist actually did when completing a visit. It decides what is billed and what
+    counts towards the stylist's pay. Written once, never changed."""
+
+    appointment = models.OneToOneField(
+        Appointment, on_delete=models.PROTECT, related_name="completion"
+    )
+    # [{"key": "service" | add-on id, "label": str, "price": "300.00"}]
+    done_lines = models.JSONField(default=list)
+    removed_lines = models.JSONField(default=list, blank=True)
+    booked_price = models.DecimalField(max_digits=10, decimal_places=2)
+    done_price = models.DecimalField(max_digits=10, decimal_places=2)
+    note = EncryptedTextField(context=COMPLETION_NOTE_CONTEXT, blank=True, default="")
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    completed_at = models.DateTimeField()
+
+    def __str__(self) -> str:
+        return f"Completion of {self.appointment_id}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("A completed visit record cannot be changed.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("A completed visit record cannot be deleted.")
+
+
+class AppointmentProduct(models.Model):
+    """A product added to a booking (Task 8.5 part 4). Its stock is held through the ledger from
+    the moment it is added, given back if the visit does not happen, and billed at checkout
+    without being taken from stock a second time.
+
+    `paid_online`: chosen in the booking sheet, so it is part of the online payment. Products added
+    later ("Add to my next appointment") are paid at the salon.
+    """
+
+    class Status(models.TextChoices):
+        HELD = "held", "Held for the visit"
+        RELEASED = "released", "Put back (visit did not happen or item removed)"
+        BILLED = "billed", "Billed at checkout"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="products")
+    product = models.ForeignKey(
+        "inventory.Product", on_delete=models.PROTECT, related_name="appointment_lines"
+    )
+    name = models.CharField(max_length=120)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_percent = models.DecimalField(max_digits=5, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_online = models.BooleanField(default=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.HELD)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0), name="appointment_product_quantity"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} x{self.quantity} ({self.status})"
+
+
+class SlotChange(models.Model):
+    """One change that STAFF made to a customer's slot (Task 13C), and what the customer did about
+    it. The sorry note is sent in the same transaction, once per change (`seq` is unique per
+    booking). Only a category from `notifications.templates.CHANGE_REASONS` is stored here: a
+    stylist's private decline reasons never reach this table."""
+
+    class Kind(models.TextChoices):
+        MOVED = "moved", "Moved to another time"
+        REASSIGNED = "reassigned", "Given to another stylist"
+        CANCELLED = "cancelled", "Cancelled"
+
+    class Response(models.TextChoices):
+        PENDING = "pending", "Waiting for the customer"
+        ACCEPTED = "accepted", "Customer accepted the new time"
+        REBOOK = "rebook", "Customer chose another time"
+        CANCELLED = "cancelled", "Customer cancelled with a refund"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="changes")
+    seq = models.PositiveIntegerField()
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    reason = models.CharField(max_length=24)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    actor_role = models.CharField(max_length=20, blank=True)
+    old_start = models.DateTimeField(null=True, blank=True)
+    new_start = models.DateTimeField(null=True, blank=True)
+    old_stylist_name = models.CharField(max_length=120, blank=True)
+    new_stylist_name = models.CharField(max_length=120, blank=True)
+    response = models.CharField(max_length=10, choices=Response.choices, default=Response.PENDING)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-seq"]
+        constraints = [
+            models.UniqueConstraint(fields=["appointment", "seq"], name="slot_change_once"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.kind} #{self.seq} of {self.appointment_id}"

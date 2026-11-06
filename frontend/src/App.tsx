@@ -1,0 +1,119 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppShell } from './components/layout/AppShell';
+import { PublicLayout } from './components/layout/PublicLayout';
+import { DelayedLoader, ToastProvider } from './components/ui';
+import { divisions } from './config/divisions';
+import { ThemeProvider } from './design/ThemeProvider';
+import { routerFuture } from './config/router';
+import { zenotiansRoutes } from './pages/zenotians/routes';
+import { rolePaths } from './policy/policy';
+import { RequireRole } from './routes/RequireRole';
+import { SessionProvider } from './session/SessionProvider';
+
+const HomePage = lazy(() => import('./pages/public/HomePage'));
+const DivisionPage = lazy(() => import('./pages/public/DivisionPage'));
+const LoginPage = lazy(() => import('./pages/public/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/public/RegisterPage'));
+const UnsubscribePage = lazy(() => import('./pages/public/UnsubscribePage'));
+const ForbiddenPage = lazy(() => import('./pages/public/ForbiddenPage'));
+const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
+const PolicyPage = lazy(() => import('./pages/public/PolicyPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'));
+const PayPage = lazy(() => import('./pages/customer/PayPage'));
+const RolePage = lazy(() => import('./pages/app/RolePage'));
+const DesignSystemPage = lazy(() => import('./pages/dev/DesignSystemPage'));
+const MailboxPage = lazy(() => import('./pages/dev/MailboxPage'));
+
+const paths = rolePaths();
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<PublicLayout />}>
+        <Route index element={<HomePage />} />
+        {divisions.map((division) => (
+          <Route
+            key={division.id}
+            path={division.path}
+            element={<DivisionPage divisionId={division.id} />}
+          />
+        ))}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
+        <Route path="/unsubscribe" element={<UnsubscribePage />} />
+        {zenotiansRoutes}
+        <Route path="/privacy" element={<PolicyPage policy="privacy" />} />
+        <Route path="/terms" element={<PolicyPage policy="terms" />} />
+        <Route path="/cancellation-policy" element={<PolicyPage policy="cancellation" />} />
+        <Route path="/403" element={<ForbiddenPage />} />
+        {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystemPage />} />}
+        {import.meta.env.DEV && <Route path="/dev/mailbox" element={<MailboxPage />} />}
+
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
+      {/* The signed-in area of all four roles: one layout with the left sidebar. The menu and
+          access come from the shared policy. */}
+      <Route
+        element={
+          <RequireRole>
+            <AppShell />
+          </RequireRole>
+        }
+      >
+        <Route path="/customer/pay/:id" element={<PayPage />} />
+        {paths.all
+          .filter((path) => path !== '/customer/pay/:id')
+          .map((path) => (
+            <Route key={path} path={path} element={<RolePage path={path} />} />
+          ))}
+      </Route>
+    </Routes>
+  );
+}
+
+export function AppProviders({
+  children,
+  queryClient,
+}: {
+  children: ReactNode;
+  queryClient?: QueryClient;
+}) {
+  const [client] = useState(
+    () =>
+      queryClient ??
+      new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } }),
+  );
+  return (
+    <QueryClientProvider client={client}>
+      <ThemeProvider>
+        <ToastProvider>
+          <SessionProvider>{children}</SessionProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppProviders>
+        <BrowserRouter future={routerFuture}>
+          {/* First load: the branded loader, only if it takes longer than 300 ms. */}
+          <Suspense fallback={<DelayedLoader />}>
+            <AppRoutes />
+          </Suspense>
+        </BrowserRouter>
+      </AppProviders>
+    </ErrorBoundary>
+  );
+}
