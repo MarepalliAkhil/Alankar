@@ -11,7 +11,13 @@
 // still matches the photo file it was made from.
 import fs from 'node:fs';
 import path from 'node:path';
-import { MEERA_FOLDER, PHOTO_EXTENSIONS, PHOTO_SLOTS, pickPhoto } from './photo-slots.js';
+import {
+  LEADER_FOLDER,
+  MEERA_FOLDER,
+  PHOTO_EXTENSIONS,
+  PHOTO_SLOTS,
+  pickPhoto,
+} from './photo-slots.js';
 
 const ID = 'virtual:photo-manifest';
 const RESOLVED = '\0' + ID;
@@ -30,16 +36,20 @@ export function readManifest(dir) {
   } catch {
     return { files: [], placeholders: {} };
   }
-  // Meera's pictures live in public/photos/meera/ (listed as "meera/meera-wave.webp").
-  try {
-    const sub = fs
-      .readdirSync(path.join(dir, MEERA_FOLDER))
-      .filter((name) => PHOTO.test(name))
-      .sort()
-      .map((name) => `${MEERA_FOLDER}/${name}`);
-    files = [...files, ...sub];
-  } catch {
-    // no meera folder yet: the tour shows the letter "M"
+  // Meera's pictures live in public/photos/meera/ (listed as "meera/meera-wave.webp"), the
+  // optional pictures of Zenoti's leaders in public/photos/zenoti-leaders/. A folder that does not
+  // exist yet is simply skipped (the tour shows the letter "M", a leader card shows a monogram).
+  for (const folder of [MEERA_FOLDER, LEADER_FOLDER]) {
+    try {
+      const sub = fs
+        .readdirSync(path.join(dir, folder))
+        .filter((name) => PHOTO.test(name))
+        .sort()
+        .map((name) => `${folder}/${name}`);
+      files = [...files, ...sub];
+    } catch {
+      // folder not created yet
+    }
   }
   let saved = {};
   try {

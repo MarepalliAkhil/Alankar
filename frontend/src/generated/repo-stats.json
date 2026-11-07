@@ -2,14 +2,14 @@
   "roles": 4,
   "pages": 71,
   "apiEndpoints": 259,
-  "automatedTests": 1639,
+  "automatedTests": 1758,
   "testBreakdown": {
-    "backend": 988,
-    "frontendUnit": 569,
-    "endToEnd": 82
+    "backend": 993,
+    "frontendUnit": 673,
+    "endToEnd": 92
   },
-  "migrations": 96,
-  "accessibilityScreens": 43,
+  "migrations": 99,
+  "accessibilityScreens": 41,
   "method": {
     "roles": "roles in shared/policy.json",
     "pages": "frontend/src/pages/**/*Page.tsx files",

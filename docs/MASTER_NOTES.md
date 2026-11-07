@@ -458,7 +458,7 @@ shell from Task 0 stay until then.
 4. **How it maps to Zenoti**: a table or cards of salon-software capabilities and where each one
    lives in this project (booking, schedule, POS, inventory, payroll, ratings, reports, and so on),
    including what is simulated or left out.
-5. **Engineering decisions**: why the choices were made (request-then-assign booking with row
+5. **Engineering decisions**: why the choices were made (request-then-assign booking with row **(Removed from the public page on 2026-11-07; the text lives in docs/ENGINEERING_DECISIONS.md. The "Questions you might ask me" section was removed the same day; its answers are in docs/QA_PREP.md. Old URLs redirect to the Overview.)**
    locking and 409 plus nearest slots, role isolation from one policy file, field-level encryption
    with blind index, stock as a ledger, immutable invoices, no LLMs with a deterministic chatbot,
    audit log, tests).

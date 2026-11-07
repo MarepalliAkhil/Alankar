@@ -1,0 +1,27 @@
+{
+  "_about": "Where each division hero photo is cropped. desktop = the wide hero (the glass card sits on the left, the subject stays on the right), mobile = the 4:3 band on a portrait phone. scrim = the directional gradient on the LEFT of the hero (black over a dark tone, white over a light tone), measured against the real photos in design/hero-contrast.test.ts. glass = the card fill. Change a number here and in design/index.css together; the test fails if they differ.",
+  "focus": {
+    "salon-hero": { "desktop": "50% 60%", "mobile": "74% 58%" },
+    "spa-hero": { "desktop": "50% 60%", "mobile": "66% 56%" },
+    "parlor-hero": { "desktop": "50% 48%", "mobile": "78% 52%" }
+  },
+  "scrimShape": { "hold": 0.62, "end": 0.85 },
+  "scrim": {
+    "salon": {
+      "light": { "color": "0 0 0", "alpha": 0.45 },
+      "dark": { "color": "0 0 0", "alpha": 0.45 }
+    },
+    "spa": {
+      "light": { "color": "255 255 255", "alpha": 0.72 },
+      "dark": { "color": "0 0 0", "alpha": 0.72 }
+    },
+    "parlor": {
+      "light": { "color": "255 255 255", "alpha": 0.55 },
+      "dark": { "color": "0 0 0", "alpha": 0.55 }
+    }
+  },
+  "glass": {
+    "light": { "color": "255 255 255", "alpha": 0.1 },
+    "dark": { "color": "0 0 0", "alpha": 0.16 }
+  }
+}

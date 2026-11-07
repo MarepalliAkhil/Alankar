@@ -13,11 +13,9 @@ export const ZENOTIANS_PAGES = [
   '/zenotians/day',
   '/zenotians/project',
   '/zenotians/mapping',
-  '/zenotians/decisions',
   '/zenotians/quality',
   '/zenotians/security',
   '/zenotians/limitations',
-  '/zenotians/questions',
   '/zenotians/contact',
 ];
 

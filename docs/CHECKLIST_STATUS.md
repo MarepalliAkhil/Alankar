@@ -77,7 +77,7 @@ What ran in this pass (R): the whole frontend vitest suite (794 of 795 passed; t
 | T16A | Future vision removed | DONE (unit) | C: zenotians/routes.tsx redirects the old address; T: zenotians.test.tsx "sends the old Future vision address to the overview" and asserts no Future vision text; R: passed | none |
 | T16B | Limitations section | DONE (unit) | C: api/zenotians.ts Limitations type; website content; T: zenotians.test.tsx | Content is admin-edited; check wording |
 | T16C | Story page "A day at Alankar" | DONE (unit) | C: zenotians/StoryPage.tsx, story-visuals.tsx; T: zenotians.test.tsx; R: passed | Browser |
-| T16D | FAQ ("Questions you might ask me") | DONE (unit) | C: zenotians/ContentPages.tsx, model.ts; seed: website/demo_data.py FAQS | Browser |
+| T16D | FAQ section "Questions you might ask me": REMOVED from the public page on 2026-11-07 (answers now in docs/QA_PREP.md) | DONE (unit) | C: zenotians/ContentPages.tsx, model.ts; seed: website/demo_data.py FAQS | Browser |
 | T16E | docs/QA_PREP.md and PRESENTATION_NOTES.md | DONE | QA_PREP.md 219 lines (sections A to I), PRESENTATION_NOTES.md 67 lines | Read them before presenting |
 | T17 | Task 17 A to E (fixes, one menu, home background, header images, Meera) | DONE (unit) | PROGRESS 17A..17E; tests pass (R) | Browser |
 | T17-am1 | Real photos only, nothing generated | DONE (unit) | T: art.test.ts, photo-slots.test.ts; R: passed | Your real photos for empty slots |

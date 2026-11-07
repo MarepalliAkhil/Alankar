@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HOME_CHAPTERS, type HomeChapter } from '../../design/art';
 import { ThemeScope } from '../../design/ThemeProvider';
+import { usePortraitMobile } from '../../design/viewport-image';
 import { cn } from '../../lib/cn';
 import { ArtImage } from '../ui/ArtImage';
 import { HOME_BACKGROUNDS } from './home-backgrounds';
@@ -25,6 +26,10 @@ export function HomeBackdrop({
   /** An image the admin set for the first section in the content editor. */
   firstImage?: string | null;
 }) {
+  // One shared hook (the same media query as the <picture> sources and the CSS): true on a portrait
+  // window no wider than 900 px. It follows rotation live. The browser itself downloads only the
+  // matching file of each picture, so the landscape and portrait photos are never both loaded.
+  const portraitMobile = usePortraitMobile();
   const [leaving, setLeaving] = useState<HomeChapter | null>(null);
   const previous = useRef<HomeChapter>(chapter);
   useEffect(() => {
@@ -35,13 +40,16 @@ export function HomeBackdrop({
     return () => window.clearTimeout(timer);
   }, [chapter]);
 
-  const next = Math.min(4, chapter + 1) as HomeChapter;
+  // On a portrait phone only the current picture (and the one just left, during the fade) is
+  // mounted, so the next one is not fetched ahead of time over a mobile connection.
+  const next = portraitMobile ? chapter : (Math.min(4, chapter + 1) as HomeChapter);
   const mounted = HOME_CHAPTERS.filter((n) => n === chapter || n === next || n === leaving);
   return (
     <div
       aria-hidden="true"
       data-home-backdrop
       data-chapter={chapter}
+      data-portrait-mobile={portraitMobile}
       className="home-backdrop pointer-events-none sticky top-0 z-0 -mb-[100svh] h-[100svh] w-full overflow-hidden"
     >
       {mounted.map((n) => (
@@ -57,6 +65,7 @@ export function HomeBackdrop({
               priority={n === chapter}
               override={n === 1 ? firstImage : null}
               overlay
+              band
               className="absolute inset-0 h-full w-full"
             />
           </div>

@@ -217,3 +217,68 @@ The free-text ones. A test proves a file exists and a number matches, but it can
 6. Zenoti facts were read on 30 October 2026; re-check the links before quoting them.
 7. Your own reasons for choosing this stack are yours to state; the page gives only what the code shows.
 8. Confirm the For Zenotians page loads from your own seeded database after `python manage.py migrate`.
+
+## J. Questions from the retired public page
+
+Questions a reader might ask, answered the way I would answer them in person.
+
+**Why a single shop and not many branches?**
+
+A single shop keeps every rule checkable: one set of prices, one set of stylists and rooms, one cash close. Multi-branch brings its own questions (who sees which branch, how stock moves, how staff are shared) and I would rather show one flow that works end to end and say so than a thin version of many things. It is listed under Limitations.
+
+Where: `docs/MASTER_NOTES.md`
+
+**Why is there no AI in it?**
+
+Every smart feature here is a rule or a count, so it can be explained, tested and trusted with a customer's records. The chatbot answers only from the shop's data and the signed-in person's own records, and when it does not know it says so and gives the shop's contact details. A language model could not give that guarantee as simply. The cost is real: the chatbot is less flexible, and its measured accuracy is on this page.
+
+Where: `docs/CHATBOT_ALGORITHM.md`, `backend/chatbot/engine/`
+
+**Why Django and React?**
+
+The stack was fixed at the start of the project. What it gives this one: Django's transactions and row locks (select_for_update) are what keep two people from taking the same slot; its migrations give a numbered history of the database; Django REST framework's permission classes let one policy file drive every endpoint; and React with TypeScript lets the same policy file drive the menus.
+
+Where: `backend/scheduling/booking.py`, `shared/policy.json`
+
+**How is double booking prevented?**
+
+Creating or moving a booking runs in one database transaction that locks the stylist and room rows and checks for overlap. A clash returns 409 with the three nearest free times. A request already holds its slot while it waits for approval. The database has no exclusion rule for overlaps, so a read-only integrity command would report any that slipped through. Two desks acting at once are tested.
+
+Where: `backend/scheduling/booking.py`, `backend/billing/tests/test_concurrency_8b.py`, `backend/core/integrity.py`
+
+**How does the stylist-and-receptionist approval work?**
+
+A booking request carries two answers, one from the front desk and one from the stylist. Each can accept or decline. When both have accepted, the booking moves to awaiting payment and a payment link goes out. The receptionist can choose the stylist for an any-stylist request and can hand a request to another stylist, but can never accept for the stylist.
+
+Where: `backend/scheduling/approvals.py`, `backend/scheduling/tests/test_dual_approval.py`
+
+**What happens when the stylist declines?**
+
+The request ends as declined by the stylist and the held slot is released. The customer gets a polite note, in the app, by email and by simulated text, and a button that opens the booking form with the service and options filled in. The stylist's reason is private: only the stylist and the receptionist can read it.
+
+Where: `backend/scheduling/approvals.py`, `frontend/src/pages/customer/AppointmentsPage.tsx`
+
+**What if nobody answers?**
+
+The request expires after the approval window, 24 hours unless the admin changes it. The side that has not answered is reminded after 2 hours and after 12 hours, and the slot is released on expiry. The timed work is a command that should be scheduled every five minutes.
+
+Where: `backend/scheduling/approvals.py`, `docs/OPERATIONS.md`
+
+**How accurate is the chatbot, really?**
+
+On questions I wrote myself: 130 of 143 (90.9%) on the set it was tuned on, and 67 of 91 (73.6%) on a holdout set kept apart from the tuning, measured on 5 November 2026. Real customers will phrase things differently, so I expect lower numbers in practice. The Chatbot insights screen collects what real visitors ask that it could not answer.
+
+Where: `backend/chatbot/tests/test_accuracy.py`
+
+**How do I know the numbers on this page are real?**
+
+Counts of pages, endpoints, tests and migrations are produced by a script that counts them in the repository, and a test fails if the stored file is out of date. The accuracy figures are written next to a test that measures them again and fails if they differ. Every code pointer on this page is checked by a test to be a real file.
+
+Where: `scripts/repo-stats.mjs`, `backend/website/tests/test_zenotians.py`
+
+**What did testing catch?**
+
+Among others: a forged forwarding header that bypassed every rate limit, a staff invite that survived the person's deactivation, a banner link that could carry javascript:, reset links two simultaneous clicks could both use, and access tokens that outlived a password change. Each was fixed and has a test; the list is in the security notes.
+
+Where: `docs/SECURITY.md`, `backend/accounts/tests/test_hardening.py`
+

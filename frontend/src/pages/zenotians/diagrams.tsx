@@ -9,7 +9,7 @@ import { cn } from '../../lib/cn';
 const stroke = 'stroke-primary';
 const nodeBox = 'fill-surface stroke-primary-light';
 const label = 'fill-text text-[14px] font-semibold';
-const small = 'fill-text-muted text-[12px]';
+const small = 'fill-text-muted text-[14px]';
 
 function Arrow({ id }: { id: string }) {
   return (
@@ -277,7 +277,7 @@ export function LifecycleDiagram() {
                 x={xs[exit.from]!}
                 y={exit.label.includes('\n') ? 189 : 198}
                 text={exit.label}
-                className="fill-text-muted text-[12px] font-medium"
+                className="fill-text-muted text-[14px] font-medium"
                 gap={14}
               />
             </Fragment>

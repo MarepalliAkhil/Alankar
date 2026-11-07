@@ -85,6 +85,14 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
     setSearch('');
   };
 
+  /** A hero chip: show that category and bring the list into view (no animation if reduced). */
+  const pickCategory = (slug: string) => {
+    setCategory(slug);
+    const target = document.getElementById('division-services');
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    target?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  };
+
   const categoryOptions: ChipOption<string>[] = [
     { value: 'all', label: 'All categories' },
     ...(categories.data ?? []).map((c) => ({ value: c.slug, label: c.name })),
@@ -115,107 +123,115 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
         facts={facts}
         book={book}
         tel={tel}
+        categories={categories.data}
+        onPickCategory={pickCategory}
       />
-      <PageContainer className="flex flex-col gap-lg pb-2xl pt-lg">
-        <Card variant="dense" className="flex flex-col gap-md">
-          <div className="relative max-w-md">
-            <Input
-              label="Search services"
-              type="search"
-              placeholder={`Search ${division.label.toLowerCase()} services`}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="pl-10"
-            />
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute bottom-3.5 left-3.5 h-4 w-4 text-text-muted"
-            />
-          </div>
-          <FilterChips
-            label="Who is it for"
-            options={audienceOptions}
-            value={audience}
-            onChange={setAudience}
-          />
-          {categoryOptions.length > 2 && (
+      <div className="division-tint">
+        <PageContainer className="flex flex-col gap-lg pb-2xl pt-lg">
+          <Card
+            id="division-services"
+            variant="dense"
+            className="flex flex-col gap-md scroll-mt-24"
+          >
+            <div className="relative max-w-md">
+              <Input
+                label="Search services"
+                type="search"
+                placeholder={`Search ${division.label.toLowerCase()} services`}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="pl-10"
+              />
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-3.5 left-3.5 h-4 w-4 text-text-muted"
+              />
+            </div>
             <FilterChips
-              label="Category"
-              options={categoryOptions}
-              value={category}
-              onChange={setCategory}
+              label="Who is it for"
+              options={audienceOptions}
+              value={audience}
+              onChange={setAudience}
             />
-          )}
-        </Card>
-
-        <section aria-label={`${division.label} services`}>
-          {services.isPending ? (
-            <SkeletonCards count={6} label="Loading services…" />
-          ) : services.isError ? (
-            <Card variant="dense">
-              <ErrorState
-                description="We couldn't load the services. Please try again."
-                onRetry={() => void services.refetch()}
+            {categoryOptions.length > 2 && (
+              <FilterChips
+                label="Category"
+                options={categoryOptions}
+                value={category}
+                onChange={setCategory}
               />
-            </Card>
-          ) : services.data.length === 0 ? (
-            <Card variant="dense">
-              <EmptyState
-                icon={<SearchX className="h-6 w-6" />}
-                title={filtered ? 'No services match your filters' : 'No services listed yet'}
-                description={
-                  filtered
-                    ? 'Try another filter or search word.'
-                    : `${division.label} services will appear here as soon as the salon publishes them.`
-                }
-                action={
-                  filtered ? (
-                    <Button variant="secondary" onClick={clearFilters}>
-                      Clear filters
-                    </Button>
-                  ) : undefined
-                }
-              />
-            </Card>
-          ) : (
-            <>
-              <div className="mb-sm flex flex-wrap items-center justify-between gap-sm">
-                <p className="text-sm font-medium text-text" aria-live="polite">
-                  {services.data.length} {services.data.length === 1 ? 'service' : 'services'}
-                  {filtered ? ' match your filters' : ''}
-                </p>
-                {filtered && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="inline-flex items-center gap-1 rounded-full px-sm py-1 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
-                  >
-                    <X aria-hidden="true" className="h-4 w-4" /> Reset filters
-                  </button>
-                )}
-              </div>
-              <ul className="card-grid">
-                {services.data.map((service) => (
-                  <li key={service.id}>
-                    <ServiceCard service={service} onOpen={() => setOpen(service)} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+            )}
+          </Card>
 
-        {team.data && team.data.length > 0 && (
-          <section aria-labelledby="division-team" className="mt-xl">
-            <h2 id="division-team" className="mb-md text-2xl font-semibold text-text">
-              Our {division.label.toLowerCase()} team
-            </h2>
-            <TeamGrid team={team.data} />
+          <section aria-label={`${division.label} services`}>
+            {services.isPending ? (
+              <SkeletonCards count={6} label="Loading services…" />
+            ) : services.isError ? (
+              <Card variant="dense">
+                <ErrorState
+                  description="We couldn't load the services. Please try again."
+                  onRetry={() => void services.refetch()}
+                />
+              </Card>
+            ) : services.data.length === 0 ? (
+              <Card variant="dense">
+                <EmptyState
+                  icon={<SearchX className="h-6 w-6" />}
+                  title={filtered ? 'No services match your filters' : 'No services listed yet'}
+                  description={
+                    filtered
+                      ? 'Try another filter or search word.'
+                      : `${division.label} services will appear here as soon as the salon publishes them.`
+                  }
+                  action={
+                    filtered ? (
+                      <Button variant="secondary" onClick={clearFilters}>
+                        Clear filters
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              </Card>
+            ) : (
+              <>
+                <div className="mb-sm flex flex-wrap items-center justify-between gap-sm">
+                  <p className="text-sm font-medium text-text" aria-live="polite">
+                    {services.data.length} {services.data.length === 1 ? 'service' : 'services'}
+                    {filtered ? ' match your filters' : ''}
+                  </p>
+                  {filtered && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1 rounded-full px-sm py-1 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                    >
+                      <X aria-hidden="true" className="h-4 w-4" /> Reset filters
+                    </button>
+                  )}
+                </div>
+                <ul className="card-grid">
+                  {services.data.map((service) => (
+                    <li key={service.id}>
+                      <ServiceCard service={service} onOpen={() => setOpen(service)} />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </section>
-        )}
 
-        <ServiceSheet service={open} onClose={() => setOpen(null)} />
-      </PageContainer>
+          {team.data && team.data.length > 0 && (
+            <section aria-labelledby="division-team" className="mt-xl">
+              <h2 id="division-team" className="mb-md text-2xl font-semibold text-text">
+                Our {division.label.toLowerCase()} team
+              </h2>
+              <TeamGrid team={team.data} />
+            </section>
+          )}
+
+          <ServiceSheet service={open} onClose={() => setOpen(null)} />
+        </PageContainer>
+      </div>
     </>
   );
 }

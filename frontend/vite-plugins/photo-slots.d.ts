@@ -4,7 +4,19 @@ export declare const HOME_PHOTOS: readonly string[];
 export declare const SLOT_SHOWS: Readonly<Record<string, string>>;
 export declare const MEERA_POSES: readonly string[];
 export declare const MEERA_FOLDER: string;
+export declare const LEADER_FOLDER: string;
 export declare const MEERA_DEFAULT: string;
 export declare const MAX_PHOTO_BYTES: number;
 export declare function isTransparentSlot(slot: string): boolean;
 export declare function pickPhoto(base: string, files: readonly string[]): string | null;
+export declare const VARIANT_WIDTHS: readonly number[];
+export declare const PORTRAIT_MOBILE_QUERY: string;
+export declare const MOBILE_SUFFIX: string;
+export declare const MOBILE_SLOT_SIZE: { readonly width: number; readonly height: number };
+export declare const MOBILE_PHOTO_SLOTS: Readonly<
+  Record<string, { width: number; height: number }>
+>;
+export declare const WEBP_QUALITY: number;
+export declare const JPEG_QUALITY: number;
+export declare function maxBytesForWidth(width: number): number;
+export declare function variantWidths(originalWidth: number, maxWidth?: number): number[];

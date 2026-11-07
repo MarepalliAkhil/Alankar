@@ -172,12 +172,12 @@ test('other pages: the Alankar reception photo, no header strip, nothing but a b
     await expect(s.page.locator('[data-page-hero]')).toHaveCount(0);
     await expect(s.page.locator('[data-booking-header]')).toHaveCount(0);
     expect(await decoded(s.page, '[data-page-backdrop] img')).toBe(true);
-    // a background, not a second picture: blurred and decorative
+    // a background kept sharp (the veil keeps text legible, not blur) and decorative
     const filter = await s.page
       .locator('[data-page-backdrop] .art-photo')
       .first()
       .evaluate((e) => getComputedStyle(e).filter);
-    expect(filter).toMatch(/blur\(10px\)/);
+    expect(filter).toBe('none');
     await expect(s.page.locator('[data-page-backdrop] img').first()).toHaveAttribute('alt', '');
   }
   await s.context.close();
@@ -206,17 +206,22 @@ test('staff, login, register and For Zenotians also wear the Alankar photo (staf
   await guest.close();
 });
 
-test('division pages wear their own background; the profile page uses only the Alankar photo', async ({
+test('division pages show only their hero picture; the profile page uses only the Alankar photo', async ({
   page,
   browser,
 }) => {
   for (const [path, slot] of [
-    ['/salon', 'salonBackground'],
-    ['/spa', 'spaBackground'],
-    ['/beauty-parlor', 'parlorBackground'],
+    ['/salon', 'salonHero'],
+    ['/spa', 'spaHero'],
+    ['/beauty-parlor', 'parlorHero'],
   ] as const) {
     await page.goto(path);
-    await expect(backdrop(page), path).toHaveAttribute('data-page-backdrop', slot);
+    // ONE picture: no blurred second copy behind the page, no framed copy in the hero.
+    await expect(backdrop(page), path).toHaveCount(0);
+    await expect(page.locator('main [data-art-frame], header [data-art-frame]'), path).toHaveCount(
+      1,
+    );
+    await expect(page.locator(`[data-art-frame="${slot}"]`), path).toHaveCount(1);
   }
   const s = await signIn(browser, 'customer', { width: 1280, height: 800 });
   await s.page.goto('/customer/profile');

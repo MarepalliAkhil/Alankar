@@ -38,6 +38,12 @@ describe('PageBackground', () => {
     expect(container.querySelector('[data-page-backdrop]')).toBeNull();
   });
 
+  it('shows no second picture on a division page: the hero is its only picture', () => {
+    for (const path of ['/salon', '/spa', '/beauty-parlor', '/spa/']) {
+      expect(at(path).container.querySelector('[data-page-backdrop]'), path).toBeNull();
+    }
+  });
+
   it('is decorative, fixed and full window, with the Alankar photo on ordinary pages', () => {
     const { container } = at('/customer/wallet');
     const root = container.querySelector('[data-page-backdrop]')!;

@@ -6,6 +6,7 @@ import { useSeo } from '../../hooks/useSeo';
 import stats from '../../generated/repo-stats.json';
 import { Hero } from './Hero';
 import { useZenotians } from './context';
+import { ZenAccent, ZenHeadline } from './ZenHeadline';
 import { SectionGate } from './SectionGate';
 import { Bullets, Ext } from './parts';
 import { buttonClasses } from '../../components/ui/button-styles';
@@ -39,10 +40,14 @@ function Overview() {
   return (
     <div className="flex flex-col gap-lg">
       <Hero>
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary-hover">
+        <p className="text-sm font-semibold text-primary-hover">
           For Zenotians · {brand.platformName}
         </p>
-        <h1 className="max-w-[26ch] text-3xl font-semibold text-text">{o.headline}</h1>
+        <ZenHeadline
+          text={o.headline ?? ''}
+          className="max-w-[26ch] text-3xl font-semibold text-text"
+        />
+        <ZenAccent />
         {o.intro && <p className="max-w-[65ch] text-lg text-text-muted">{o.intro}</p>}
         <div className="flex flex-wrap gap-sm">
           {o.demo_url &&
@@ -79,7 +84,7 @@ function Overview() {
             <li key={n.label}>
               <Card variant="dense" className="flex h-full flex-col gap-1">
                 <p className="text-3xl font-semibold text-primary-hover">
-                  <CountUp value={n.value} />
+                  <CountUp value={n.value} startDelay={600} />
                 </p>
                 <p className="font-semibold text-text">{n.label}</p>
                 <p className="text-sm text-text-muted">{n.note}</p>

@@ -24,7 +24,8 @@
     "photos:check": "node scripts/photos-check.mjs",
     "photos:optimize": "node scripts/photos-optimize.mjs",
     "photos:stats": "node scripts/photo-stats.mjs",
-    "photos:inventory": "node scripts/photos-inventory.mjs"
+    "photos:inventory": "node scripts/photos-inventory.mjs",
+    "images:budget": "node scripts/image-budget.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

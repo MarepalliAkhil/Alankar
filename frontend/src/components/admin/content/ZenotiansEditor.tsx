@@ -15,7 +15,6 @@ import type {
   MappingRow,
   Person,
   QualityCheck,
-  Question,
   ResumeAchievement,
   ResumeProject,
   RoleInfo,
@@ -36,12 +35,10 @@ type Tab =
   | 'zenoti'
   | 'project'
   | 'mapping'
-  | 'decisions'
   | 'story'
   | 'quality'
   | 'security'
   | 'limitations'
-  | 'questions'
   | 'demo';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -49,12 +46,10 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'zenoti', label: 'Zenoti facts' },
   { id: 'project', label: 'Project' },
   { id: 'mapping', label: 'Mapping' },
-  { id: 'decisions', label: 'Decisions' },
   { id: 'story', label: 'A day at Alankar' },
   { id: 'quality', label: 'Quality evidence' },
   { id: 'security', label: 'Security' },
   { id: 'limitations', label: 'Limitations' },
-  { id: 'questions', label: 'Questions' },
   { id: 'demo', label: 'Demo logins' },
 ];
 const STORY_OPTIONS = (
@@ -81,9 +76,9 @@ function clean(content: ZenotiansContent): ZenotiansContent {
       ...content.zenoti,
       last_checked: content.zenoti?.last_checked || null,
       founded_year: content.zenoti?.founded_year || null,
-      leadership: (content.zenoti?.leadership ?? []).filter(
-        (p) => p.name?.trim() && p.title?.trim(),
-      ),
+      leadership: (content.zenoti?.leadership ?? [])
+        .filter((p) => p.name?.trim() && p.title?.trim())
+        .map((p) => ({ ...p, last_checked: p.last_checked || null })),
     },
     demo: {
       ...content.demo,
@@ -110,7 +105,6 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
   const qu = c.quality ?? {};
   const sec = c.security ?? {};
   const li = c.limitations ?? {};
-  const qn = c.questions ?? {};
   const d = c.demo ?? {};
   const menu = buildMenu(clean(c));
 
@@ -509,13 +503,15 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
               value={z.investors_source ?? ''}
               onChange={(e) => set('zenoti', { investors_source: e.target.value })}
             />
-            <h3 className="font-semibold text-text">Leadership (name and title only)</h3>
+            <h3 className="font-semibold text-text">
+              Leadership cards (public information from Zenoti's website only)
+            </h3>
             <ListEditor<Person>
               noun="person"
               max={20}
               items={z.leadership}
               onChange={(leadership) => set('zenoti', { leadership })}
-              blank={() => ({ name: '', title: '' })}
+              blank={() => ({ name: '', title: '', bio: [], sources: [], last_checked: null })}
               render={(item, change, i) => (
                 <>
                   <Input
@@ -528,13 +524,35 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
                     value={item.title}
                     onChange={(e) => change({ title: e.target.value })}
                   />
+                  <LinesField
+                    label="Short lines (one bullet each, 4 to 5 lines)"
+                    value={item.bio}
+                    onChange={(bio) => change({ bio })}
+                  />
+                  <LinesField
+                    label="Source links (one per line)"
+                    value={item.sources}
+                    onChange={(sources) => change({ sources })}
+                  />
+                  <Input
+                    label="Last checked"
+                    type="date"
+                    value={item.last_checked ?? ''}
+                    onChange={(e) => change({ last_checked: e.target.value || null })}
+                  />
+                  <Input
+                    label="Photo file name (optional, without the extension)"
+                    hint="A file in public/photos/zenoti-leaders/. Leave blank to use the name as a slug, for example neal-singh. Only with permission; nothing is downloaded."
+                    value={item.photo ?? ''}
+                    onChange={(e) => change({ photo: e.target.value })}
+                  />
+                  <Input
+                    label="Photo credit (optional)"
+                    value={item.photo_credit ?? ''}
+                    onChange={(e) => change({ photo_credit: e.target.value })}
+                  />
                 </>
               )}
-            />
-            <Input
-              label="Leadership source link"
-              value={z.leadership_source ?? ''}
-              onChange={(e) => set('zenoti', { leadership_source: e.target.value })}
             />
           </>
         )}
@@ -630,36 +648,6 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
                   rows={2}
                   value={item.not_built ?? ''}
                   onChange={(e) => change({ not_built: e.target.value })}
-                />
-              </>
-            )}
-          />
-        )}
-        {tab === 'decisions' && (
-          <ListEditor<Decision>
-            noun="decision"
-            max={10}
-            items={c.decisions}
-            onChange={(decisions) => setC((prev) => ({ ...prev, decisions }))}
-            blank={() => ({ where: [] })}
-            render={(item, change, i) => (
-              <>
-                <Input
-                  label={`Decision ${i + 1}`}
-                  value={item.title ?? ''}
-                  onChange={(e) => change({ title: e.target.value })}
-                />
-                <Textarea
-                  label="Why"
-                  rows={4}
-                  value={item.body ?? ''}
-                  onChange={(e) => change({ body: e.target.value })}
-                />
-                <LinesField
-                  label="Where in the code"
-                  hint="One file path per line."
-                  value={item.where}
-                  onChange={(where) => change({ where })}
                 />
               </>
             )}
@@ -920,43 +908,6 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
                     rows={3}
                     value={item.out_of_scope ?? ''}
                     onChange={(e) => change({ out_of_scope: e.target.value })}
-                  />
-                  <LinesField
-                    label="Where in the code"
-                    value={item.where}
-                    onChange={(where) => change({ where })}
-                  />
-                </>
-              )}
-            />
-          </>
-        )}
-        {tab === 'questions' && (
-          <>
-            <Textarea
-              label="Introduction"
-              rows={2}
-              value={qn.intro ?? ''}
-              onChange={(e) => set('questions', { intro: e.target.value })}
-            />
-            <ListEditor<Question>
-              noun="question"
-              max={14}
-              items={qn.items}
-              onChange={(items) => set('questions', { items })}
-              blank={() => ({ where: [] })}
-              render={(item, change, i) => (
-                <>
-                  <Input
-                    label={`Question ${i + 1}`}
-                    value={item.q ?? ''}
-                    onChange={(e) => change({ q: e.target.value })}
-                  />
-                  <Textarea
-                    label="Honest answer"
-                    rows={4}
-                    value={item.a ?? ''}
-                    onChange={(e) => change({ a: e.target.value })}
                   />
                   <LinesField
                     label="Where in the code"

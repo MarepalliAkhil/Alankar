@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn';
 import stats from '../../generated/repo-stats.json';
 import { LazyLifecycleDiagram, LazyRolesDiagram } from './LazyDiagram';
 import { useZenotians } from './context';
+import { Leaders } from './Leaders';
 import { SectionGate } from './SectionGate';
 import { Bullets, Chip, Ext, SourceNote, Where } from './parts';
 import { CONTACT_LABEL, ROOT, publicContacts, yearsSince } from './model';
@@ -102,24 +103,7 @@ function AboutZenoti() {
           </li>
         )}
       </ul>
-      {(z.leadership ?? []).length > 0 && (
-        <Card variant="dense" as="section" aria-labelledby="zen-leaders">
-          <h2 id="zen-leaders" className="mb-md text-lg font-semibold text-text">
-            Leadership
-          </h2>
-          <ul className="card-grid">
-            {z.leadership!.map((p) => (
-              <li key={p.name} className="rounded-nested border border-border p-3">
-                <p className="font-semibold text-text">{p.name}</p>
-                <p className="text-sm text-text-muted">{p.title}</p>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-md">
-            <SourceNote url={z.leadership_source} checked={checked} />
-          </div>
-        </Card>
-      )}
+      <Leaders people={z.leadership ?? []} />
     </div>
   );
 }
@@ -303,49 +287,6 @@ export function MappingPage() {
   return (
     <SectionGate id="mapping">
       <Mapping />
-    </SectionGate>
-  );
-}
-
-// --------------------------------------------------------------------------- Engineering decisions
-
-function Decisions() {
-  const { content } = useZenotians();
-  const items = (content.decisions ?? []).filter((d) => d.title);
-  useSeo(
-    'Engineering decisions · For Zenotians',
-    'The choices that matter most, with the files they live in.',
-  );
-  return (
-    <div className="flex flex-col gap-md">
-      <PageHeader
-        title="Engineering decisions"
-        description="Short notes on why, with where to find it in the code."
-        breadcrumb={crumbs('Engineering decisions')}
-      />
-      <ol className="flex flex-col gap-md">
-        {items.map((d, i) => (
-          <li key={d.title}>
-            <Card variant="dense" className="flex flex-col gap-2">
-              <h2 className="flex items-baseline gap-3 text-lg font-semibold text-text">
-                <span aria-hidden="true" className="text-primary-hover">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                {d.title}
-              </h2>
-              <p className="max-w-[65ch] text-text">{d.body}</p>
-              <Where items={d.where} />
-            </Card>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-export function DecisionsPage() {
-  return (
-    <SectionGate id="decisions">
-      <Decisions />
     </SectionGate>
   );
 }
@@ -549,13 +490,13 @@ function LimitationsSection() {
               <h2 className="text-lg font-semibold text-text">{item.area}</h2>
               <div className="grid gap-md md:grid-cols-2">
                 <div>
-                  <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-primary-hover">
+                  <h3 className="mb-1 text-sm font-semibold text-primary-hover">
                     What it does today
                   </h3>
                   <p className="text-text">{item.today}</p>
                 </div>
                 <div>
-                  <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-text-muted">
+                  <h3 className="mb-1 text-sm font-semibold text-text-muted">
                     What is out of scope
                   </h3>
                   <p className="text-text">{item.out_of_scope}</p>
@@ -573,46 +514,6 @@ export function LimitationsPage() {
   return (
     <SectionGate id="limitations">
       <LimitationsSection />
-    </SectionGate>
-  );
-}
-
-// --------------------------------------------------------------------------- Questions
-
-function QuestionsSection() {
-  const { content } = useZenotians();
-  const f = content.questions ?? {};
-  const items = (f.items ?? []).filter((i) => i.q && i.a);
-  useSeo(
-    'Questions you might ask me · For Zenotians',
-    'Honest answers to the questions a reader is likely to ask about the project.',
-  );
-  return (
-    <div className="flex flex-col gap-md">
-      <PageHeader
-        title="Questions you might ask me"
-        description="Honest answers, with the code to check them against."
-        breadcrumb={crumbs('Questions')}
-      />
-      {f.intro && <p className="max-w-[65ch] text-lg text-text">{f.intro}</p>}
-      <ol className="flex flex-col gap-md">
-        {items.map((item) => (
-          <li key={item.q}>
-            <Card variant="dense" className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold text-text">{item.q}</h2>
-              <p className="max-w-[65ch] text-text">{item.a}</p>
-              <Where items={item.where} />
-            </Card>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-export function QuestionsPage() {
-  return (
-    <SectionGate id="questions">
-      <QuestionsSection />
     </SectionGate>
   );
 }

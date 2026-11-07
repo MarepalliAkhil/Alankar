@@ -7,9 +7,9 @@ import type { StoryVisual } from '../../api/zenotians';
    label says the same thing for people who cannot. */
 
 const card = 'fill-surface stroke-border';
-const ink = 'fill-text text-[13px] font-semibold';
-const soft = 'fill-text-muted text-[12px]';
-const onPrimary = 'fill-white text-[13px] font-semibold';
+const ink = 'fill-text text-[14px] font-semibold';
+const soft = 'fill-text-muted text-[14px]';
+const onPrimary = 'fill-white text-[14px] font-semibold';
 
 function Scene({ label, children }: { label: string; children: ReactNode }) {
   return (

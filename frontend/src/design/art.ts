@@ -7,7 +7,12 @@
  * content editor wins over it. A slot with no photo shows a plain themed gradient: there is no
  * drawn artwork anywhere. See docs/IMAGE_SLOTS.md.
  */
-import { PHOTO_SLOTS, pickPhoto } from '../../vite-plugins/photo-slots.js';
+import {
+  MOBILE_SLOT_SIZE,
+  MOBILE_SUFFIX,
+  PHOTO_SLOTS,
+  pickPhoto,
+} from '../../vite-plugins/photo-slots.js';
 
 /** The four pictures of the home page, in the order of its four sections. */
 export type HomeChapter = 1 | 2 | 3 | 4;
@@ -71,6 +76,8 @@ export type ArtId = keyof typeof art;
 export interface Crop {
   /** CSS object-position, e.g. "70% 40%". */
   position: string;
+  /** Position used instead on a portrait phone (see PORTRAIT_MOBILE_QUERY), when it differs. */
+  mobilePosition?: string;
   /** 1 = the whole photo; larger = a closer crop. */
   zoom: number;
 }
@@ -141,4 +148,77 @@ export function smallerSources(
 export function resolveSlot(slot: ArtSlot, available: readonly string[]): Resolved | null {
   const own = photoSources(slot, available);
   return own ? { ...own, kind: 'own', from: slot.photo, crop: CENTRE } : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Responsive pictures: width variants and the optional portrait photo
+// ---------------------------------------------------------------------------------------------
+
+/** One file with the width it is offered at (the number in its name, or the slot's own width). */
+export interface Candidate {
+  url: string;
+  width: number;
+}
+
+/** What one picture offers: a WebP list and a fallback-format list, widest last. */
+export interface FormatSets {
+  webp: Candidate[];
+  fallback: Candidate[];
+  /** The plain file for the <img> (the slot's own photo in the fallback format). */
+  src: string;
+}
+
+export interface Picture {
+  landscape: FormatSets;
+  /** The optional portrait photo (`<slot>-mobile`), or null when none was supplied. */
+  portrait: FormatSets | null;
+}
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The files of one photo name: the plain file at `baseWidth`, plus every `<name>-<width>.<ext>`
+ * (`npm run photos:optimize` writes 640, 1080, 1600, 2400; older builds wrote -960). Null when the
+ * photo does not exist at all.
+ */
+export function formatSets(
+  name: string,
+  baseWidth: number,
+  available: readonly string[],
+): FormatSets | null {
+  const own = photoSources({ photo: name }, available);
+  if (!own) return null;
+  const pattern = new RegExp(`^${escape(name)}-(\\d+)\\.(webp|jpe?g|png)$`, 'i');
+  const webp: Candidate[] = [];
+  const fallback: Candidate[] = [];
+  const baseUrl = own.webp ?? (/\.webp$/i.test(own.src) ? own.src : null);
+  if (baseUrl) webp.push({ url: baseUrl, width: baseWidth });
+  if (!/\.webp$/i.test(own.src)) fallback.push({ url: own.src, width: baseWidth });
+  for (const file of available) {
+    const m = file.match(pattern);
+    if (!m) continue;
+    const entry = { url: `/photos/${file}`, width: Number(m[1]) };
+    (/webp$/i.test(m[2]!) ? webp : fallback).push(entry);
+  }
+  // One file per width (the plain file wins over a same-width variant), narrowest first.
+  const widest = (list: Candidate[]) =>
+    list
+      .filter((c, i) => list.findIndex((d) => d.width === c.width) === i)
+      .sort((a, b) => a.width - b.width);
+  return { webp: widest(webp), fallback: widest(fallback), src: own.src };
+}
+
+/** "/a-640.webp 640w, /a.webp 1920w", or just the file when there is only one size. */
+export function srcSetOf(list: readonly Candidate[]): string | undefined {
+  if (list.length === 0) return undefined;
+  if (list.length === 1) return list[0]!.url;
+  return list.map((c) => `${c.url} ${c.width}w`).join(', ');
+}
+
+/** Everything ArtImage needs to build the <picture>. Null when the slot has no photo. */
+export function pictureFor(slot: ArtSlot, available: readonly string[]): Picture | null {
+  const landscape = formatSets(slot.photo, slot.width, available);
+  if (!landscape) return null;
+  const portrait = formatSets(`${slot.photo}${MOBILE_SUFFIX}`, MOBILE_SLOT_SIZE.width, available);
+  return { landscape, portrait };
 }

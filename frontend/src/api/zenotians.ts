@@ -68,6 +68,13 @@ export interface Resume {
 export interface Person {
   name: string;
   title: string;
+  /** Short lines, each one a bullet (public information only). */
+  bio?: string[];
+  sources?: string[];
+  last_checked?: string | null;
+  /** Picture file name without extension in public/photos/zenoti-leaders/ (blank: the name as a slug). */
+  photo?: string;
+  photo_credit?: string;
 }
 export interface Zenoti {
   label?: string;
@@ -167,15 +174,6 @@ export interface Limitations {
   intro?: string;
   items?: Limit[];
 }
-export interface Question {
-  q?: string;
-  a?: string;
-  where?: string[];
-}
-export interface Questions {
-  intro?: string;
-  items?: Question[];
-}
 export interface DemoLogin {
   role: 'customer' | 'receptionist' | 'stylist' | 'admin';
   email: string;
@@ -192,12 +190,10 @@ export interface ZenotiansContent {
   zenoti?: Zenoti;
   project?: ProjectInfo;
   mapping?: MappingRow[];
-  decisions?: Decision[];
   story?: Story;
   quality?: Quality;
   security?: Notes;
   limitations?: Limitations;
-  questions?: Questions;
   demo?: Demo;
 }
 

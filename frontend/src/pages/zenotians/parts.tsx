@@ -94,7 +94,7 @@ export function TimelineItem({
 
 export function Chip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-7 items-center rounded-full bg-primary-soft px-3 text-xs font-medium text-primary-hover">
+    <span className="inline-flex h-7 items-center rounded-full bg-primary-soft px-3 text-sm font-medium text-primary-hover">
       {children}
     </span>
   );
@@ -110,7 +110,7 @@ export function Where({ items }: { items?: string[] }) {
       {rows.map((w) => (
         <code
           key={w}
-          className="max-w-full break-all rounded-nested bg-primary-soft px-2 py-0.5 text-xs text-text"
+          className="max-w-full break-all rounded-nested bg-primary-soft px-2 py-0.5 text-sm text-text"
         >
           {w}
         </code>

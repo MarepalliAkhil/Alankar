@@ -251,6 +251,12 @@
     transform-origin: var(--art-pos, 50% 50%);
     transition: opacity var(--motion-page) var(--motion-ease);
   }
+  /* A different focal point on a portrait phone (the hero crop), same media query as everywhere. */
+  @media (orientation: portrait) and (max-width: 900px) {
+    .art-photo {
+      object-position: var(--art-pos-mobile, var(--art-pos, 50% 50%));
+    }
+  }
   /* No photo at all: a plain themed gradient, never an illustration. */
   .art-frame[data-source='gradient'] {
     background-image: linear-gradient(
@@ -272,17 +278,28 @@
   .page-backdrop .art-frame > .art-scrim {
     background-color: var(--color-page-veil);
   }
-  /* The page photo is a background, not a second picture: a soft blur (10 px; 14 px on staff
-     pages) and a fade when the picture changes. The photo is scaled a little so the blur never
-     shows a pale edge. */
-  .page-backdrop .art-photo,
-  .page-backdrop .art-frame[data-source='photo']::before {
-    filter: blur(10px);
-    transform: scale(1.06);
+  /* Once the sharp photo has loaded the tiny blurred preview is removed, so nothing stays blurred. */
+  .art-frame[data-loaded='true']::before {
+    display: none;
   }
+  /* A page photo is a background, kept SHARP: the readability veil (a colour layer) is what keeps
+     text legible, not blur. Only data-heavy staff screens get a light 4 px blur, and the photo is
+     then scaled 2% so the blur never shows a pale edge. Customer and public pages: no filter. */
   .page-backdrop[data-blur='strong'] .art-photo,
   .page-backdrop[data-blur='strong'] .art-frame[data-source='photo']::before {
-    filter: blur(14px);
+    filter: blur(4px);
+    transform: scale(1.02);
+  }
+  /* A portrait phone without a portrait photo: the landscape photo sits in a short band at the top
+     (40% of the window) and fades out, instead of being stretched over a tall window. The text of
+     this query is PORTRAIT_MOBILE_QUERY (vite-plugins/photo-slots.js). */
+  @media (orientation: portrait) and (max-width: 900px) {
+    .art-frame[data-band='true'] {
+      bottom: auto;
+      height: 40dvh;
+      -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+      mask-image: linear-gradient(to bottom, #000 72%, transparent);
+    }
   }
   .page-backdrop-layer + .page-backdrop-layer {
     animation: backdrop-in 800ms var(--motion-ease) both;
@@ -942,10 +959,10 @@ html[data-switching] *::after {
    slowly (transform); the tint changes colour per chapter. Nothing here moves layout. */
 @keyframes home-zoom {
   from {
-    transform: scale(1.02) translate3d(0, 0, 0);
+    transform: scale(1) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.1) translate3d(0, -1.5%, 0);
+    transform: scale(1.06) translate3d(0, -0.5%, 0);
   }
 }
 .home-layer {
@@ -955,9 +972,16 @@ html[data-switching] *::after {
 .home-layer.is-current {
   opacity: 1;
 }
-.home-zoom {
+/* A slow zoom of at most 6%, only after the sharp photo has loaded, and never on phones. */
+.home-layer.is-current:has(.art-frame[data-loaded='true']) .home-zoom {
   animation: home-zoom 30s ease-in-out infinite alternate;
   will-change: transform;
+}
+@media (max-width: 900px) {
+  .home-layer.is-current:has(.art-frame[data-loaded='true']) .home-zoom {
+    animation: none;
+    will-change: auto;
+  }
 }
 .home-tint {
   /* Each picture's tint is drawn inside that division's theme scope, so --color-primary is the
@@ -965,7 +989,7 @@ html[data-switching] *::after {
   background-color: color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-zoom {
+  .home-layer.is-current:has(.art-frame[data-loaded='true']) .home-zoom {
     animation: none;
     will-change: auto;
   }
@@ -1085,4 +1109,295 @@ html[data-switching] *::after {
 /* The tour card is fixed to the window even though glass panels are otherwise relative. */
 .tour-card.glass-photo {
   position: fixed;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   For Zenotians entrance (pages/zenotians/reveal.ts). The page assembles from the left.
+   Only transform and opacity change, so nothing moves around it. Nothing is hidden unless
+   JavaScript has switched the stage to data-zen-motion="on" before the first paint, so without
+   JavaScript, without IntersectionObserver, with reduced motion, or when printing, everything is
+   simply visible. will-change exists only while an element is animating (data-revealing).
+   --------------------------------------------------------------------------------------------- */
+.zen-stage {
+  overflow-x: clip;
+  --zen-x: -24px;
+  --zen-dur: 550ms;
+  --zen-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (max-width: 640px) {
+  .zen-stage {
+    --zen-x: -12px;
+  }
+}
+.zen-stage[data-zen-speed='short'] {
+  --zen-dur: 300ms;
+}
+/* Cards also grow from 98% to full size as they slide in. */
+.zen-stage [data-zen-r]:is(li) {
+  --zen-s: 0.98;
+}
+.zen-stage[data-zen-motion='on'] [data-zen-r]:not([data-revealed]):not([data-zen-r='words']) {
+  opacity: 0;
+  transform: translateX(var(--zen-x)) scale(var(--zen-s, 1));
+}
+.zen-stage[data-zen-motion='on'] [data-zen-r='line']:not([data-revealed]) {
+  opacity: 1;
+  transform: scaleX(0);
+}
+.zen-stage[data-zen-motion='on']
+  [data-zen-r][data-revealed]:not([data-zen-instant]):not([data-zen-r='words']):not(
+    [data-zen-r='line']
+  ) {
+  animation: zen-in var(--zen-dur) var(--zen-ease) var(--zen-delay, 0ms) both;
+}
+.zen-stage[data-zen-motion='on'] [data-zen-r='line'][data-revealed]:not([data-zen-instant]) {
+  transform-origin: left center;
+  animation: zen-draw 600ms var(--zen-ease) var(--zen-delay, 0ms) both;
+}
+.zen-stage[data-zen-r][data-revealing],
+.zen-stage [data-zen-r][data-revealing] {
+  will-change: transform, opacity;
+}
+.zen-stage [data-zen-r='line'] {
+  transform-origin: left center;
+}
+/* Headline: each word slides in, about 60 ms after the one before. */
+.zen-stage[data-zen-motion='on'] [data-zen-r='words'] .zen-word {
+  display: inline-block;
+}
+.zen-stage[data-zen-motion='on'] [data-zen-r='words']:not([data-revealed]) .zen-word {
+  opacity: 0;
+  transform: translateX(var(--zen-x));
+}
+.zen-stage[data-zen-motion='on']
+  [data-zen-r='words'][data-revealed]:not([data-zen-instant])
+  .zen-word {
+  animation: zen-in var(--zen-dur) var(--zen-ease)
+    calc(var(--zen-delay, 0ms) + min(var(--w, 0) * 60ms, 600ms)) both;
+}
+@keyframes zen-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--zen-x)) scale(var(--zen-s, 1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes zen-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .zen-stage [data-zen-r],
+  .zen-stage [data-zen-r] .zen-word {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- division hero (Salon, Spa, Parlor)
+   ONE picture per division page. Wide: the photo fills the hero and a nearly transparent glass card
+   sits on the left over a left-only directional scrim (numbers in design/photo-focus.json, measured
+   against the real photos in design/hero-contrast.test.ts). Phones (up to 640 px): a top band of the
+   photo (about 40dvh, roughly 4:3) with the card overlapping its lower edge; the page below takes
+   the division's tint. dvh, never vh; 16 px gutters plus the safe areas; targets at least 44 px. */
+.division-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --hero-ink: var(--color-text);
+}
+.division-hero__photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 38dvh;
+  max-height: 42dvh;
+  overflow: hidden;
+}
+.division-hero__scrim {
+  display: none;
+}
+.division-hero__content {
+  position: relative;
+  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+}
+.division-hero__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: -3.25rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-card, 1.25rem);
+  border: 1px solid rgb(255 255 255 / 0.3);
+  background-color: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  color: var(--color-text);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.14);
+}
+.division-hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 7vw, 3.25rem);
+  line-height: 1.1;
+  color: inherit;
+}
+.division-hero__summary {
+  max-width: 48ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: inherit;
+}
+.division-hero__facts {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: inherit;
+}
+.hero-ghost,
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.hero-chip {
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+.hero-ghost:hover,
+.hero-chip:hover {
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+.hero-ghost:focus-visible,
+.hero-chip:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* The page under the hero takes the division's tint, fading out. */
+.division-tint {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-primary) 10%, transparent),
+    transparent 28rem
+  );
+}
+
+@media (min-width: 641px) {
+  .division-hero {
+    display: flex;
+    align-items: center;
+    min-height: clamp(520px, 78dvh, 760px);
+  }
+  .division-hero__photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+  }
+  .division-hero__scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--hero-scrim-rgb) / var(--hero-scrim-a)) 62%,
+      rgb(var(--hero-scrim-rgb) / 0) 85%
+    );
+  }
+  .division-hero__content {
+    width: 100%;
+    padding-block: 3rem;
+  }
+  .division-hero__card {
+    width: 60%;
+    margin-top: 0;
+    padding: 1.75rem 2rem;
+    background-color: rgb(var(--hero-glass-rgb) / var(--hero-glass-a));
+    color: var(--hero-ink);
+    -webkit-backdrop-filter: blur(12px) saturate(1.1);
+    backdrop-filter: blur(12px) saturate(1.1);
+    box-shadow: none;
+  }
+  .division-hero__summary {
+    font-size: 1.125rem;
+  }
+  .division-hero__facts {
+    font-size: 0.875rem;
+  }
+}
+@media (min-width: 1024px) {
+  .division-hero__card {
+    width: 46%;
+  }
+}
+
+/* Tone per division and mode: white writing over the dark photo and over dark mode; the theme's own
+   dark writing over the light spa and parlor photos in light mode. The scrim is the opposite colour. */
+.division-hero[data-division-hero='salon'] {
+  --hero-scrim-rgb: 0 0 0;
+  --hero-scrim-a: 0.45;
+  --hero-ink: #fff;
+}
+:root[data-mode='light'] .division-hero[data-division-hero='spa'] {
+  --hero-scrim-rgb: 255 255 255;
+  --hero-scrim-a: 0.72;
+}
+:root[data-mode='dark'] .division-hero[data-division-hero='spa'] {
+  --hero-scrim-rgb: 0 0 0;
+  --hero-scrim-a: 0.72;
+  --hero-ink: #fff;
+}
+:root[data-mode='light'] .division-hero[data-division-hero='beauty-parlor'] {
+  --hero-scrim-rgb: 255 255 255;
+  --hero-scrim-a: 0.55;
+}
+:root[data-mode='dark'] .division-hero[data-division-hero='beauty-parlor'] {
+  --hero-scrim-rgb: 0 0 0;
+  --hero-scrim-a: 0.55;
+  --hero-ink: #fff;
+}
+:root[data-mode='light'] .division-hero {
+  --hero-glass-rgb: 255 255 255;
+  --hero-glass-a: 0.1;
+}
+:root[data-mode='dark'] .division-hero,
+.division-hero[data-division-hero='salon'] {
+  --hero-glass-rgb: 0 0 0;
+  --hero-glass-a: 0.16;
+}
+:root[data-mode='light'] .division-hero[data-division-hero='salon'] {
+  --hero-glass-rgb: 255 255 255;
+  --hero-glass-a: 0.1;
+}
+
+/* Reduce transparency: a solid card in the theme's own colours, no blur. */
+@media (prefers-reduced-transparency: reduce) {
+  .division-hero .hero-glass {
+    background-color: var(--glass-fill-solid, var(--color-surface));
+    color: var(--color-text);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+[data-transparency='reduced'] .division-hero .hero-glass {
+  background-color: var(--glass-fill-solid, var(--color-surface));
+  color: var(--color-text);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }

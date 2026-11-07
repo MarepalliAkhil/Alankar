@@ -37,7 +37,7 @@ function Header() {
   return (
     <Card as="section" aria-label="Contact details" className="flex flex-col gap-md">
       <div>
-        <p className="text-2xl font-semibold tracking-wide text-text">{r.name}</p>
+        <p className="text-2xl font-semibold text-text">{r.name}</p>
         {r.location && (
           <p className="mt-1 flex items-center gap-1 text-text-muted">
             <MapPin className="h-4 w-4" aria-hidden="true" /> {r.location}

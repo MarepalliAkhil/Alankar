@@ -10,6 +10,9 @@ import { PUBLIC_PAGES, ROLE_PAGES } from './pages';
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 async function scan(page: import('@playwright/test').Page, path: string) {
+  // The For Zenotians pages fade in. Measuring colour contrast on a half-faded element gives a
+  // wrong answer, so the scan asks for reduced motion (everything fully visible from the start).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(path);
   // Not "networkidle": a dev server on a slow machine, or a polling request, can keep it busy for
   // ever. Wait for the page itself to be drawn and the fonts to be ready, then let it settle.

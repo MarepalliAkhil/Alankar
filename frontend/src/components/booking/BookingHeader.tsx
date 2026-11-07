@@ -10,8 +10,8 @@ const HEADER: Record<DivisionId, ArtId> = {
 
 /**
  * The framed header picture on the booking page: the chosen division's photo (a different picture
- * from the page background, shown whole in a 16:5 frame), or a close crop of the Alankar
- * reception for "All". The frame reserves its space, so nothing moves when the picture loads.
+ * from the page background, shown whole in a 16:5 frame), or the Alankar
+ * reception for "All" (never enlarged: a 1.5x zoom made it soft). The frame reserves its space, so nothing moves when the picture loads.
  * Decorative only.
  */
 export function BookingHeader({ division }: { division: DivisionId | null }) {
@@ -24,7 +24,7 @@ export function BookingHeader({ division }: { division: DivisionId | null }) {
       <ArtImage
         key={division ?? 'all'}
         slot={division ? HEADER[division] : 'shopBackground'}
-        crop={division ? undefined : { position: '78% 50%', zoom: 1.5 }}
+        crop={division ? undefined : { position: '78% 50%', zoom: 1 }}
         sizes="(min-width: 1024px) 900px, 100vw"
         className="absolute inset-0 h-full w-full"
       />

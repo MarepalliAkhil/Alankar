@@ -7,9 +7,9 @@ Sources of truth:
   fields exist (project "tech" and "outcome", education "result") and stay empty until the owner
   adds them in the editor.
 - zenoti: only the facts the owner listed, each with its source link and last-checked date.
-- project, mapping, decisions: written from this repository (README, MASTER_NOTES, PROGRESS.md and
+- project, mapping: written from this repository (README, MASTER_NOTES, PROGRESS.md and
   the code); the "where" pointers name real files.
-- story, quality, security, limitations, questions (Task 16): written from this repository and checked
+- story, quality, security, limitations (Task 16): written from this repository and checked
   by tests: every code pointer must be a real file, the accuracy numbers must equal a fresh measurement,
   and every mapping row must point at a real limitation.
 """
@@ -44,9 +44,9 @@ RESUME = {
     ],
     "summary": (
         "B.Tech CSE undergraduate (CGPA 8.7) with hands-on experience in Python/ML projects, "
-        "full-stack development, and Linux and networking coursework (Red Hat RH134, Cisco, "
-        "Aviatrix). Looking for a software or infrastructure role where I can build, deploy, "
-        "and troubleshoot reliable systems."
+        "full-stack development, and Linux and networking coursework (Red Hat RH134, Cisco). "
+        "Looking for a software or infrastructure role where I can build, deploy, and "
+        "troubleshoot reliable systems."
     ),
     "education": [
         {
@@ -194,11 +194,6 @@ RESUME = {
             "url": "https://drive.google.com/drive/folders/14pflARfAdiqLvcWfgDtEH1a0l-icHVX8?usp=drive_link",
         },
         {
-            "title": "Aviatrix Certified Engineer (ACE)",
-            "detail": "Multicloud Network Associate",
-            "url": "https://drive.google.com/drive/folders/14pflARfAdiqLvcWfgDtEH1a0l-icHVX8?usp=drive_link",
-        },
-        {
             "title": "Red Hat System Administration II (RH134)",
             "detail": "Certificate of Attendance",
             "url": "https://drive.google.com/drive/folders/14pflARfAdiqLvcWfgDtEH1a0l-icHVX8?usp=drive_link",
@@ -215,6 +210,90 @@ RESUME = {
 
 COMPANY = "https://www.zenoti.com/company"
 
+LEADERS_PAGE = "https://www.zenoti.com/company/zenoti-leadership"
+LEADERS_CHECKED = "2026-11-07"
+
+LEADERS = [
+    {
+        "name": "Sudheer Koneru",
+        "title": "Founder & CEO",
+        "bio": [
+            "Founded Zenoti in 2010 (it began as ManageMySpa) and leads the company as CEO.",
+            "Earlier in his career he worked at Microsoft.",
+            "He was also CEO of Intelliprep, which merged into SumTotal Systems.",
+            "Zenoti's website says his leadership made it the first unicorn in its industry, and that it powers over 30,000 businesses worldwide.",
+            "He holds degrees from IIT Madras and the University of Texas at Austin.",
+        ],
+        "sources": [LEADERS_PAGE],
+        "last_checked": LEADERS_CHECKED,
+        "photo": "",
+        "photo_credit": "",
+    },
+    {
+        "name": "Neal Singh",
+        "title": "COO",
+        "bio": [
+            "Runs global operations at Zenoti, including product development, engineering, implementation, customer success and support.",
+            "Zenoti announced his appointment as President and COO in November 2023, and said he would also oversee its investments in payments and fintech.",
+            "He was previously COO at Icertis.",
+            "Before that he was President and CEO of Caradigm, a GE Healthcare company.",
+            "He spent over a decade at Microsoft, helping build its Dynamics enterprise ERP portfolio, and has more than 20 years in the software industry.",
+        ],
+        "sources": [
+            LEADERS_PAGE,
+            "https://www.zenoti.com/press/neal-singh-industry-veteran-from-microsoft-ge-and-icertis-joins-zenoti-as-president-coo",
+        ],
+        "last_checked": LEADERS_CHECKED,
+        "photo": "",
+        "photo_credit": "",
+    },
+    {
+        "name": "Dheeraj Koneru",
+        "title": "Founder & SVP, Global Product Sales",
+        "bio": [
+            "Co-founded Zenoti and has led its expansion into new regions and new areas such as fitness and gym management.",
+            "Before Zenoti he managed Latitudes Health Club and Tangerine Spas.",
+            "He co-founded Intelliprep Technologies, which later merged with Click2Learn.",
+            "He held leadership roles at SumTotal Systems and Microsoft.",
+            "He holds a Ph.D. in Particle Physics from Cornell University.",
+        ],
+        "sources": [LEADERS_PAGE],
+        "last_checked": LEADERS_CHECKED,
+        "photo": "",
+        "photo_credit": "",
+    },
+    {
+        "name": "Anand Arvind",
+        "title": "Founder & Chief Product Officer",
+        "bio": [
+            "Co-founded Zenoti and, as Chief Product Officer, leads its technology vision.",
+            "Has over 20 years of experience in enterprise software.",
+            "Was Vice President of Products at SumTotal Systems, where he led a platform used by over 20 million users.",
+            "Contributed to Windows System Restore at Microsoft.",
+            "Holds degrees from BITS Pilani and Ohio State University, and an MBA from the Indian School of Business.",
+        ],
+        "sources": [LEADERS_PAGE],
+        "last_checked": LEADERS_CHECKED,
+        "photo": "",
+        "photo_credit": "",
+    },
+    {
+        "name": "Sunil Koneru",
+        "title": "Senior VP, Customer Experience",
+        "bio": [
+            "Leads professional services and customer experience at Zenoti.",
+            "Has been at Zenoti for more than 11 years, according to the company's page.",
+            "Earlier he held engineering leadership roles in Microsoft's Xbox and Interactive Entertainment division.",
+            "Holds a Master's degree in computer engineering from the University of South Carolina.",
+        ],
+        "sources": [LEADERS_PAGE],
+        "last_checked": LEADERS_CHECKED,
+        "photo": "",
+        "photo_credit": "",
+    },
+]
+
+
 ZENOTI = {
     "label": "Public information from Zenoti's website",
     "last_checked": CHECKED,
@@ -227,17 +306,7 @@ ZENOTI = {
     "customers_text": "Over 30,000 spa, salon, medspa and fitness businesses",
     "customers_note": "Their page is undated, so this figure may have changed since it was written.",
     "customers_source": "https://zenoti.com/choose-zenoti",
-    "leadership": [
-        {"name": "Sudheer Koneru", "title": "Founder & CEO"},
-        {"name": "Neal Singh", "title": "COO"},
-        {"name": "Dheeraj Koneru", "title": "Founder & SVP, Global Product Sales"},
-        {"name": "Anand Arvind", "title": "Founder & Chief Product Officer"},
-        {"name": "Amita Tomkoria", "title": "EVP Finance"},
-        {"name": "Sunil Koneru", "title": "Senior VP, Customer Experience"},
-        {"name": "Matt Baer", "title": "General Manager, Fitness Sales"},
-        {"name": "Anna Duke", "title": "General Manager, Australia & New Zealand"},
-        {"name": "Sachin Kamat", "title": "GM, India, Middle East and South East Asia"},
-    ],
+    "leadership": LEADERS,
     "leadership_source": "https://www.zenoti.com/company/zenoti-leadership",
     "offices": [
         "Bellevue (USA)",
@@ -274,8 +343,8 @@ OVERVIEW = {
         "Read A day at Alankar for the whole visit as a short story, or press play for a 90-second tour.",
         "Read The project for the four roles, the booking lifecycle and the tech stack.",
         "Read How it maps to Zenoti for what is built, and what is simplified or left out.",
-        "Read Engineering decisions, Quality evidence and Security and privacy for how it was built and checked.",
-        "Read Limitations and Questions you might ask me for the honest answers.",
+        "Read Quality evidence and Security and privacy for how it was built and checked.",
+        "Read Limitations for the honest answers.",
     ],
     "demo_url": "",
     "github_url": "",
@@ -451,106 +520,6 @@ MAPPING = [
         "built": "A responsive website with a guided booking flow and a phone menu, checked at phone width.",
         "limits": ["no-apps", "browsers"],
         "not_built": "",
-    },
-]
-
-DECISIONS = [
-    {
-        "title": "One policy file for every role",
-        "body": (
-            "Menus, pages and API actions for the four roles come from a single JSON file that "
-            "both the front end and the server read. An endpoint with no known action is denied. "
-            "Hidden actions are removed, not just disabled, and tests walk every endpoint as a "
-            "guest and as each role, including direct API calls with other people's ids."
-        ),
-        "where": [
-            "shared/policy.json",
-            "backend/core/policy.py",
-            "frontend/src/policy/policy.ts",
-            "backend/core/tests/test_sweep.py",
-        ],
-    },
-    {
-        "title": "Two yeses, and no double booking",
-        "body": (
-            "A request holds the stylist's slot while the front desk and the stylist each answer; "
-            "each accept re-checks the slot under a database row lock, and the booking is "
-            "confirmed only when both have said yes. Creating or moving a booking is one "
-            "transaction with an overlap check; a clash returns 409 with the three nearest free "
-            "times. I did not add a database exclusion rule (it needs an extension an ordinary "
-            "database user cannot install), so row locks and a read-only integrity check do the "
-            "job; two desks acting at once are tested."
-        ),
-        "where": [
-            "backend/scheduling/approvals.py",
-            "backend/scheduling/booking.py",
-            "backend/billing/tests/test_concurrency_8b.py",
-            "backend/core/integrity.py",
-        ],
-    },
-    {
-        "title": "Encrypted fields you can still search",
-        "body": (
-            "Sensitive fields are stored as AES-GCM ciphertext tied to their column. Phone search "
-            "uses a keyed hash (a blind index), so the number itself is never stored in the clear. "
-            "Chat messages and photos use a key derived per conversation."
-        ),
-        "where": ["backend/core/crypto.py", "backend/core/fields.py", "backend/chat/models.py"],
-    },
-    {
-        "title": "Immutable invoices and a stock ledger",
-        "body": (
-            "A paid invoice is never edited; a correction is a refund that the admin approves. "
-            "Stock is a ledger of movements, so every quantity can be explained from its history."
-        ),
-        "where": [
-            "backend/billing/models.py",
-            "backend/billing/refunds.py",
-            "backend/inventory/models.py",
-        ],
-    },
-    {
-        "title": "Deterministic algorithms, no AI",
-        "body": (
-            "The product uses deterministic algorithms and no AI: no language model, no "
-            "machine-learning library and no outside AI service. The chatbot is a rule engine over "
-            "the shop's own data. On questions I wrote myself it got 130 of 143 right (90.9%) on "
-            "the set I tuned it against and 67 of 91 (73.6%) on a holdout set; real customers "
-            "will phrase things differently, so expect lower in practice."
-        ),
-        "where": [
-            "backend/chatbot/engine/",
-            "backend/chatbot/tests/test_accuracy.py",
-            "docs/CHATBOT_ALGORITHM.md",
-        ],
-    },
-    {
-        "title": "Everything that changes is audited",
-        "body": (
-            "Sign-ins, price and role changes, refunds, invites, exports, rating exclusions, "
-            "payroll steps and content publishing each write an audit entry that admins can read. "
-            "Audit entries are never removed by the clean-up job."
-        ),
-        "where": [
-            "backend/accounts/audit.py",
-            "backend/accounts/models.py",
-            "backend/core/jobs.py",
-        ],
-    },
-    {
-        "title": "A remembered device that cannot be replayed",
-        "body": (
-            "A customer can skip the emailed code for 30 days on one browser. The browser holds a "
-            "random 256-bit token; the server keeps only its hash and rotates it on every use, "
-            "and an old token coming back cancels that device. It skips the emailed code and "
-            "nothing else: the password is always checked first and sensitive actions ask for a "
-            "fresh code."
-        ),
-        "where": [
-            "backend/accounts/trusted.py",
-            "backend/accounts/stepup.py",
-            "backend/accounts/tests/test_trusted_devices.py",
-        ],
     },
 ]
 
@@ -1068,82 +1037,6 @@ LIMITATIONS = {
     ],
 }
 
-QUESTIONS = {
-    "intro": "Questions a reader might ask, answered the way I would answer them in person.",
-    "items": [
-        {
-            "q": "Why a single shop and not many branches?",
-            "a": "A single shop keeps every rule checkable: one set of prices, one set of stylists and rooms, one cash close. Multi-branch brings its own questions (who sees which branch, how stock moves, how staff are shared) and I would rather show one flow that works end to end and say so than a thin version of many things. It is listed under Limitations.",
-            "where": ["docs/MASTER_NOTES.md"],
-        },
-        {
-            "q": "Why is there no AI in it?",
-            "a": "Every smart feature here is a rule or a count, so it can be explained, tested and trusted with a customer's records. The chatbot answers only from the shop's data and the signed-in person's own records, and when it does not know it says so and gives the shop's contact details. A language model could not give that guarantee as simply. The cost is real: the chatbot is less flexible, and its measured accuracy is on this page.",
-            "where": ["docs/CHATBOT_ALGORITHM.md", "backend/chatbot/engine/"],
-        },
-        {
-            "q": "Why Django and React?",
-            "a": "The stack was fixed at the start of the project. What it gives this one: Django's transactions and row locks (select_for_update) are what keep two people from taking the same slot; its migrations give a numbered history of the database; Django REST framework's permission classes let one policy file drive every endpoint; and React with TypeScript lets the same policy file drive the menus.",
-            "where": ["backend/scheduling/booking.py", "shared/policy.json"],
-        },
-        {
-            "q": "How is double booking prevented?",
-            "a": "Creating or moving a booking runs in one database transaction that locks the stylist and room rows and checks for overlap. A clash returns 409 with the three nearest free times. A request already holds its slot while it waits for approval. The database has no exclusion rule for overlaps, so a read-only integrity command would report any that slipped through. Two desks acting at once are tested.",
-            "where": [
-                "backend/scheduling/booking.py",
-                "backend/billing/tests/test_concurrency_8b.py",
-                "backend/core/integrity.py",
-            ],
-        },
-        {
-            "q": "How does the stylist-and-receptionist approval work?",
-            "a": "A booking request carries two answers, one from the front desk and one from the stylist. Each can accept or decline. When both have accepted, the booking moves to awaiting payment and a payment link goes out. The receptionist can choose the stylist for an any-stylist request and can hand a request to another stylist, but can never accept for the stylist.",
-            "where": [
-                "backend/scheduling/approvals.py",
-                "backend/scheduling/tests/test_dual_approval.py",
-            ],
-        },
-        {
-            "q": "What happens when the stylist declines?",
-            "a": "The request ends as declined by the stylist and the held slot is released. The customer gets a polite note, in the app, by email and by simulated text, and a button that opens the booking form with the service and options filled in. The stylist's reason is private: only the stylist and the receptionist can read it.",
-            "where": [
-                "backend/scheduling/approvals.py",
-                "frontend/src/pages/customer/AppointmentsPage.tsx",
-            ],
-        },
-        {
-            "q": "What if nobody answers?",
-            "a": "The request expires after the approval window, 24 hours unless the admin changes it. The side that has not answered is reminded after 2 hours and after 12 hours, and the slot is released on expiry. The timed work is a command that should be scheduled every five minutes.",
-            "where": ["backend/scheduling/approvals.py", "docs/OPERATIONS.md"],
-        },
-        {
-            "q": "Are the payments real?",
-            "a": "No. Online payments go through a simulated gateway and nothing is charged; at the desk the receptionist records cash, card or UPI. A real gateway is out of scope.",
-            "where": ["backend/billing/tender.py"],
-        },
-        {
-            "q": "How accurate is the chatbot, really?",
-            "a": "On questions I wrote myself: 130 of 143 (90.9%) on the set it was tuned on, and 67 of 91 (73.6%) on a holdout set kept apart from the tuning, measured on 5 November 2026. Real customers will phrase things differently, so I expect lower numbers in practice. The Chatbot insights screen collects what real visitors ask that it could not answer.",
-            "where": ["backend/chatbot/tests/test_accuracy.py"],
-        },
-        {
-            "q": "How do I know the numbers on this page are real?",
-            "a": "Counts of pages, endpoints, tests and migrations are produced by a script that counts them in the repository, and a test fails if the stored file is out of date. The accuracy figures are written next to a test that measures them again and fails if they differ. Every code pointer on this page is checked by a test to be a real file.",
-            "where": ["scripts/repo-stats.mjs", "backend/website/tests/test_zenotians.py"],
-        },
-        {
-            "q": "Could a real shop use this today?",
-            "a": "Not yet. It has no live deployment, no real payment gateway or messaging, no load test, and a few open dependency advisories, all listed under Limitations. It shows how the workflow and the safeguards fit together; it is not a finished product.",
-            "where": ["docs/OPERATIONS.md", "docs/SECURITY.md"],
-        },
-        {
-            "q": "What did testing catch?",
-            "a": "Among others: a forged forwarding header that bypassed every rate limit, a staff invite that survived the person's deactivation, a banner link that could carry javascript:, reset links two simultaneous clicks could both use, and access tokens that outlived a password change. Each was fixed and has a test; the list is in the security notes.",
-            "where": ["docs/SECURITY.md", "backend/accounts/tests/test_hardening.py"],
-        },
-    ],
-}
-
 DEMO = {"logins": [], "guide": []}
 
 SEED = {
@@ -1152,11 +1045,9 @@ SEED = {
     "zenoti": ZENOTI,
     "project": PROJECT,
     "mapping": MAPPING,
-    "decisions": DECISIONS,
     "story": STORY,
     "quality": QUALITY,
     "security": SECURITY,
     "limitations": LIMITATIONS,
-    "questions": QUESTIONS,
     "demo": DEMO,
 }

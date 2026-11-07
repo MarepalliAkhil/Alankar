@@ -112,9 +112,7 @@ function StoryBody() {
             <li key={c.name}>
               <Card variant="dense" className="flex h-full flex-col gap-1">
                 <p className="text-base font-semibold text-text">{c.name}</p>
-                <p className="text-xs font-medium uppercase tracking-wide text-primary-hover">
-                  {c.role}
-                </p>
+                <p className="text-sm font-medium text-primary-hover">{c.role}</p>
                 {c.line && <p className="text-sm text-text-muted">{c.line}</p>}
               </Card>
             </li>
@@ -173,7 +171,7 @@ function StoryBody() {
             aria-label="Walkthrough progress"
           />
         )}
-        <p className="w-full text-xs text-text">
+        <p className="w-full text-sm text-text">
           {reduced
             ? 'Use Previous and Next, or the left and right arrow keys.'
             : 'Left and right arrow keys move between chapters.'}
@@ -198,9 +196,7 @@ function StoryBody() {
               )}
             >
               <div className="flex min-w-0 flex-col gap-sm">
-                <p className="text-xs font-medium uppercase tracking-wide text-primary-hover">
-                  Chapter {i + 1}
-                </p>
+                <p className="text-sm font-medium text-primary-hover">Chapter {i + 1}</p>
                 <h2 className="text-xl font-semibold text-text">{chapter.title}</h2>
                 <p className="text-text">{chapter.body}</p>
                 {(chapter.behind || (chapter.where ?? []).length > 0) && (

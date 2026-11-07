@@ -17,7 +17,7 @@ def _upgrade(value):
         del value["vision"]
         changed = True
     for key in NEW_SECTIONS:
-        if key not in value:
+        if key not in value and key in new:
             value[key] = new[key]
             changed = True
 
@@ -35,9 +35,6 @@ def _upgrade(value):
         swap("project", field, old.PROJECT[field], new["project"][field])
     if value.get("mapping") == old.MAPPING and old.MAPPING != new["mapping"]:
         value["mapping"] = new["mapping"]
-        changed = True
-    if value.get("decisions") == old.DECISIONS and old.DECISIONS != new["decisions"]:
-        value["decisions"] = new["decisions"]
         changed = True
     return value, changed
 

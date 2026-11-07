@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  MAX_PHOTO_BYTES,
+  maxBytesForWidth,
   MEERA_FOLDER,
   PHOTO_SLOTS,
   pickPhoto,
@@ -56,8 +56,10 @@ for (const [slot, want] of Object.entries(PHOTO_SLOTS)) {
   const size = imageSize(full);
   const dims = size ? `${size.width}x${size.height}` : 'unknown size';
   const notes = [];
-  if (bytes > MAX_PHOTO_BYTES) notes.push(`over 200 KB (run npm run photos:optimize)`);
   if (size) {
+    if (bytes > maxBytesForWidth(size.width) * 1.5) {
+      notes.push(`${kb(bytes)} is heavy for ${size.width}px (run npm run photos:optimize)`);
+    }
     if (size.width < want.width || size.height < want.height) {
       notes.push(`smaller than the recommended ${want.width}x${want.height}`);
     }

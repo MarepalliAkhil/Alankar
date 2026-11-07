@@ -20,6 +20,34 @@ export const PHOTO_SLOTS = {
   'parlor-hero': { width: 1920, height: 1080 },
 };
 
+/**
+ * Widths `npm run photos:optimize` writes for every photo (never larger than the original, so a
+ * small original simply has fewer): `<slot>-640.webp`, `-1080`, `-1600`, `-2400` (and .jpg).
+ */
+export const VARIANT_WIDTHS = [640, 1080, 1600, 2400];
+
+/**
+ * The screen shape that gets a portrait photo: a tall window no wider than 900 px (a phone held
+ * upright, a small tablet upright). It is a media query on the screen, never the user agent, and
+ * it follows rotation and resizing live. Used by <picture> sources, by CSS backgrounds (the same
+ * text) and by the JS hook for the home background (design/viewport-image.ts).
+ */
+export const PORTRAIT_MOBILE_QUERY = '(orientation: portrait) and (max-width: 900px)';
+
+/**
+ * Optional portrait photos for the four backgrounds: public/photos/<name>-mobile.png|jpg|webp,
+ * ideally 1080 x 1920. Used when PORTRAIT_MOBILE_QUERY matches; without one the landscape photo is
+ * shown in a short band (see docs/IMAGE_SLOTS.md).
+ */
+export const MOBILE_SUFFIX = '-mobile';
+export const MOBILE_SLOT_SIZE = { width: 1080, height: 1920 };
+export const MOBILE_PHOTO_SLOTS = {
+  'shop-background-mobile': { ...MOBILE_SLOT_SIZE },
+  'salon-background-mobile': { ...MOBILE_SLOT_SIZE },
+  'spa-background-mobile': { ...MOBILE_SLOT_SIZE },
+  'parlor-background-mobile': { ...MOBILE_SLOT_SIZE },
+};
+
 /** The four pictures of the home page, in the order of its four sections. */
 export const HOME_PHOTOS = [
   'shop-background',
@@ -50,6 +78,9 @@ export const MEERA_POSES = [
 ];
 /** The folder (inside public/photos) where Meera's pictures live. */
 export const MEERA_FOLDER = 'meera';
+
+/** Optional pictures of Zenoti's leaders: public/photos/zenoti-leaders/<name-as-slug>.png|jpg|jpeg|webp */
+export const LEADER_FOLDER = 'zenoti-leaders';
 /** Meera pictures are 4:5 portraits, 1024 px tall (a 512 px tall copy `<slot>-512.webp` is made too). */
 export const MEERA_SIZE = { width: 820, height: 1024 };
 for (const pose of MEERA_POSES) PHOTO_SLOTS[`meera-${pose}`] = { ...MEERA_SIZE };
@@ -89,7 +120,7 @@ const MEERA_SHOWS = {
   stars: 'Meera holding five stars or a rating card (rate your visit).',
   shield: 'Meera with a shield or a padlock (stay safe: trusted devices and privacy).',
   celebrate:
-    'Meera celebrating with her arms up and confetti (the finale, the booking-sent moment).',
+    'Meera celebrating with her arms up and confetti (the finale, and a booking that is confirmed).',
   namaste: 'Meera with palms together in a namaste (chapter 1, welcome at the salon door).',
   scissors: 'Meera holding scissors and a comb (chapter 2, pick a service).',
   calendar: 'Meera holding a calendar (the My bookings tip).',
@@ -102,8 +133,27 @@ for (const pose of MEERA_POSES) SLOT_SHOWS[`meera-${pose}`] = MEERA_SHOWS[pose];
 SLOT_SHOWS[MEERA_DEFAULT] =
   'Meera, the default picture: shown in every tour pose that has no meera-<pose> file yet.';
 
-/** Photos above this size slow the page down; photos:check warns about them. */
+/** Photos above this size slow the page down; photos:check warns about them (older limit, kept). */
 export const MAX_PHOTO_BYTES = 200 * 1024;
+
+/** WebP quality of the width variants. A fixed quality, not a byte cap: a cap made big photos soft. */
+export const WEBP_QUALITY = 78;
+export const JPEG_QUALITY = 82;
+
+/**
+ * Weight allowed for one variant of this pixel width (photos:check warns above it). Sized for
+ * q78 WebP of photographs; a JPEG fallback is allowed 50% more.
+ */
+export function maxBytesForWidth(width) {
+  const kb =
+    width <= 700 ? 90 : width <= 1100 ? 220 : width <= 1700 ? 380 : width <= 2000 ? 480 : 650;
+  return kb * 1024;
+}
+
+/** The width variants to write for an original that is `originalWidth` px wide: never upscaled. */
+export function variantWidths(originalWidth, maxWidth = Infinity) {
+  return VARIANT_WIDTHS.filter((w) => w <= originalWidth && w <= maxWidth);
+}
 
 /**
  * The file to use for a slot from a list of file names: `<base>.webp`, then `.jpg`, `.jpeg`,

@@ -50,11 +50,9 @@ const ROUTES = [
   '/zenotians/day',
   '/zenotians/project',
   '/zenotians/mapping',
-  '/zenotians/decisions',
   '/zenotians/quality',
   '/zenotians/security',
   '/zenotians/limitations',
-  '/zenotians/questions',
 ] as const;
 
 describe('For Zenotians: structure', () => {
@@ -94,13 +92,32 @@ describe('For Zenotians: structure', () => {
       'A day at Alankar',
       'The project',
       'How it maps to Zenoti',
-      'Engineering decisions',
       'Quality evidence',
       'Security and privacy',
       'Limitations',
-      'Questions you might ask me',
       'Contact',
     ]);
+  });
+
+  it('has no Engineering decisions or Questions section, and the old addresses go to the overview', async () => {
+    const ids = buildMenu(fullContent).map((e) => e.id as string);
+    expect(ids).not.toContain('decisions');
+    expect(ids).not.toContain('questions');
+    for (const path of ['/zenotians/decisions', '/zenotians/questions']) {
+      const { unmount } = renderAt(path);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: /Built for Zenotians/ }),
+      ).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it.each(ROUTES)('links on %s never point at a removed section', async (path) => {
+    renderAt(path);
+    await screen.findByRole('heading', { level: 1 });
+    const hrefs = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs.filter((h) => /\/zenotians\/(decisions|questions)/.test(h ?? ''))).toEqual([]);
+    expect(screen.queryByText(/Engineering decisions|Questions you might ask me/)).toBeNull();
   });
 
   it('shows Achievements and Try the demo only when they have content', () => {
@@ -120,12 +137,10 @@ describe('For Zenotians: structure', () => {
     bare.zenoti = {};
     bare.project = {};
     bare.mapping = [];
-    bare.decisions = [];
     bare.story = {};
     bare.quality = {};
     bare.security = {};
     bare.limitations = {};
-    bare.questions = {};
     bare.resume = { contacts: [] };
     expect(buildMenu(bare).map((e) => e.id)).toEqual(['overview']);
   });
@@ -212,7 +227,9 @@ describe('For Zenotians: content rules', () => {
   it('gives each Zenoti fact a source link and the last-checked date', async () => {
     renderAt('/zenotians/about-zenoti');
     await screen.findByRole('heading', { level: 1, name: 'About Zenoti' });
-    expect(screen.getAllByText(/last checked: 2026-10-30/).length).toBeGreaterThanOrEqual(5);
+    // The company facts carry the page date; each leader card carries its own source and date.
+    expect(screen.getAllByText(/last checked: 2026-10-30/).length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByText(/last checked: 2026-11-07/).length).toBe(5);
     expect(screen.getByText(/Their page is undated/)).toBeInTheDocument();
     expect(screen.getByText(/years in business/)).toBeInTheDocument();
   });

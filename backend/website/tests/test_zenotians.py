@@ -150,7 +150,36 @@ def test_zenoti_facts_carry_sources_and_a_date(client, db):
     ):
         assert zenoti[key].startswith("https://")
     assert zenoti["founded_year"] == 2010
-    assert len(zenoti["leadership"]) == 9
+    leaders = zenoti["leadership"]
+    assert [p["name"] for p in leaders] == [
+        "Sudheer Koneru",
+        "Neal Singh",
+        "Dheeraj Koneru",
+        "Anand Arvind",
+        "Sunil Koneru",
+    ]
+    assert [p["title"] for p in leaders][0] == "Founder & CEO"
+    for person in leaders:
+        assert 4 <= len(person["bio"]) <= 5, person["name"]
+        assert person["sources"] and all(u.startswith("https://") for u in person["sources"])
+        assert person["last_checked"] == "2026-11-07"
+    assert len(leaders[1]["sources"]) == 2
+    everything = str(client.get(PUBLIC).json())
+    for gone in ("Amita Tomkoria", "Matt Baer", "Anna Duke", "Sachin Kamat"):
+        assert gone not in everything
+
+
+def test_the_leader_upgrade_replaces_the_old_list_but_not_edited_cards():
+    import importlib
+
+    from website.zenotians_seed import LEADERS
+
+    migration = importlib.import_module("website.migrations.0006_zenotians_five_leaders")
+    old = {"zenoti": {"leadership": [{"name": "Amita Tomkoria", "title": "EVP Finance"}]}}
+    value, changed = migration._upgrade(old)
+    assert changed and value["zenoti"]["leadership"] == LEADERS
+    mine = {"zenoti": {"leadership": [{"name": "Me", "title": "T", "bio": ["Line"]}]}}
+    assert migration._upgrade(mine) == (mine, False)
 
 
 def test_seed_demo_restores_the_page_but_never_overwrites_edits(client, db):
@@ -254,8 +283,10 @@ def test_limitation_ids_must_be_unique_and_a_hit_count_cannot_exceed_its_total(a
 
 def test_the_seed_page_is_valid_and_every_new_section_is_public(client, db):
     data = client.get(PUBLIC).json()
-    for key in ("story", "quality", "security", "limitations", "questions"):
+    for key in ("story", "quality", "security", "limitations"):
         assert data[key], key
+    for key in ("decisions", "questions", "vision"):
+        assert key not in data, key  # retired sections never reach the public
     assert len(data["story"]["chapters"]) == 7
     assert [c["name"] for c in data["story"]["characters"]] == [
         "Priya",
@@ -263,9 +294,6 @@ def test_the_seed_page_is_valid_and_every_new_section_is_public(client, db):
         "Meera",
         "Suresh",
     ]
-    assert 10 <= len(data["questions"]["items"]) <= 12
-    assert 5 <= len(data["decisions"]) <= 7
-    assert all(d["where"] for d in data["decisions"])
     assert all(c["behind"] and c["where"] for c in data["story"]["chapters"])
 
 
@@ -283,18 +311,15 @@ def test_the_upgrade_keeps_the_admins_edits_and_replaces_untouched_text():
         "overview": {**old.OVERVIEW, "headline": "My own headline"},
         "project": dict(old.PROJECT),
         "mapping": copy.deepcopy(old.MAPPING),
-        "decisions": copy.deepcopy(old.DECISIONS),
         "vision": {"intro": "old"},
     }
-    stored["decisions"][0]["title"] = "Edited by the admin"
     value, changed = migration._upgrade(stored)
     assert changed
     assert "vision" not in value
     assert value["overview"]["headline"] == "My own headline"
     assert value["overview"]["start_here"] == SEED["overview"]["start_here"]
     assert value["mapping"] == SEED["mapping"]
-    assert value["decisions"][0]["title"] == "Edited by the admin"  # edited: left alone
-    for key in ("story", "quality", "security", "limitations", "questions"):
+    for key in ("story", "quality", "security", "limitations"):
         assert value[key] == SEED[key]
     again, changed_again = migration._upgrade(value)
     assert again == value and not changed_again
@@ -308,3 +333,67 @@ def test_the_upgrade_leaves_an_edited_mapping_alone():
     mapping[0]["built"] = "My words"
     value, _ = migration._upgrade({"overview": dict(old.OVERVIEW), "mapping": mapping})
     assert value["mapping"] == mapping
+
+
+def test_the_retire_migration_removes_the_two_sections_and_keeps_other_edits():
+    import importlib
+
+    migration = importlib.import_module("website.migrations.0005_zenotians_retire_sections")
+    stored = {
+        "overview": {"headline": "Mine", "start_here": list(migration.OLD_START_HERE)},
+        "decisions": [{"title": "x"}],
+        "questions": {"items": []},
+    }
+    value, changed = migration._retire(stored)
+    assert changed
+    assert "decisions" not in value and "questions" not in value
+    assert value["overview"]["headline"] == "Mine"
+    assert value["overview"]["start_here"] == migration.NEW_START_HERE
+    assert not any("Engineering decisions" in line for line in value["overview"]["start_here"])
+    edited = {"overview": {"start_here": ["My own line"]}}
+    assert migration._retire(edited) == (edited, False)
+
+
+def test_the_starting_text_no_longer_mentions_the_removed_sections():
+    text = " ".join(SEED["overview"]["start_here"])
+    assert "Engineering decisions" not in text and "Questions you might ask" not in text
+    assert "decisions" not in SEED and "questions" not in SEED
+
+
+def test_the_seed_has_three_certifications_and_no_aviatrix():
+    from website.zenotians_seed import SEED
+
+    titles = [c["title"] for c in SEED["resume"]["certifications"]]
+    assert titles == [
+        "Cisco Networking Essentials",
+        "Red Hat System Administration II (RH134)",
+        "Cambridge Linguaskill General",
+    ]
+    assert "aviatrix" not in json.dumps(SEED).lower()
+    assert SEED["resume"]["summary"] == (
+        "B.Tech CSE undergraduate (CGPA 8.7) with hands-on experience in Python/ML projects, "
+        "full-stack development, and Linux and networking coursework (Red Hat RH134, Cisco). "
+        "Looking for a software or infrastructure role where I can build, deploy, and "
+        "troubleshoot reliable systems."
+    )
+    # The Skills list is not touched.
+    skills = [i for g in SEED["resume"]["skills"] for i in g["items"]]
+    assert "Multicloud Networking" in skills
+
+
+def test_the_aviatrix_migration_cleans_stored_content_and_keeps_other_edits():
+    import importlib
+
+    migration = importlib.import_module("website.migrations.0007_zenotians_remove_aviatrix")
+    old = copy.deepcopy(SEED)
+    old["resume"]["summary"] = "Cisco, Aviatrix and more."
+    old["resume"]["certifications"].insert(1, {"title": "Aviatrix Certified Engineer (ACE)"})
+    value, changed = migration._upgrade(old)
+    assert changed
+    assert len(value["resume"]["certifications"]) == 3
+    assert "aviatrix" not in json.dumps(value).lower()
+    assert value["resume"]["projects"] == old["resume"]["projects"]
+    edited = copy.deepcopy(SEED)
+    edited["resume"]["summary"] = "My own words."
+    again, changed = migration._upgrade(edited)
+    assert not changed and again["resume"]["summary"] == "My own words."

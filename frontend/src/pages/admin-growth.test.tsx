@@ -309,6 +309,32 @@ describe('website content editor', () => {
     expect(sent.resume?.contacts?.find((c) => c.key === 'phone')?.public).toBe(false);
   });
 
+  it('edits a leader card (lines, sources, date, photo credit) and saves the draft', async () => {
+    const user = userEvent.setup();
+    vi.mocked(contentApi.listBlocks).mockResolvedValue([
+      hero,
+      about,
+      announcements,
+      { ...zenotians, is_published: true, published: fullContent },
+    ]);
+    vi.mocked(contentApi.saveDraft).mockResolvedValue({ ...zenotians, has_draft: true });
+    renderAt('/content');
+    await user.click(await screen.findByRole('tab', { name: 'Zenotians page' }));
+    await user.click(await screen.findByRole('tab', { name: 'Zenoti facts' }));
+    const credit = screen.getAllByLabelText('Photo credit (optional)')[0]!;
+    await user.type(credit, 'Photo: the person');
+    const date = screen.getAllByLabelText('Last checked').at(-1)!;
+    expect(date).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Short lines (one bullet each, 4 to 5 lines)').length).toBe(5);
+    expect(screen.getAllByLabelText('Source links (one per line)').length).toBe(5);
+    await user.click(screen.getAllByRole('button', { name: 'Save draft' })[0]);
+    await waitFor(() => expect(contentApi.saveDraft).toHaveBeenCalled());
+    const sent = vi.mocked(contentApi.saveDraft).mock.calls.at(-1)![1] as typeof fullContent;
+    expect(sent.zenoti?.leadership?.[0]?.photo_credit).toBe('Photo: the person');
+    expect(sent.zenoti?.leadership?.[0]?.name).toBe('Sudheer Koneru');
+    expect(sent.zenoti?.leadership).toHaveLength(5);
+  });
+
   it('adds an FAQ as a draft and publishes it from the list', async () => {
     const user = userEvent.setup();
     vi.mocked(contentApi.createFaq).mockResolvedValue({} as contentApi.Faq);

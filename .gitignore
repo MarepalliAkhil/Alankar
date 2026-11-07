@@ -44,3 +44,8 @@ _to_delete/
 the assistant outputs/
 *.tgz
 *.tar.gz
+
+# load test (Part 5)
+.venv-loadtest/
+backend/results/
+results/

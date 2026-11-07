@@ -12,12 +12,10 @@ const named = <K extends string>(key: K) =>
 const AboutZenoti = named('AboutZenotiPage');
 const Project = named('ProjectPage');
 const Mapping = named('MappingPage');
-const Decisions = named('DecisionsPage');
 const Day = lazy(() => import('./StoryPage'));
 const Quality = named('QualityPage');
 const Security = named('SecurityPage');
 const Limitations = named('LimitationsPage');
-const Questions = named('QuestionsPage');
 const Demo = named('DemoPage');
 const Contact = named('ContactPage');
 
@@ -43,11 +41,12 @@ export const zenotiansRoutes = (
     <Route path="project" element={<Project />} />
     <Route path="mapping" element={<Mapping />} />
     <Route path="day" element={<Day />} />
-    <Route path="decisions" element={<Decisions />} />
     <Route path="quality" element={<Quality />} />
     <Route path="security" element={<Security />} />
     <Route path="limitations" element={<Limitations />} />
-    <Route path="questions" element={<Questions />} />
+    {/* Removed sections: the old addresses go to the overview so no link is left dead. */}
+    <Route path="decisions" element={<Navigate to="/zenotians" replace />} />
+    <Route path="questions" element={<Navigate to="/zenotians" replace />} />
     {/* The old "Future vision" address: sent to the overview so no link is left dead. */}
     <Route path="vision" element={<Navigate to="/zenotians" replace />} />
     <Route path="demo" element={<Demo />} />

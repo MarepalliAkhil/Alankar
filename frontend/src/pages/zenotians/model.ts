@@ -8,11 +8,9 @@ export type SectionId =
   | 'project'
   | 'mapping'
   | 'day'
-  | 'decisions'
   | 'quality'
   | 'security'
   | 'limitations'
-  | 'questions'
   | 'demo'
   | 'contact';
 
@@ -113,10 +111,6 @@ export function limitationsConfigured(content: ZenotiansContent): boolean {
   return some(content.limitations?.items, (i) => filled(i.area));
 }
 
-export function questionsConfigured(content: ZenotiansContent): boolean {
-  return some(content.questions?.items, (i) => filled(i.q) && filled(i.a));
-}
-
 /** The menu: every section that has something to show, nothing empty. */
 export function buildMenu(content: ZenotiansContent): MenuEntry[] {
   const about = aboutItems(content) ?? [];
@@ -154,12 +148,6 @@ export function buildMenu(content: ZenotiansContent): MenuEntry[] {
       has: some(content.mapping, (m) => filled(m.workflow)),
     },
     {
-      id: 'decisions',
-      label: 'Engineering decisions',
-      path: `${ROOT}/decisions`,
-      has: some(content.decisions, (d) => filled(d.title)),
-    },
-    {
       id: 'quality',
       label: 'Quality evidence',
       path: `${ROOT}/quality`,
@@ -178,12 +166,6 @@ export function buildMenu(content: ZenotiansContent): MenuEntry[] {
       has: limitationsConfigured(content),
     },
     {
-      id: 'questions',
-      label: 'Questions you might ask me',
-      path: `${ROOT}/questions`,
-      has: questionsConfigured(content),
-    },
-    {
       id: 'demo',
       label: 'Try the demo',
       path: `${ROOT}/demo`,
@@ -197,6 +179,46 @@ export function buildMenu(content: ZenotiansContent): MenuEntry[] {
     },
   ];
   return entries.filter((e) => e.has).map((e) => ({ ...e, has: undefined }) as MenuEntry);
+}
+
+export interface MenuGroup {
+  id: 'start' | 'about' | 'project' | 'end';
+  /** Sentence-case heading, or null for a group without one. */
+  heading: string | null;
+  entries: MenuEntry[];
+}
+
+/** Which group each section belongs to. The order inside a group is the menu order. */
+const GROUP_OF: Record<SectionId, MenuGroup['id']> = {
+  overview: 'start',
+  about: 'about',
+  'about-zenoti': 'about',
+  day: 'project',
+  project: 'project',
+  mapping: 'project',
+  quality: 'project',
+  security: 'project',
+  limitations: 'project',
+  demo: 'end',
+  contact: 'end',
+};
+
+const GROUP_HEADING: Record<MenuGroup['id'], string | null> = {
+  start: null,
+  about: 'About',
+  project: 'The project',
+  end: null,
+};
+
+/** The menu under its headings. A group whose sections are all hidden is not here. */
+export function groupMenu(menu: MenuEntry[]): MenuGroup[] {
+  return (['start', 'about', 'project', 'end'] as const)
+    .map((id) => ({
+      id,
+      heading: GROUP_HEADING[id],
+      entries: menu.filter((entry) => GROUP_OF[entry.id] === id),
+    }))
+    .filter((group) => group.entries.length > 0);
 }
 
 /** Whole years in business, computed from the founding year so it never goes stale. */

@@ -7,7 +7,16 @@ function prefersReducedMotion(): boolean {
 }
 
 /** Animated number (count-up once it scrolls into view). Static with reduced motion. */
-export function CountUp({ value, suffix = '' }: { value: number; suffix?: string }) {
+export function CountUp({
+  value,
+  suffix = '',
+  startDelay = 0,
+}: {
+  value: number;
+  suffix?: string;
+  /** Wait this many milliseconds after it scrolls into view (so a sliding card lands first). */
+  startDelay?: number;
+}) {
   const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0));
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -17,23 +26,29 @@ export function CountUp({ value, suffix = '' }: { value: number; suffix?: string
       return;
     }
     let frame = 0;
+    let timer = 0;
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
-      const start = performance.now();
-      const tick = (now: number) => {
-        const progress = Math.min(1, (now - start) / 900);
-        setShown(Math.round(value * (1 - Math.pow(1 - progress, 3))));
-        if (progress < 1) frame = requestAnimationFrame(tick);
+      const begin = () => {
+        const start = performance.now();
+        const tick = (now: number) => {
+          const progress = Math.min(1, (now - start) / 900);
+          setShown(Math.round(value * (1 - Math.pow(1 - progress, 3))));
+          if (progress < 1) frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
       };
-      frame = requestAnimationFrame(tick);
+      if (startDelay > 0) timer = window.setTimeout(begin, startDelay);
+      else begin();
     });
     if (ref.current) observer.observe(ref.current);
     return () => {
       observer.disconnect();
+      window.clearTimeout(timer);
       cancelAnimationFrame(frame);
     };
-  }, [value]);
+  }, [value, startDelay]);
 
   return (
     <span ref={ref}>

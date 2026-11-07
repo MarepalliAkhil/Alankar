@@ -1,0 +1,4 @@
+# Only for the load test (backend/loadtest). Not needed to run or develop the app.
+# Install in its own virtual environment:  pip install -r backend\loadtest\requirements-loadtest.txt
+locust>=2.32,<3
+websocket-client>=1.8,<2

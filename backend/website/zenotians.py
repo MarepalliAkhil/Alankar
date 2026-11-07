@@ -148,8 +148,17 @@ class Resume(serializers.Serializer):
 
 
 class Person(serializers.Serializer):
+    """A Zenoti leader: public information only, each card with its own sources and date."""
+
     name = serializers.CharField(max_length=80)
     title = serializers.CharField(max_length=120)
+    bio = lines(6, 400)
+    sources = serializers.ListField(child=Link(), required=False, default=list, max_length=4)
+    last_checked = serializers.DateField(required=False, allow_null=True, default=None)
+    # The picture file name without the extension, in public/photos/zenoti-leaders/ (blank: the
+    # name as a slug). Optional: the monogram shows when there is no file.
+    photo = text(80)
+    photo_credit = text(160)
 
 
 class Zenoti(serializers.Serializer):
@@ -199,12 +208,6 @@ class MappingRow(serializers.Serializer):
     # for a row with no limitation behind it.
     limits = lines(6, 40)
     not_built = text(600)
-
-
-class Decision(serializers.Serializer):
-    title = text(120)
-    body = text(700)
-    where = lines(6, 160)
 
 
 STORY_VISUALS = ("request", "approval", "twist", "pay", "visit", "rating", "dashboard")
@@ -263,6 +266,14 @@ class Quality(serializers.Serializer):
     verify_note = text(400)
 
 
+class Decision(serializers.Serializer):
+    """One note with code pointers; the Security and privacy list uses it."""
+
+    title = text(120)
+    body = text(700)
+    where = lines(6, 160)
+
+
 class Notes(serializers.Serializer):
     """A titled list of notes with code pointers (Security and privacy)."""
 
@@ -281,17 +292,6 @@ class Limit(serializers.Serializer):
 class Limitations(serializers.Serializer):
     intro = text(600)
     items = Limit(many=True, max_length=30, required=False, default=list)
-
-
-class Question(serializers.Serializer):
-    q = text(200)
-    a = text(1200)
-    where = lines(6, 160)
-
-
-class Questions(serializers.Serializer):
-    intro = text(600)
-    items = Question(many=True, max_length=20, required=False, default=list)
 
 
 class DemoLogin(serializers.Serializer):
@@ -319,12 +319,10 @@ class ZenotiansSerializer(serializers.Serializer):
     zenoti = Zenoti(required=False, default=dict)
     project = ProjectInfo(required=False, default=dict)
     mapping = MappingRow(many=True, max_length=20, required=False, default=list)
-    decisions = Decision(many=True, max_length=10, required=False, default=list)
     story = Story(required=False, default=dict)
     quality = Quality(required=False, default=dict)
     security = Notes(required=False, default=dict)
     limitations = Limitations(required=False, default=dict)
-    questions = Questions(required=False, default=dict)
     demo = Demo(required=False, default=dict)
 
     def validate(self, attrs):
@@ -341,12 +339,16 @@ class ZenotiansSerializer(serializers.Serializer):
         return attrs
 
 
+# Sections that no longer exist: never sent to the browser, even if an old row still has them.
+RETIRED = ("vision", "decisions", "questions")
+
+
 def public_view(value: dict | None) -> dict:
     """What the public may see: contact fields whose switch is off are removed here, so a hidden
     phone number never reaches the browser."""
     if not value:
         return {}
-    shown = {k: v for k, v in value.items() if k != "vision"}  # retired in Task 16
+    shown = {k: v for k, v in value.items() if k not in RETIRED}  # retired sections
     resume = dict(shown.get("resume") or {})
     resume["contacts"] = [c for c in resume.get("contacts") or [] if c.get("public")]
     shown["resume"] = resume
