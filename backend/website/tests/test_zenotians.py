@@ -234,14 +234,27 @@ def test_the_future_vision_section_is_gone(client, db):
     assert "vision" not in client.get(PUBLIC).json()
 
 
-def test_no_planned_or_future_wording_and_ai_only_as_a_denial():
+def test_no_planned_or_future_wording_and_ai_only_as_optional():
+    """AIR Task 3: the product has an optional AI service (off by default). The page may never
+    claim the product uses no AI, and every mention of AI must say it is optional or off."""
     import re
 
     banned = re.compile(r"\b(planned|future|roadmap|coming soon|to be built|will be added)\b", re.I)
+    no_ai = re.compile(r"\b(no AI|no language model|without AI|no LLM)\b", re.I)
     for where, text in _strings(SEED):
         assert not banned.search(text), (where, text)
+        assert not no_ai.search(text), (where, text)
         for _hit in re.finditer(r"\bAI\b", text):
-            assert re.search(r"\bno AI\b", text, re.I), (where, text)
+            assert re.search(r"optional|off by default", text, re.I), (where, text)
+
+
+def test_air_is_described_as_built_optional_and_limited():
+    air = next(i for i in SEED["limitations"]["items"] if i["id"] == "air")
+    for words in ("off by default", "no receptionist is on shift or signed in", "stylist",
+                  "simulated", "third-party", "rules"):
+        assert words in air["today"], words
+    assert "phone calls" in air["out_of_scope"] and "browser's own voice" in air["out_of_scope"]
+    assert any(row["workflow"] == "Virtual receptionist (AIR)" for row in SEED["mapping"])
 
 
 def test_every_code_pointer_is_a_real_file():
@@ -397,3 +410,28 @@ def test_the_aviatrix_migration_cleans_stored_content_and_keeps_other_edits():
     edited["resume"]["summary"] = "My own words."
     again, changed = migration._upgrade(edited)
     assert not changed and again["resume"]["summary"] == "My own words."
+
+
+def test_the_air_migration_updates_stored_content_once_and_keeps_admin_edits():
+    import importlib
+
+    migration = importlib.import_module("website.migrations.0008_zenotians_air")
+    old = copy.deepcopy(SEED)
+    old["project"]["intro"] = old["project"]["intro"].split(" AIR, an optional")[0]
+    old["project"]["roles"] = [r for r in old["project"]["roles"] if not r["role"].startswith("AIR")]
+    old["mapping"] = [r for r in old["mapping"] if r["workflow"] != "Virtual receptionist (AIR)"]
+    old["limitations"]["items"] = [i for i in old["limitations"]["items"] if i["id"] != "air"]
+    chat = next(i for i in old["limitations"]["items"] if i["id"] == "chatbot")
+    chat["today"] = migration.OLD_CHAT_TODAY + " Measured on questions I wrote myself."
+    value, changed = migration._upgrade(old)
+    assert changed
+    assert "AIR, an optional virtual receptionist" in value["project"]["intro"]
+    assert sum(r["role"].startswith("AIR") for r in value["project"]["roles"]) == 1
+    assert sum(i["id"] == "air" for i in value["limitations"]["items"]) == 1
+    assert "no language model" not in json.dumps(value)
+    again, changed_again = migration._upgrade(value)
+    assert not changed_again and again == value
+    edited = copy.deepcopy(old)
+    edited["project"]["intro"] = "My own words."
+    kept, _ = migration._upgrade(edited)
+    assert kept["project"]["intro"] == "My own words."

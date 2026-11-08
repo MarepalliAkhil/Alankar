@@ -1,0 +1,173 @@
+/* The Alankar logo: home button, splash and loader. Transform and opacity only; colours come from
+   the theme through currentColor and the token classes in the components. */
+
+/* ---- the home button ---- */
+.brand-mark,
+.brand-word {
+  display: inline-block;
+  transition:
+    transform 450ms var(--motion-ease),
+    opacity 450ms var(--motion-ease);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brand-link {
+    transition: transform 150ms var(--motion-ease);
+  }
+  .brand-link:hover .brand-mark {
+    transform: scale(1.06) rotate(-4deg);
+  }
+  .brand-link:active {
+    transform: scale(0.96);
+  }
+}
+/* While the splash is up the mark keeps its place (no layout shift) but is not drawn yet. */
+.brand-link[data-intro='splash'] .brand-mark {
+  visibility: hidden;
+  transition: none;
+}
+.brand-link[data-intro='splash'] .brand-word {
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+/* ---- the splash ---- */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.splash-bg {
+  position: absolute;
+  inset: 0;
+  transition: opacity 600ms var(--motion-ease);
+}
+.splash[data-step='glide'] .splash-bg,
+.splash[data-step='glide'] .splash-skip {
+  opacity: 0;
+}
+.splash-logo {
+  position: relative;
+  width: min(40vmin, 200px);
+  height: min(40vmin, 200px);
+  transform-origin: center;
+  transition: transform 600ms cubic-bezier(0.22, 0.8, 0.25, 1);
+}
+.splash-logo svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.splash-outline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-dashoffset 900ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.splash-outline {
+  transition: opacity 400ms ease;
+}
+.splash-fill {
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+.splash[data-step='fill'] .splash-fill,
+.splash[data-step='glide'] .splash-fill {
+  opacity: 1;
+}
+.splash[data-step='fill'] .splash-outline,
+.splash[data-step='glide'] .splash-outline {
+  opacity: 0;
+}
+.splash-skip {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transition: opacity 300ms ease;
+}
+
+/* ---- the loader: the filled A with a gentle pulse and rising bubbles ---- */
+.logo-loader {
+  position: relative;
+  display: inline-block;
+}
+.logo-loader-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: logo-pulse 1.6s ease-in-out infinite;
+}
+.logo-loader-bubble {
+  position: absolute;
+  bottom: 12%;
+  width: 13%;
+  height: 13%;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+  animation: logo-bubble 1.9s ease-out infinite;
+}
+.logo-loader-bubble:nth-child(2) {
+  left: 4%;
+  animation-delay: 0s;
+}
+.logo-loader-bubble:nth-child(3) {
+  left: 30%;
+  animation-delay: 0.5s;
+}
+.logo-loader-bubble:nth-child(4) {
+  left: 62%;
+  animation-delay: 1s;
+}
+.logo-loader-bubble:nth-child(5) {
+  left: 86%;
+  animation-delay: 1.4s;
+}
+@keyframes logo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes logo-bubble {
+  0% {
+    transform: translateY(0) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-260%) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes logo-fade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader-mark {
+    animation: logo-fade 2.4s ease-in-out infinite;
+  }
+  .logo-loader-bubble {
+    display: none;
+  }
+  .brand-mark,
+  .brand-word {
+    transition: none;
+  }
+}

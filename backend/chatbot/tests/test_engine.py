@@ -222,3 +222,18 @@ def test_the_package_has_no_banned_imports_and_no_network():
             continue
         found = pattern.findall(path.read_text(encoding="utf-8"))
         assert not found, f"{path} imports {found}"
+
+
+@pytest.mark.parametrize(
+    ("question", "needle"),
+    [
+        ("who accepted my booking?", "Accepted by our front desk"),
+        ("who accepted my booking?", "virtual receptionist (the front desk was closed)"),
+        ("why was my request declined or rescheduled?", "private reason"),
+        ("why was my booking request declined?", "We are sorry"),
+    ],
+)
+def test_who_accepted_and_why_declined_use_the_shared_wording(engine, question, needle):
+    text = engine.answer(question).text
+    assert needle in text
+    assert "personal plans" not in text.lower() and "busy" not in text.lower()

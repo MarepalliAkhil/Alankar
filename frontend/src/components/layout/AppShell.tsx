@@ -7,6 +7,7 @@ import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed';
 import { cn } from '../../lib/cn';
 import { canCall, notificationsPathFor, roleLabel } from '../../policy/policy';
 import { useSession } from '../../session/session-context';
+import { AirPopup } from '../air/Air';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { TourProvider } from '../tour/TourProvider';
@@ -110,6 +111,7 @@ export function AppShell() {
 
         <CommandBar />
         {isCustomer && <ChatWidget />}
+        {user.role === 'receptionist' && <AirPopup />}
         <Drawer open={drawer} onClose={() => setDrawer(false)} title="Menu" side="left">
           <Sidebar
             role={user.role}

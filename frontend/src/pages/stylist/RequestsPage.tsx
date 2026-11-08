@@ -152,7 +152,10 @@ export default function RequestsPage() {
                         <Badge tone="danger">Allergy alert: shown once the visit is booked</Badge>
                       )}
                       <p className="text-xs text-text-muted">
-                        Front desk: {request.reception_status_label}
+                        Front desk:{' '}
+                        {request.reception_by_air && request.reception_status === 'accepted'
+                          ? 'Accepted by AIR (covering the desk)'
+                          : request.reception_status_label}
                       </p>
                       <div className="mt-auto flex flex-wrap gap-sm pt-sm">
                         <Button

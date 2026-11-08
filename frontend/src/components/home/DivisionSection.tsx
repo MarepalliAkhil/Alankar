@@ -5,6 +5,8 @@ import { divisions, type DivisionId } from '../../config/divisions';
 import { ThemeScope } from '../../design/ThemeProvider';
 import { divisionTheme } from '../../design/themes';
 import { formatINR } from '../../lib/format';
+import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { LoaderSlot } from '../brand/LogoLoader';
 import { PageContainer } from '../layout/PageContainer';
 import { ButtonLink } from '../ui';
 
@@ -37,6 +39,7 @@ export function DivisionSection({
   const { chapter, id: sectionId } = CHAPTER[id];
   const rows = services.filter((s) => s.division === id).slice(0, 4);
   const titleId = `${sectionId}-title`;
+  const loaderShown = useDelayedLoading(loading);
   return (
     <section
       id={sectionId}
@@ -52,8 +55,11 @@ export function DivisionSection({
               {division.label}
             </h2>
             <p className="text-lg text-text">{division.summary}</p>
-            {loading ? (
-              <p className="text-sm text-text">Loading services…</p>
+            {loading || loaderShown ? (
+              <p className="flex items-center gap-2 text-sm text-text">
+                <LoaderSlot visible={loaderShown} label="Loading services" />
+                Loading services…
+              </p>
             ) : rows.length > 0 ? (
               <ul aria-label={`${division.label} services`} className="divide-y divide-border">
                 {rows.map((service) => (

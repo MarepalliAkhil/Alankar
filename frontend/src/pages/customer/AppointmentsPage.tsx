@@ -13,6 +13,8 @@ import {
 } from '../../api/booking';
 import { RatingPrompt } from '../../components/booking/RatingPrompt';
 import { MeeraMoment, PageTip } from '../../components/tour';
+import { RequestTimeline } from '../../components/customer/RequestTimeline';
+import { SorryNote } from '../../components/customer/SorryNote';
 import { VisitProducts } from '../../components/customer/VisitProducts';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
@@ -313,6 +315,10 @@ function AppointmentCard({
 
       <VisitProducts appt={appt} />
 
+      {appt.timeline && appt.timeline.length > 0 && (
+        <RequestTimeline steps={appt.timeline} name={appt.id} />
+      )}
+
       {appt.chat_thread_id && (
         <ButtonLink
           to={`/customer/chat/${appt.chat_thread_id}`}
@@ -324,7 +330,8 @@ function AppointmentCard({
         </ButtonLink>
       )}
 
-      {appt.approval && appt.approval.stage !== 'confirmed' && (
+      {appt.sorry_note && <SorryNote appt={appt} />}
+      {!appt.sorry_note && appt.approval && appt.approval.stage !== 'confirmed' && (
         <MeeraMoment
           pose={appt.approval.stage === 'waiting' ? 'waiting' : 'sorry'}
           className={
@@ -351,7 +358,7 @@ function AppointmentCard({
           <p className="font-medium">You are confirmed. We look forward to seeing you.</p>
         </MeeraMoment>
       )}
-      {appt.rebook && (
+      {appt.rebook && !appt.sorry_note && (
         <ButtonLink to={rebookLink(appt.rebook)} size="sm" className="w-fit">
           Choose another time or stylist
         </ButtonLink>

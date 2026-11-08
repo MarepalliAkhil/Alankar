@@ -6,6 +6,7 @@ import type { SVGProps } from 'react';
  * steps of a visit), so pages do not depend on a stock icon set for their identity.
  * Colour comes from `currentColor`, size from the className.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- a constant map, shared on purpose
 export const alankarIcons = {
   scissors: (
     <>

@@ -58,6 +58,9 @@ export interface DeskAppointment {
   reject_reason: string;
   reception_status: ApprovalStatus;
   reception_status_label: string;
+  /** AIR (covering the desk) gave the front-desk answer, not a person. */
+  reception_by_air?: boolean;
+  reception_accepted_at?: string | null;
   stylist_status: ApprovalStatus;
   stylist_status_label: string;
   approval_expires_at: string | null;

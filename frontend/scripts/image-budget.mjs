@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  AIR_FOLDER,
   LEADER_FOLDER,
   MEERA_FOLDER,
   PHOTO_SLOTS,
@@ -112,6 +113,26 @@ for (const file of meeraFiles) {
     }
   }
 }
+// AIR (Task AIR-3): the popup draws the character at most 176 CSS px square (a 128 px bottom
+// sheet on phones). Each picture must cover that on the iPhone and laptop profiles without being
+// enlarged more than MAX_COVER_SCALE; a picture that is not square is flagged too (never stretched).
+const AIR_STAGE = { width: 176, height: 176 };
+const airFiles = list(path.join(photosDir, AIR_FOLDER)).filter((n) => /\.webp$/i.test(n));
+const airProblems = [];
+for (const file of airFiles) {
+  const size = imageSize(fs.readFileSync(path.join(photosDir, AIR_FOLDER, file)));
+  if (!size) continue;
+  if (size.width !== size.height) airProblems.push(`${AIR_FOLDER}/${file} is not square`);
+  for (const p of PROFILES.filter((x) => ['iphone-portrait', 'laptop-2x'].includes(x.id))) {
+    const scale = Math.max(
+      (AIR_STAGE.width * p.dpr) / size.width,
+      (AIR_STAGE.height * p.dpr) / size.height,
+    );
+    if (scale > MAX_COVER_SCALE && !/-512\.webp$/i.test(file)) {
+      airProblems.push(`${AIR_FOLDER}/${file} on ${p.id}: x${scale.toFixed(2)}`);
+    }
+  }
+}
 const leaderFiles = list(path.join(photosDir, LEADER_FOLDER)).filter((n) => EXT.test(n));
 
 // ---- output
@@ -206,6 +227,9 @@ say(
   `Meera pictures: ${meeraFiles.length} files${meeraTooSmall.length ? '; too small: ' + meeraTooSmall.join(', ') : ''} (assumed stage ${MEERA_STAGE.width}x${MEERA_STAGE.height} CSS px).`,
 );
 say(
+  `AIR pictures: ${airFiles.length} files${airProblems.length ? '; PROBLEMS: ' + airProblems.join(', ') : ', all square and sharp enough'} (stage ${AIR_STAGE.width}x${AIR_STAGE.height} CSS px).`,
+);
+say(
   `Zenoti leader photos: ${leaderFiles.length ? leaderFiles.join(', ') : 'none (initials are shown)'}.`,
 );
 say();
@@ -214,5 +238,6 @@ say(
     ? `RESULT: ${flagged.length} picture/device combinations are over ${MAX_COVER_SCALE}x.`
     : `RESULT: every picture is within ${MAX_COVER_SCALE}x on every profile.`,
 );
+if (airProblems.length) say(`RESULT (AIR): ${airProblems.length} problem(s), see above.`);
 console.log(out.join('\n'));
-process.exit(flagged.length ? 1 : 0);
+process.exit(flagged.length || airProblems.length ? 1 : 0);

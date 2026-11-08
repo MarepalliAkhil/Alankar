@@ -1,0 +1,175 @@
+ the project rules file                                          |    4 [32m+[m[31m-[m
+ README.md                                          |    2 [32m+[m[31m-[m
+ backend/.env.example                               |    9 [32m+[m
+ backend/air/__init__.py                            |    0
+ backend/air/actionlog.py                           |  115 [32m++[m
+ backend/air/actor.py                               |  119 [32m+++[m
+ backend/air/ai.py                                  |  148 [32m+++[m
+ backend/air/air_desk_urls.py                       |   13 [32m+[m
+ backend/air/apps.py                                |   10 [32m+[m
+ backend/air/briefing.py                            |  150 [32m+++[m
+ backend/air/callback.py                            |   95 [32m++[m
+ backend/air/catalogue.py                           |   27 [32m+[m
+ backend/air/chat_api.py                            |  493 [32m+++++++++[m
+ backend/air/config.py                              |  123 [32m+++[m
+ backend/air/consent.py                             |   57 [32m+[m
+ backend/air/cover.py                               |  169 [32m+++[m
+ backend/air/desk.py                                |  408 [32m++++++++[m
+ backend/air/desk_api.py                            |  195 [32m++++[m
+ backend/air/desk_urls.py                           |    9 [32m+[m
+ backend/air/dialog.py                              | 1100 [32m++++++++++++++++++++[m
+ backend/air/handover.py                            |  129 [32m+++[m
+ backend/air/holds.py                               |  248 [32m+++++[m
+ backend/air/lifecycle.py                           |  179 [32m++++[m
+ backend/air/links.py                               |  152 [32m+++[m
+ backend/air/llm/__init__.py                        |    0
+ backend/air/llm/numbercheck.py                     |   95 [32m++[m
+ backend/air/llm/orchestrator.py                    |  355 [32m+++++++[m
+ backend/air/llm/providers.py                       |  167 [32m+++[m
+ backend/air/llm/redact.py                          |   38 [32m+[m
+ backend/air/llm/tools.py                           |  523 [32m++++++++++[m
+ backend/air/llm/usage.py                           |  111 [32m++[m
+ backend/air/management/__init__.py                 |    0
+ backend/air/management/commands/__init__.py        |    0
+ .../air/management/commands/air_cover_diagnose.py  |   90 [32m++[m
+ backend/air/management/commands/air_cover_sweep.py |   33 [32m+[m
+ backend/air/management/commands/expire_holds.py    |   21 [32m+[m
+ backend/air/migrations/0001_initial.py             |  208 [32m++++[m
+ .../air/migrations/0002_order_cap_and_callbacks.py |   41 [32m+[m
+ backend/air/migrations/0003_needs_you_state.py     |   31 [32m+[m
+ backend/air/migrations/0004_desk_cover.py          |   65 [32m++[m
+ backend/air/migrations/__init__.py                 |    0
+ backend/air/models.py                              |  386 [32m+++++++[m
+ backend/air/my_urls.py                             |   10 [32m+[m
+ backend/air/needs.py                               |  101 [32m++[m
+ backend/air/orders.py                              |  398 [32m+++++++[m
+ backend/air/public_urls.py                         |    9 [32m+[m
+ backend/air/service.py                             |  340 [32m++++++[m
+ backend/air/signals.py                             |   91 [32m++[m
+ backend/air/stats.py                               |  762 [32m++++++++++++++[m
+ backend/air/tests/__init__.py                      |    0
+ backend/air/tests/air_evaluation.py                |   90 [32m++[m
+ backend/air/tests/conftest.py                      |  150 [32m+++[m
+ backend/air/tests/eval_sets.py                     |  317 [32m++++++[m
+ backend/air/tests/test_admin_api_and_off.py        |  184 [32m++++[m
+ backend/air/tests/test_chat_flow.py                |  371 [32m+++++++[m
+ backend/air/tests/test_cover.py                    |  150 [32m+++[m
+ backend/air/tests/test_customer_side.py            |  443 [32m++++++++[m
+ backend/air/tests/test_desk_cover.py               |  589 [32m+++++++++++[m
+ backend/air/tests/test_desk_stats.py               |  545 [32m++++++++++[m
+ backend/air/tests/test_eval.py                     |  102 [32m++[m
+ backend/air/tests/test_handover_and_log.py         |  253 [32m+++++[m
+ backend/air/tests/test_holds_and_links.py          |  455 [32m++++++++[m
+ backend/air/tests/test_llm.py                      |  510 [32m+++++++++[m
+ backend/air/tests/test_orders.py                   |  383 [32m+++++++[m
+ backend/air/tests/test_policy.py                   |  352 [32m+++++++[m
+ backend/air/tests/test_zz_dbg.py                   |    1 [32m+[m
+ backend/air/understand.py                          |  953 [32m+++++++++++++++++[m
+ backend/air/urls.py                                |   11 [32m+[m
+ backend/air/views.py                               |  127 [32m+++[m
+ ..._paymentlink_sent_by_paymentlink_sent_by_air.py |   26 [32m+[m
+ backend/billing/models.py                          |    5 [32m+[m
+ backend/chatbot/data.py                            |   26 [32m+[m
+ backend/chatbot/defaults.py                        |   42 [32m+[m
+ backend/chatbot/engine/engine.py                   |   23 [32m+[m
+ backend/chatbot/registry.py                        |    7 [32m+[m[31m-[m
+ backend/chatbot/tests/test_accuracy.py             |    9 [32m+[m[31m-[m
+ backend/config/settings.py                         |    1 [32m+[m
+ backend/config/urls.py                             |    7 [32m+[m[31m-[m
+ backend/core/demo.py                               |   11 [32m+[m
+ backend/core/jobs.py                               |   19 [32m+[m
+ backend/core/management/commands/reset_demo.py     |    1 [32m+[m
+ backend/core/policy.py                             |   16 [32m+[m
+ backend/notifications/air_templates.py             |   83 [32m++[m
+ backend/notifications/templates.py                 |    7 [32m+[m
+ backend/people/stylist_views.py                    |    1 [32m+[m
+ backend/pyproject.toml                             |    3 [32m+[m[31m-[m
+ backend/scheduling/booking.py                      |    6 [32m+[m
+ backend/scheduling/serializers.py                  |   18 [32m+[m
+ backend/scheduling/views.py                        |   11 [32m+[m[31m-[m
+ backend/website/migrations/0008_zenotians_air.py   |   96 [32m++[m
+ backend/website/tests/test_zenotians.py            |   42 [32m+[m[31m-[m
+ backend/website/zenotians_seed.py                  |   38 [32m+[m[31m-[m
+ docs/AIR.md                                        |  564 [32m++++++++++[m
+ docs/CHATBOT_ALGORITHM.md                          |    4 [32m+[m[31m-[m
+ docs/CHECKLIST_STATUS.md                           |    6 [32m+[m[31m-[m
+ docs/ENGINEERING_DECISIONS.md                      |    4 [32m+[m[31m-[m
+ docs/IMAGE_INVENTORY.md                            |  137 [32m+[m[31m--[m
+ docs/IMAGE_QUALITY.md                              |   10 [32m+[m
+ docs/IMAGE_SLOTS.md                                |   37 [32m+[m
+ docs/MASTER_NOTES.md                               |    3 [32m+[m
+ docs/PRESENTATION_NOTES.md                         |    2 [32m+[m[31m-[m
+ docs/PROGRESS.md                                   |   46 [32m+[m
+ docs/QA_PREP.md                                    |    4 [32m+[m[31m-[m
+ docs/SECURITY.md                                   |    2 [32m+[m
+ frontend/e2e/air-dashboard.e2e.ts                  |  166 [32m+++[m
+ frontend/e2e/air-widget.e2e.ts                     |   97 [32m++[m
+ frontend/e2e/helpers.ts                            |    6 [32m+[m
+ frontend/e2e/pages.ts                              |   19 [32m+[m[31m-[m
+ frontend/public/brand/alankar-logo.svg             |   33 [32m+[m
+ frontend/public/photos/air/air-01-welcome-512.webp |  Bin [31m0[m -> [32m28410[m bytes
+ frontend/public/photos/air/air-01-welcome.webp     |  Bin [31m511688[m -> [32m45466[m bytes
+ frontend/public/photos/air/air-02-idle-512.webp    |  Bin [31m0[m -> [32m28002[m bytes
+ frontend/public/photos/air/air-02-idle.webp        |  Bin [31m499046[m -> [32m45146[m bytes
+ frontend/public/photos/air/air-03-explain-512.webp |  Bin [31m0[m -> [32m27978[m bytes
+ frontend/public/photos/air/air-03-explain.webp     |  Bin [31m525922[m -> [32m44348[m bytes
+ .../public/photos/air/air-04-point-right-512.webp  |  Bin [31m0[m -> [32m26642[m bytes
+ frontend/public/photos/air/air-04-point-right.webp |  Bin [31m523206[m -> [32m43352[m bytes
+ frontend/public/photos/air/air-05-report-512.webp  |  Bin [31m0[m -> [32m26766[m bytes
+ frontend/public/photos/air/air-05-report.webp      |  Bin [31m537580[m -> [32m44436[m bytes
+ .../public/photos/air/air-06-thumbs-up-512.webp    |  Bin [31m0[m -> [32m26664[m bytes
+ frontend/public/photos/air/air-06-thumbs-up.webp   |  Bin [31m549676[m -> [32m42778[m bytes
+ .../public/photos/air/air-07-thinking-512.webp     |  Bin [31m0[m -> [32m24384[m bytes
+ frontend/public/photos/air/air-07-thinking.webp    |  Bin [31m548546[m -> [32m40484[m bytes
+ .../public/photos/air/air-08-attention-512.webp    |  Bin [31m0[m -> [32m27104[m bytes
+ frontend/public/photos/air/air-08-attention.webp   |  Bin [31m578994[m -> [32m43316[m bytes
+ .../public/photos/air/air-09-concerned-512.webp    |  Bin [31m0[m -> [32m22068[m bytes
+ frontend/public/photos/air/air-09-concerned.webp   |  Bin [31m549630[m -> [32m37392[m bytes
+ .../public/photos/air/air-10-celebrate-512.webp    |  Bin [31m0[m -> [32m36384[m bytes
+ frontend/public/photos/air/air-10-celebrate.webp   |  Bin [31m644612[m -> [32m53612[m bytes
+ frontend/public/photos/air/air-11-on-call-512.webp |  Bin [31m0[m -> [32m29252[m bytes
+ frontend/public/photos/air/air-11-on-call.webp     |  Bin [31m644520[m -> [32m47332[m bytes
+ .../public/photos/air/air-12-handover-512.webp     |  Bin [31m0[m -> [32m27218[m bytes
+ frontend/public/photos/air/air-12-handover.webp    |  Bin [31m627490[m -> [32m45246[m bytes
+ frontend/public/photos/air/air-13-sleep-512.webp   |  Bin [31m0[m -> [32m26806[m bytes
+ frontend/public/photos/air/air-13-sleep.webp       |  Bin [31m665386[m -> [32m44828[m bytes
+ frontend/public/photos/placeholders.json           |  117 [32m+++[m
+ frontend/scripts/image-budget.mjs                  |   27 [32m+[m[31m-[m
+ frontend/scripts/photos-inventory.mjs              |   50 [32m+[m[31m-[m
+ frontend/scripts/photos-optimize.mjs               |   83 [32m+[m[31m-[m
+ frontend/src/api/air.ts                            |  146 [32m+++[m
+ frontend/src/api/airDesk.ts                        |  228 [32m++++[m
+ frontend/src/api/desk.ts                           |    3 [32m+[m
+ frontend/src/api/stylist.ts                        |    1 [32m+[m
+ frontend/src/components/air/Air.test.tsx           |  315 [32m++++++[m
+ frontend/src/components/air/Air.tsx                |  475 [32m+++++++++[m
+ frontend/src/components/air/air-data.test.ts       |   66 [32m++[m
+ frontend/src/components/air/air-data.ts            |  147 [32m+++[m
+ frontend/src/components/air/air-images.ts          |   18 [32m+[m
+ frontend/src/components/charts/BarChartView.tsx    |    2 [32m+[m
+ .../components/charts/ConversationTrendView.tsx    |   88 [32m++[m
+ .../src/components/chatbot/ChatWidget.test.tsx     |  362 [32m+++++[m[31m--[m
+ frontend/src/components/chatbot/ChatWidget.tsx     |  431 [32m++++++[m[31m--[m
+ frontend/src/components/chatbot/air-text.ts        |   21 [32m+[m
+ .../src/components/customer/AiHelpCard.test.tsx    |   51 [32m+[m
+ frontend/src/components/customer/AiHelpCard.tsx    |   62 [32m++[m
+ .../src/components/desk/CallbackPanel.test.tsx     |   54 [32m+[m
+ frontend/src/components/desk/CallbackPanel.tsx     |   56 [32m+[m
+ frontend/src/components/layout/AppShell.tsx        |    2 [32m+[m
+ frontend/src/components/layout/menu-icons.tsx      |    2 [32m+[m
+ frontend/src/components/ui/AlankarIcon.tsx         |    1 [32m+[m
+ frontend/src/design/index.css                      |   13 [32m+[m
+ frontend/src/generated/repo-stats.json             |   16 [32m+[m[31m-[m
+ frontend/src/pages/air/AirActivityPage.test.tsx    |  430 [32m++++++++[m
+ frontend/src/pages/air/AirActivityPage.tsx         |  666 [32m++++++++++++[m
+ frontend/src/pages/air/AirSettingsPanel.tsx        |  343 [32m++++++[m
+ frontend/src/pages/air/air-charts.ts               |  112 [32m++[m
+ frontend/src/pages/app/RolePage.tsx                |    2 [32m+[m
+ frontend/src/pages/customer/ProfilePage.tsx        |    4 [32m+[m
+ frontend/src/pages/desk/DeskAppointmentsPage.tsx   |    9 [32m+[m[31m-[m
+ frontend/src/pages/stylist/RequestsPage.tsx        |    5 [32m+[m[31m-[m
+ frontend/src/test/setup.ts                         |   47 [32m+[m
+ frontend/vite-plugins/photo-manifest.js            |    6 [32m+[m[31m-[m
+ frontend/vite-plugins/photo-slots.js               |   49 [32m+[m[31m-[m
+ shared/policy.json                                 |  138 [32m++[m[31m-[m
+ 174 files changed, 19829 insertions(+), 272 deletions(-)

@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from core import crypto
 from notifications import templates
-from scheduling import booking
+from scheduling import acceptance, booking, timeline
 from scheduling.models import (
     Appointment,
     AppointmentEvent,
@@ -261,11 +261,19 @@ class CustomerAppointmentSerializer(_AppointmentBase):
     approval = serializers.SerializerMethodField()
     rebook = serializers.SerializerMethodField()
     pending_change = serializers.SerializerMethodField()
+    reception_actor = serializers.SerializerMethodField()
+    reception_label = serializers.SerializerMethodField()
+    timeline = serializers.SerializerMethodField()
+    sorry_note = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
         fields = [
             *COMMON_FIELDS,
+            "reception_actor",
+            "reception_label",
+            "timeline",
+            "sorry_note",
             "notes",
             "allergies",
             "actions",
@@ -276,6 +284,19 @@ class CustomerAppointmentSerializer(_AppointmentBase):
             "rebook",
             "pending_change",
         ]
+
+    def get_reception_actor(self, obj: Appointment) -> str:
+        """ "receptionist" or "air": only the TYPE of who accepted, never the person."""
+        return obj.reception_actor
+
+    def get_reception_label(self, obj: Appointment) -> str:
+        return acceptance.label(obj.reception_actor)
+
+    def get_timeline(self, obj: Appointment) -> list[dict]:
+        return timeline.timeline(obj)
+
+    def get_sorry_note(self, obj: Appointment) -> dict | None:
+        return timeline.sorry_note(obj)
 
     def get_approval(self, obj: Appointment) -> dict | None:
         """Plain words for the booking card: Waiting for approval, Declined or Confirmed.
@@ -360,6 +381,13 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.actor.full_name if obj.actor_id else "System"
 
 
+def air_accepted_at(obj: Appointment):
+    """When AIR accepted the front-desk side of this request, or None. (A request AIR never
+    handled has no AIR state row.)"""
+    state = getattr(obj, "air_state", None)
+    return state.accepted_at if state is not None else None
+
+
 class DeskAppointmentSerializer(_AppointmentBase):
     customer_name = serializers.CharField(source="contact_name", read_only=True)
     customer_email = serializers.CharField(source="contact_email", read_only=True)
@@ -377,11 +405,20 @@ class DeskAppointmentSerializer(_AppointmentBase):
     )
     asked_stylist_id = serializers.SerializerMethodField()
     asked_stylist_name = serializers.SerializerMethodField()
+    reception_by_air = serializers.SerializerMethodField()
+    reception_accepted_at = serializers.SerializerMethodField()
     stylist_decline_reason_label = serializers.SerializerMethodField()
 
     def get_asked_stylist_id(self, obj: Appointment):
         asked = obj.hold_stylist_id or obj.stylist_id
         return str(asked) if asked else None
+
+    def get_reception_by_air(self, obj: Appointment) -> bool:
+        """True when AIR (covering the desk) gave the front-desk answer, not a person."""
+        return bool(air_accepted_at(obj))
+
+    def get_reception_accepted_at(self, obj: Appointment):
+        return air_accepted_at(obj)
 
     def get_asked_stylist_name(self, obj: Appointment) -> str | None:
         asked = obj.hold_stylist or obj.stylist
@@ -398,6 +435,8 @@ class DeskAppointmentSerializer(_AppointmentBase):
             "reject_reason",
             "reception_status",
             "reception_status_label",
+            "reception_by_air",
+            "reception_accepted_at",
             "stylist_status",
             "stylist_status_label",
             "approval_expires_at",

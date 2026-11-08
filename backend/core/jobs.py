@@ -37,6 +37,23 @@ def waitlist(now) -> int:
     return engine.expire_offers(now) + engine.expire_waiting(now)
 
 
+def air_expire_holds(now) -> int:
+    """AIR (Task AIR-1): ends overdue slot holds, tells customers, hands work to the desk when a
+    receptionist is in. Does nothing at all while AIR is switched off."""
+    from air import cover, holds
+
+    cover.is_active(now)
+    return holds.expire_due(now)
+
+
+def air_cover_sweep(now) -> int:
+    """AIR desk cover: look at every booking request that waits for the front desk and accept the
+    receptionist side while AIR covers (every request gets a logged outcome with a reason)."""
+    from air import desk
+
+    return desk.sweep(now)["looked_at"]
+
+
 def end_lapsed_memberships(now) -> int:
     from wallet.models import Membership
     from wallet.selling import end_lapsed
@@ -93,6 +110,8 @@ JOBS: list[tuple[str, Callable]] = [
     ("expire_unpaid_holds", expire_unpaid_holds),
     ("booking_request_reminders", booking_request_reminders),
     ("waitlist", waitlist),
+    ("air_expire_holds", air_expire_holds),
+    ("air_cover_sweep", air_cover_sweep),
     ("end_lapsed_memberships", end_lapsed_memberships),
     ("campaigns", campaigns),
     ("rating_reminders", rating_reminders),

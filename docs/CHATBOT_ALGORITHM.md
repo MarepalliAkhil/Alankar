@@ -1,6 +1,6 @@
 # AI Alankar Intelligence: Question-Understanding Algorithm
 
-**Rule: no LLMs, no Ollama, no external AI services, no API keys, no ML libraries.** The chatbot is a deterministic program built from text processing, a rule table, a search formula (BM25) and the application's own database. It understands a question by **rewriting it into a standard form** (the "rephrase"), then answers only from data it can point to.
+**Rule for this engine: no LLMs, no Ollama, no external AI services, no API keys, no ML libraries.** (AIR, the optional virtual receptionist that shares the chat window, has its own optional and off-by-default AI service; it is described in docs/AIR.md and never changes this engine.) The chatbot is a deterministic program built from text processing, a rule table, a search formula (BM25) and the application's own database. It understands a question by **rewriting it into a standard form** (the "rephrase"), then answers only from data it can point to.
 
 The reference implementation is in `alankar_intelligence/` (Python standard library only, about 600 lines, 16 passing tests). the coding assistant should port it into the Django app (`backend/chatbot/`) and keep the same module boundaries.
 
@@ -95,7 +95,7 @@ Standard BM25 with k1 = 1.5 and b = 0.75 over each entry's question and tags (co
 
 After any change, rebuild the in-memory engine (a Django signal can call `Engine(...)` again). Typical question time is well under 10 ms.
 
-## 4. How it gets better without AI
+## 4. How it gets better without a language model
 1. The engine logs `unanswered_key` (normalized, anonymous) for every fallback.
 2. The admin sees the most frequent unanswered questions, writes a knowledge entry for each, and optionally adds synonyms.
 3. Re-run the test suite; add the new question to `CASES`.

@@ -228,9 +228,9 @@ A single shop keeps every rule checkable: one set of prices, one set of stylists
 
 Where: `docs/MASTER_NOTES.md`
 
-**Why is there no AI in it?**
+**Does it use AI?**
 
-Every smart feature here is a rule or a count, so it can be explained, tested and trusted with a customer's records. The chatbot answers only from the shop's data and the signed-in person's own records, and when it does not know it says so and gives the shop's contact details. A language model could not give that guarantee as simply. The cost is real: the chatbot is less flexible, and its measured accuracy is on this page.
+Only as an optional extra, off by default. Every smart feature is a rule or a count, so it can be explained, tested and trusted with a customer's records. The chatbot answers only from the shop's data and the signed-in person's own records, and when it does not know it says so and gives the shop's contact details. AIR, the optional virtual receptionist, can use a third-party language model to read messages, but only when the admin switches it on with a key and the customer agrees; the model can only propose things, the customer presses the button, and the rules take over when it is off or fails. Rule-based accuracy for AIR is measured (docs/AIR.md); AI-mode accuracy is not.
 
 Where: `docs/CHATBOT_ALGORITHM.md`, `backend/chatbot/engine/`
 

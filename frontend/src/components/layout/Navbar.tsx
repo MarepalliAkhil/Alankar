@@ -1,10 +1,10 @@
 import { Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { brand } from '../../config/brand';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { divisions } from '../../config/divisions';
 import { BOOK_NOW_PATH } from '../../config/paths';
 import { cn } from '../../lib/cn';
+import { BrandLink } from '../brand/BrandLink';
 import { usePendingAction } from '../../hooks/usePendingAction';
 import { useScrolled } from '../../hooks/useScrolled';
 import { useSession } from '../../session/session-context';
@@ -97,18 +97,16 @@ export function Navbar() {
     );
 
   return (
-    <header data-hero-follow className="sticky top-0 z-nav px-md pt-sm sm:px-lg">
+    <header
+      data-hero-follow
+      className="sticky top-0 z-nav px-md pt-sm sm:px-lg pl-[max(theme(spacing.md),env(safe-area-inset-left))] pr-[max(theme(spacing.md),env(safe-area-inset-right))] sm:pl-[max(theme(spacing.lg),env(safe-area-inset-left))] sm:pr-[max(theme(spacing.lg),env(safe-area-inset-right))]"
+    >
       <nav
         ref={bar}
         aria-label="Main"
         className="glass-bar mx-auto flex h-16 w-full max-w-7xl items-center gap-md rounded-card px-md"
       >
-        <Link
-          to="/"
-          className="shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xl font-semibold leading-7 text-text focus-visible:shadow-focus focus-visible:outline-none"
-        >
-          {brand.logoText}
-        </Link>
+        <BrandLink placement="navbar" />
 
         <ul className="hidden shrink-0 items-center gap-1 lg:flex">
           {divisions.map((division) => (

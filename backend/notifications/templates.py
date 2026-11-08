@@ -19,6 +19,9 @@ from __future__ import annotations
 
 import string
 
+from notifications import sorry
+from notifications.air_templates import AIR_TEMPLATES
+
 ALLOWED = {
     "first_name",
     "service",
@@ -30,6 +33,14 @@ ALLOWED = {
     "payment_note",
     "hours_left",
     "customer",
+    "pay_by",
+    "amount",
+    "alternatives",
+    "next_slots",
+    "contact",
+    "stylist_first",
+    "reception_line",
+    "reception_sentence",
 }
 
 # --- reasons staff may pick when they change a customer's slot (shown to the customer) -----------
@@ -66,7 +77,7 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "title": "Your booking is approved",
         "body": (
             "Good news, {first_name}! The salon and {stylist} have both approved your {service} "
-            "on {when}. Please pay to lock in your slot."
+            "on {when}. {reception_sentence} Please pay to lock in your slot."
         ),
         "sms": "Good news {first_name}! Your {service} on {when} is approved. Please pay to keep it.",
         "subject": "your booking is approved",
@@ -75,37 +86,10 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "title": "Your booking is confirmed",
         "body": (
             "Good news, {first_name}! The salon and {stylist} have both approved your {service} "
-            "on {when}. It is booked, so we will see you then."
+            "on {when}. {reception_sentence} It is booked, so we will see you then."
         ),
         "sms": "Good news {first_name}! Your {service} on {when} is booked. See you soon!",
         "subject": "your booking is confirmed",
-    },
-    "customer_declined_by_stylist": {
-        "title": "Please choose another time or stylist",
-        "body": (
-            "Hi {first_name}, your stylist isn't available for this time. Please choose another "
-            "time or stylist."
-        ),
-        "sms": "Hi {first_name}, your stylist isn't available for {when}. Please choose another time or stylist.",
-        "subject": "please choose another time or stylist",
-    },
-    "customer_declined_by_reception": {
-        "title": "We could not take this request",
-        "body": (
-            "Hi {first_name}, we're sorry, we could not take your {service} request for {when}. "
-            "Please choose another time or stylist."
-        ),
-        "sms": "Hi {first_name}, sorry, we couldn't take your {service} request for {when}. Please pick another time.",
-        "subject": "we could not take your booking request",
-    },
-    "customer_expired": {
-        "title": "Your request ran out of time",
-        "body": (
-            "Hi {first_name}, we did not manage to confirm your {service} request for {when} in "
-            "time, so we released the slot. We are sorry. Please choose another time."
-        ),
-        "sms": "Hi {first_name}, we couldn't confirm {service} for {when} in time, so the slot was released. Sorry!",
-        "subject": "your booking request expired",
     },
     "customer_reassigned": {
         "title": "We asked another stylist",
@@ -160,45 +144,50 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "title": "The front desk accepted a request",
         "body": "The front desk accepted {first_name}'s {service} on {when}. It now waits for you.",
     },
-    # ---- sorry notes when staff change a slot (13C): to the customer ----------------------------
-    "slot_moved": {
-        "title": "We are sorry: your booking was moved",
+    # (every apology: notifications/sorry.py)
+}
+
+# Good news. The line {reception_line} is the shared "who accepted" wording (never an apology).
+ACCEPTANCE_TEMPLATES: dict[str, dict[str, str]] = {
+    "customer_front_desk_accepted": {
+        "title": "The front desk accepted your request",
         "body": (
-            "Hi {first_name}, we are really sorry. We had to move your {service} from {old_when} "
-            "to {new_when} because of {reason}. {payment_note}"
+            "Good news, {first_name}! Your {service} request for {when} has been accepted. "
+            "{reception_sentence} We are now waiting for your stylist to answer."
         ),
-        "sms": "Hi {first_name}, sorry! We had to move your {service} from {old_when} to {new_when}. Open the app to accept or change it.",
-        "subject": "we are sorry, your booking was moved",
-    },
-    "slot_reassigned": {
-        "title": "We are sorry: your stylist changed",
-        "body": (
-            "Hi {first_name}, we are sorry. Because of {reason}, {stylist} will look after your "
-            "{service} on {new_when} (it was {old_when}). {payment_note}"
-        ),
-        "sms": "Hi {first_name}, sorry! {stylist} will now do your {service} on {new_when}. Open the app to accept or change it.",
-        "subject": "we are sorry, your stylist changed",
-    },
-    "slot_cancelled": {
-        "title": "We are sorry: your booking was cancelled",
-        "body": (
-            "Hi {first_name}, we are truly sorry. We had to cancel your {service} on {old_when} "
-            "because of {reason}. {payment_note}"
-        ),
-        "sms": "Hi {first_name}, we are truly sorry: we had to cancel your {service} on {old_when}. Open the app to rebook.",
-        "subject": "we are sorry, your booking was cancelled",
+        "sms": "Good news {first_name}! Your {service} request for {when} was accepted. {reception_sentence}",
+        "subject": "the front desk accepted your request",
     },
 }
 
+
+TEMPLATES.update(AIR_TEMPLATES)  # Task AIR-1: messages for requests AIR handles
+TEMPLATES.update(sorry.templates())  # every apology is worded in notifications/sorry.py
+TEMPLATES.update(ACCEPTANCE_TEMPLATES)
+
 PAYMENT_NOTES = {
     "valid": "Your payment stays valid for the new time.",
-    "refund": "Your online payment of Rs. {amount} will be refunded once approved.",
-    "none": "Nothing has been charged yet.",
+    # What `booking.desk_cancel` really does: it files a refund request that waits for the admin.
+    "refund": (
+        "We have asked our team to approve a refund of your online payment of Rs. {amount}."
+    ),
+    "none": "Nothing has been charged.",
+    # Used when money was paid but no refund flow applies: no amount, no deadline, no promise.
+    "contact": "Our front desk will contact you about your payment.",
 }
 
 
 class TemplateError(Exception):
     pass
+
+
+def render_text(text: str, **context: str) -> str:
+    """Fills a loose piece of template text (one apology part) with the same safety checks."""
+    names = {name for _, name, _, _ in string.Formatter().parse(text) if name}
+    unknown = names - ALLOWED
+    if unknown:
+        raise TemplateError(f"Unknown fields: {sorted(unknown)}")
+    return text.format(**{name: str(context.get(name, "")) for name in names})
 
 
 def render(key: str, field: str = "body", **context: str) -> str:

@@ -7,6 +7,7 @@ import {
   type TourProgress,
   type TourStatus,
 } from '../../api/tours';
+import { useIntroReached } from '../../intro/introPhase';
 import type { Role } from '../../policy/policy';
 import { TourContext, type TourValue } from './tour-context';
 import { Tour } from './Tour';
@@ -67,12 +68,15 @@ export function TourProvider({
     [queryClient],
   );
 
+  // Meera's offer waits until the logo splash and the hero entrance have played (at once when
+  // there was no splash).
+  const introDone = useIntroReached('tour');
   // First run: start once. Anything stored (finished, skipped, "not now") means never again.
   useEffect(() => {
-    if (!definition || !progress.data || invited.current) return;
+    if (!definition || !progress.data || invited.current || !introDone) return;
     invited.current = true;
     if (progress.data[key] === undefined) setMode('running');
-  }, [definition, progress.data, key]);
+  }, [definition, progress.data, key, introDone]);
 
   const finish = useCallback(
     (status: TourStatus) => {

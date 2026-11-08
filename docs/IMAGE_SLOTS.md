@@ -76,6 +76,43 @@ Alt text per pose, e.g. "Meera, your stylist guide, waving". The stage in the to
 | meera-gift | 820x1024 | meera/meera-gift.webp | Meera holding a gift box (the gift cards tip). |
 | meera-package | 820x1024 | meera/meera-package.webp | Meera holding a package box (the packages and memberships tip). |
 | meera | 820x1024 | meera/meera.webp | Meera, the default picture: shown in every tour pose that has no meera-<pose> file yet. |
+| air-01-welcome | 1024x1024 | air/air-01-welcome.webp | AIR, the desk-bell receptionist, waving hello (the popup greeting). |
+| air-02-idle | 1024x1024 | air/air-02-idle.webp | AIR standing ready (nothing to report). |
+| air-03-explain | 1024x1024 | air/air-03-explain.webp | AIR explaining (reading out the numbers). |
+| air-04-point-right | 1024x1024 | air/air-04-point-right.webp | AIR pointing to the side (look at the list or the chart). |
+| air-05-report | 1024x1024 | air/air-05-report.webp | AIR with a report (the briefing). |
+| air-06-thumbs-up | 1024x1024 | air/air-06-thumbs-up.webp | AIR giving a thumbs-up (a good day). |
+| air-07-thinking | 1024x1024 | air/air-07-thinking.webp | AIR thinking (loading). |
+| air-08-attention | 1024x1024 | air/air-08-attention.webp | AIR asking for attention (items need you). |
+| air-09-concerned | 1024x1024 | air/air-09-concerned.webp | AIR looking concerned (expired links, declines, failures). |
+| air-10-celebrate | 1024x1024 | air/air-10-celebrate.webp | AIR celebrating (many bookings paid). |
+| air-11-on-call | 1024x1024 | air/air-11-on-call.webp | AIR on a call (covering the desk). |
+| air-12-handover | 1024x1024 | air/air-12-handover.webp | AIR handing the desk back to a person. |
+| air-13-sleep | 1024x1024 | air/air-13-sleep.webp | AIR asleep (night cover banner; optional). |
+| air | 1024x1024 | none (gradient) | AIR, the default picture: shown for any pose that has no file of its own. |
+
+## AIR, the virtual receptionist (owner-supplied character pictures)
+
+Square WebP (or PNG) pictures, **1024x1024**, in `frontend/public/photos/air/`, named exactly as below. `npm run photos:optimize` keeps each whole and square (never stretched) as WebP at 1024 px plus a 512 px copy (`<slot>-512.webp`), keeps transparency, and keeps the original in `frontend/photos-originals/air/`. A picture **without** transparency has its plain white surround made transparent (only near-white pixels connected to the edge, so white gloves and highlights stay). Until the optimizer has run, a picture with a plain background is shown inside a round frame. A pose without its own file shows `air.webp`; when that is missing too, the idle picture is used. The first pose is preloaded when the popup is about to open.
+
+**STILL NEEDED: `air/air.webp`** (the default AIR picture). Until it is added, a missing pose falls back to `air-02-idle`.
+
+| Slot | Size | Shows | Used for | Status |
+|---|---|---|---|---|
+| air-01-welcome | 1024x1024 | AIR, the desk-bell receptionist, waving hello (the popup greeting). | Greeting when the popup opens | present (1024x1024, transparent) |
+| air-02-idle | 1024x1024 | AIR standing ready (nothing to report). | Nothing to report; idle | present (1024x1024, transparent) |
+| air-03-explain | 1024x1024 | AIR explaining (reading out the numbers). | Reading out the numbers | present (1024x1024, transparent) |
+| air-04-point-right | 1024x1024 | AIR pointing to the side (look at the list or the chart). | Pointing to the list or a chart | present (1024x1024, transparent) |
+| air-05-report | 1024x1024 | AIR with a report (the briefing). | Reading out the numbers (the briefing) | present (1024x1024, transparent) |
+| air-06-thumbs-up | 1024x1024 | AIR giving a thumbs-up (a good day). | A good day | present (1024x1024, transparent) |
+| air-07-thinking | 1024x1024 | AIR thinking (loading). | Loading | present (1024x1024, transparent) |
+| air-08-attention | 1024x1024 | AIR asking for attention (items need you). | Items need you | present (1024x1024, transparent) |
+| air-09-concerned | 1024x1024 | AIR looking concerned (expired links, declines, failures). | Expired links, declines or failures | present (1024x1024, transparent) |
+| air-10-celebrate | 1024x1024 | AIR celebrating (many bookings paid). | Many bookings paid | present (1024x1024, transparent) |
+| air-11-on-call | 1024x1024 | AIR on a call (covering the desk). | AIR covering the desk | present (1024x1024, transparent) |
+| air-12-handover | 1024x1024 | AIR handing the desk back to a person. | Handing the desk back | present (1024x1024, transparent) |
+| air-13-sleep | 1024x1024 | AIR asleep (night cover banner; optional). | Cover banner at night (optional) | present (1024x1024, transparent) |
+| air | 1024x1024 | AIR, the default picture: shown for any pose that has no file of its own. | Fallback for any missing pose | STILL NEEDED |
 
 ## Optional, only with permission: pictures of Zenoti's leaders
 

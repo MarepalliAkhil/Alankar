@@ -8,6 +8,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  AIR_DEFAULT,
+  AIR_FOLDER,
+  AIR_POSES,
   HOME_PHOTOS,
   LEADER_FOLDER,
   MEERA_DEFAULT,
@@ -34,6 +37,7 @@ const files = [
   ...ls(dir),
   ...ls(path.join(dir, MEERA_FOLDER), `${MEERA_FOLDER}/`),
   ...ls(path.join(dir, LEADER_FOLDER), `${LEADER_FOLDER}/`),
+  ...ls(path.join(dir, AIR_FOLDER), `${AIR_FOLDER}/`),
 ];
 const images = files.filter((f) => /\.(webp|jpe?g|png)$/i.test(f)).sort();
 const kb = (b) => `${Math.round(b / 1024)} KB`;
@@ -100,15 +104,17 @@ inv += missingMeera.length
 inv += `\n## Every image file in public/photos\n\n| File | Size | Orientation | Weight | Slot and pages |\n|---|---|---|---|---|\n`;
 for (const f of images) {
   const size = imageSize(path.join(dir, f));
-  const base = f.replace(/\.[a-z]+$/i, '').replace(/^meera\//, '');
+  const base = f.replace(/\.[a-z]+$/i, '').replace(/^(meera|air)\//, '');
   const slot = base.replace(/-(960|512)$/, '');
-  const use = f.startsWith(`${MEERA_FOLDER}/`)
-    ? slot === MEERA_DEFAULT
-      ? 'Meera default picture (every pose without its own file)'
-      : `Meera tour picture (${slot})`
-    : /-(960|512)$/.test(base)
-      ? `Small-screen copy of ${slot}`
-      : (USED[slot] ?? 'Not used by any slot');
+  const use = f.startsWith(`${AIR_FOLDER}/`)
+    ? `AIR popup picture (${slot}${/-512$/.test(base) ? ', 512 px copy' : ''})`
+    : f.startsWith(`${MEERA_FOLDER}/`)
+      ? slot === MEERA_DEFAULT
+        ? 'Meera default picture (every pose without its own file)'
+        : `Meera tour picture (${slot})`
+      : /-(960|512)$/.test(base)
+        ? `Small-screen copy of ${slot}`
+        : (USED[slot] ?? 'Not used by any slot');
   inv += `| ${f} | ${size ? `${size.width}x${size.height}` : '?'} | ${size ? orientation(size.width, size.height) : '?'} | ${kb(fs.statSync(path.join(dir, f)).size)} | ${use} |\n`;
 }
 fs.writeFileSync(path.join(docs, 'IMAGE_INVENTORY.md'), inv);
@@ -154,6 +160,34 @@ slots += `\nAlt text per pose, e.g. "Meera, your stylist guide, waving". The sta
 for (const [s, w] of Object.entries(PHOTO_SLOTS)) {
   slots += `| ${s} | ${w.width}x${w.height} | ${pickPhoto(s, files) ?? 'none (gradient)'} | ${SLOT_SHOWS[s]} |\n`;
 }
+// ---- AIR, the virtual receptionist (AIR Task 3)
+const AIR_USE = {
+  welcome: 'Greeting when the popup opens',
+  idle: 'Nothing to report; idle',
+  explain: 'Reading out the numbers',
+  'point-right': 'Pointing to the list or a chart',
+  report: 'Reading out the numbers (the briefing)',
+  'thumbs-up': 'A good day',
+  thinking: 'Loading',
+  attention: 'Items need you',
+  concerned: 'Expired links, declines or failures',
+  celebrate: 'Many bookings paid',
+  'on-call': 'AIR covering the desk',
+  handover: 'Handing the desk back',
+  sleep: 'Cover banner at night (optional)',
+};
+const airDefault = pickPhoto(AIR_DEFAULT, files);
+slots += `\n## AIR, the virtual receptionist (owner-supplied character pictures)\n\nSquare WebP (or PNG) pictures, **1024x1024**, in \`frontend/public/photos/${AIR_FOLDER}/\`, named exactly as below. \`npm run photos:optimize\` keeps each whole and square (never stretched) as WebP at 1024 px plus a 512 px copy (\`<slot>-512.webp\`), keeps transparency, and keeps the original in \`frontend/photos-originals/${AIR_FOLDER}/\`. A picture **without** transparency has its plain white surround made transparent (only near-white pixels connected to the edge, so white gloves and highlights stay). Until the optimizer has run, a picture with a plain background is shown inside a round frame. A pose without its own file shows \`air.webp\`; when that is missing too, the idle picture is used. The first pose is preloaded when the popup is about to open.\n\n`;
+slots += airDefault
+  ? `Default picture: \`${airDefault}\`.\n\n`
+  : `**STILL NEEDED: \`${AIR_FOLDER}/air.webp\`** (the default AIR picture). Until it is added, a missing pose falls back to \`air-02-idle\`.\n\n`;
+slots += `| Slot | Size | Shows | Used for | Status |\n|---|---|---|---|---|\n`;
+for (const [pose, slot] of Object.entries(AIR_POSES)) {
+  const file = pickPhoto(slot, files);
+  const size = file ? imageSize(path.join(dir, file)) : null;
+  slots += `| ${slot} | ${PHOTO_SLOTS[slot].width}x${PHOTO_SLOTS[slot].height} | ${SLOT_SHOWS[slot]} | ${AIR_USE[pose]} | ${file ? `present (${size ? `${size.width}x${size.height}, ${transparency(path.join(dir, file)).startsWith('alpha') ? 'transparent' : 'opaque background'}` : '?'})` : pose === 'sleep' ? 'optional, not present' : 'STILL NEEDED'} |\n`;
+}
+slots += `| ${AIR_DEFAULT} | 1024x1024 | ${SLOT_SHOWS[AIR_DEFAULT]} | Fallback for any missing pose | ${airDefault ? 'present' : 'STILL NEEDED'} |\n`;
 const LEADERS = [
   ['sudheer-koneru', 'Sudheer Koneru'],
   ['neal-singh', 'Neal Singh'],

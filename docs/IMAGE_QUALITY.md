@@ -177,3 +177,13 @@ Browser (`e2e/image-quality.e2e.ts`): iPhone and Pixel, portrait and landscape, 
 ## Not run
 
 I could not run a browser, Playwright, `npm run build` or the optimizer here (there are no original photos). The unit tests were run in a separate sandbox copy of the project; the browser tests are written but have never been run.
+
+## AIR pictures (AIR Task 3)
+
+`npm run images:budget` also checks `frontend/public/photos/air/`: every AIR picture must be square
+(never stretched) and big enough for the popup's 176 x 176 CSS px stage on the iPhone and laptop
+profiles without being enlarged more than 1.25 times. On 8 November 2026 all 13 supplied pictures
+(1024 x 1024) passed. They have an opaque white background, not a transparent one, and the default
+`air.webp` is missing; see docs/IMAGE_SLOTS.md. `e2e/air-dashboard.e2e.ts` measures the picture the
+browser really chose (its `currentSrc`, decoded with a plain `Image`, never `naturalWidth` of an
+`<img>` with `srcset`).

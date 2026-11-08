@@ -37,3 +37,19 @@ def role_can(role: str | None, action: str) -> bool:
 
 def role_home(role: str) -> str:
     return load_policy()["roles"][role]["home"]
+
+
+def service_actor_can(actor: str, action: str) -> bool:
+    """Internal service actors (code with no login, e.g. "air"). Deny by default: only actions
+    listed under `service_actors.<actor>.allow` in policy.json are permitted."""
+    spec = load_policy().get("service_actors", {}).get(actor)
+    return bool(spec) and action in spec.get("allow", [])
+
+
+def service_actor_assist(actor: str, action: str) -> bool:
+    """Actions the actor may do for a customer who is talking to it right now, with or without
+    desk cover. Must also be in `allow`."""
+    spec = load_policy().get("service_actors", {}).get(actor)
+    return (
+        bool(spec) and action in spec.get("allow", []) and action in spec.get("customer_assist", [])
+    )

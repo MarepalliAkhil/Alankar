@@ -17,81 +17,90 @@ Each PNG is converted to WebP at 820x1024 (4:5, about 1024 px tall) and a 410x51
 
 | Name | Original | Size | Weight | Transparent background | Shown as | WebP 1024 / 512 tall |
 |---|---|---|---|---|---|---|
-| meera | meera/meera.png | 928x1152 | 1131 KB | alpha channel (check the corners) | cut-out if the corners are see-through, else soft framed style | 15 KB / 6 KB |
-| meera-wave | meera/meera-wave.png | 825x1024 | 683 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-point | meera/meera-point.png | 825x1024 | 687 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-phone | meera/meera-phone.png | 825x1024 | 676 KB | no: opaque background | soft framed style | 14 KB / 6 KB |
-| meera-approve | meera/meera-approve.png | 825x1024 | 677 KB | no: opaque background | soft framed style | 14 KB / 6 KB |
-| meera-chat | meera/meera-chat.png | 825x1024 | 693 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-wallet | meera/meera-wallet.png | 825x1024 | 696 KB | no: opaque background | soft framed style | 16 KB / 7 KB |
-| meera-stars | meera/meera-stars.png | 825x1024 | 700 KB | no: opaque background | soft framed style | 16 KB / 7 KB |
-| meera-shield | meera/meera-shield.png | 825x1024 | 704 KB | no: opaque background | soft framed style | 15 KB / 7 KB |
-| meera-celebrate | meera/meera-celebrate.png | 825x1024 | 718 KB | no: opaque background | soft framed style | 17 KB / 8 KB |
-| meera-namaste | meera/meera-namaste.png | 825x1024 | 669 KB | no: opaque background | soft framed style | 14 KB / 6 KB |
-| meera-scissors | meera/meera-scissors.png | 825x1024 | 690 KB | no: opaque background | soft framed style | 16 KB / 6 KB |
-| meera-calendar | meera/meera-calendar.png | 825x1024 | 684 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-waiting | meera/meera-waiting.png | 825x1024 | 701 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-sorry | meera/meera-sorry.png | 825x1024 | 685 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-gift | meera/meera-gift.png | 825x1024 | 692 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
-| meera-package | meera/meera-package.png | 825x1024 | 698 KB | no: opaque background | soft framed style | 15 KB / 6 KB |
+| meera | **MISSING** (expected `meera.png`) | | | | | |
+| meera-wave | **MISSING** (expected `meera-wave.png`) | | | | | |
+| meera-point | **MISSING** (expected `meera-point.png`) | | | | | |
+| meera-phone | **MISSING** (expected `meera-phone.png`) | | | | | |
+| meera-approve | **MISSING** (expected `meera-approve.png`) | | | | | |
+| meera-chat | **MISSING** (expected `meera-chat.png`) | | | | | |
+| meera-wallet | **MISSING** (expected `meera-wallet.png`) | | | | | |
+| meera-stars | **MISSING** (expected `meera-stars.png`) | | | | | |
+| meera-shield | **MISSING** (expected `meera-shield.png`) | | | | | |
+| meera-celebrate | **MISSING** (expected `meera-celebrate.png`) | | | | | |
+| meera-namaste | **MISSING** (expected `meera-namaste.png`) | | | | | |
+| meera-scissors | **MISSING** (expected `meera-scissors.png`) | | | | | |
+| meera-calendar | **MISSING** (expected `meera-calendar.png`) | | | | | |
+| meera-waiting | **MISSING** (expected `meera-waiting.png`) | | | | | |
+| meera-sorry | **MISSING** (expected `meera-sorry.png`) | | | | | |
+| meera-gift | **MISSING** (expected `meera-gift.png`) | | | | | |
+| meera-package | **MISSING** (expected `meera-package.png`) | | | | | |
 
-All 17 expected Meera files were found (the 16 poses and the default `meera.png`); none is missing.
+Missing: `meera.png`, `meera-wave.png`, `meera-point.png`, `meera-phone.png`, `meera-approve.png`, `meera-chat.png`, `meera-wallet.png`, `meera-stars.png`, `meera-shield.png`, `meera-celebrate.png`, `meera-namaste.png`, `meera-scissors.png`, `meera-calendar.png`, `meera-waiting.png`, `meera-sorry.png`, `meera-gift.png`, `meera-package.png`.
 
 ## Every image file in public/photos
 
 | File | Size | Orientation | Weight | Slot and pages |
 |---|---|---|---|---|
-| meera/meera-512.webp | 410x512 | portrait | 6 KB | Meera default picture (every pose without its own file) |
-| meera/meera-approve-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-approve) |
-| meera/meera-approve.png | 825x1024 | portrait | 677 KB | Meera tour picture (meera-approve) |
-| meera/meera-approve.webp | 820x1024 | portrait | 14 KB | Meera tour picture (meera-approve) |
-| meera/meera-calendar-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-calendar) |
-| meera/meera-calendar.png | 825x1024 | portrait | 684 KB | Meera tour picture (meera-calendar) |
-| meera/meera-calendar.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-calendar) |
-| meera/meera-celebrate-512.webp | 410x512 | portrait | 8 KB | Meera tour picture (meera-celebrate) |
-| meera/meera-celebrate.png | 825x1024 | portrait | 718 KB | Meera tour picture (meera-celebrate) |
-| meera/meera-celebrate.webp | 820x1024 | portrait | 17 KB | Meera tour picture (meera-celebrate) |
+| air/air-01-welcome-512.webp | 512x512 | square | 28 KB | AIR popup picture (air-01-welcome, 512 px copy) |
+| air/air-01-welcome.webp | 1024x1024 | square | 44 KB | AIR popup picture (air-01-welcome) |
+| air/air-02-idle-512.webp | 512x512 | square | 27 KB | AIR popup picture (air-02-idle, 512 px copy) |
+| air/air-02-idle.webp | 1024x1024 | square | 44 KB | AIR popup picture (air-02-idle) |
+| air/air-03-explain-512.webp | 512x512 | square | 27 KB | AIR popup picture (air-03-explain, 512 px copy) |
+| air/air-03-explain.webp | 1024x1024 | square | 43 KB | AIR popup picture (air-03-explain) |
+| air/air-04-point-right-512.webp | 512x512 | square | 26 KB | AIR popup picture (air-04-point-right, 512 px copy) |
+| air/air-04-point-right.webp | 1024x1024 | square | 42 KB | AIR popup picture (air-04-point-right) |
+| air/air-05-report-512.webp | 512x512 | square | 26 KB | AIR popup picture (air-05-report, 512 px copy) |
+| air/air-05-report.webp | 1024x1024 | square | 43 KB | AIR popup picture (air-05-report) |
+| air/air-06-thumbs-up-512.webp | 512x512 | square | 26 KB | AIR popup picture (air-06-thumbs-up, 512 px copy) |
+| air/air-06-thumbs-up.webp | 1024x1024 | square | 42 KB | AIR popup picture (air-06-thumbs-up) |
+| air/air-07-thinking-512.webp | 512x512 | square | 24 KB | AIR popup picture (air-07-thinking, 512 px copy) |
+| air/air-07-thinking.webp | 1024x1024 | square | 40 KB | AIR popup picture (air-07-thinking) |
+| air/air-08-attention-512.webp | 512x512 | square | 26 KB | AIR popup picture (air-08-attention, 512 px copy) |
+| air/air-08-attention.webp | 1024x1024 | square | 42 KB | AIR popup picture (air-08-attention) |
+| air/air-09-concerned-512.webp | 512x512 | square | 22 KB | AIR popup picture (air-09-concerned, 512 px copy) |
+| air/air-09-concerned.webp | 1024x1024 | square | 37 KB | AIR popup picture (air-09-concerned) |
+| air/air-10-celebrate-512.webp | 512x512 | square | 36 KB | AIR popup picture (air-10-celebrate, 512 px copy) |
+| air/air-10-celebrate.webp | 1024x1024 | square | 52 KB | AIR popup picture (air-10-celebrate) |
+| air/air-11-on-call-512.webp | 512x512 | square | 29 KB | AIR popup picture (air-11-on-call, 512 px copy) |
+| air/air-11-on-call.webp | 1024x1024 | square | 46 KB | AIR popup picture (air-11-on-call) |
+| air/air-12-handover-512.webp | 512x512 | square | 27 KB | AIR popup picture (air-12-handover, 512 px copy) |
+| air/air-12-handover.webp | 1024x1024 | square | 44 KB | AIR popup picture (air-12-handover) |
+| air/air-13-sleep-512.webp | 512x512 | square | 26 KB | AIR popup picture (air-13-sleep, 512 px copy) |
+| air/air-13-sleep.webp | 1024x1024 | square | 44 KB | AIR popup picture (air-13-sleep) |
+| meera/meera-512.webp | 410x512 | portrait | 5 KB | Meera default picture (every pose without its own file) |
+| meera/meera-approve-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-approve) |
+| meera/meera-approve.webp | 820x1024 | portrait | 12 KB | Meera tour picture (meera-approve) |
+| meera/meera-calendar-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-calendar) |
+| meera/meera-calendar.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-calendar) |
+| meera/meera-celebrate-512.webp | 410x512 | portrait | 7 KB | Meera tour picture (meera-celebrate) |
+| meera/meera-celebrate.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-celebrate) |
 | meera/meera-chat-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-chat) |
-| meera/meera-chat.png | 825x1024 | portrait | 693 KB | Meera tour picture (meera-chat) |
-| meera/meera-chat.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-chat) |
-| meera/meera-gift-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-gift) |
-| meera/meera-gift.png | 825x1024 | portrait | 692 KB | Meera tour picture (meera-gift) |
-| meera/meera-gift.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-gift) |
-| meera/meera-namaste-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-namaste) |
-| meera/meera-namaste.png | 825x1024 | portrait | 669 KB | Meera tour picture (meera-namaste) |
-| meera/meera-namaste.webp | 820x1024 | portrait | 14 KB | Meera tour picture (meera-namaste) |
+| meera/meera-chat.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-chat) |
+| meera/meera-gift-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-gift) |
+| meera/meera-gift.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-gift) |
+| meera/meera-namaste-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-namaste) |
+| meera/meera-namaste.webp | 820x1024 | portrait | 12 KB | Meera tour picture (meera-namaste) |
 | meera/meera-package-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-package) |
-| meera/meera-package.png | 825x1024 | portrait | 698 KB | Meera tour picture (meera-package) |
-| meera/meera-package.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-package) |
-| meera/meera-phone-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-phone) |
-| meera/meera-phone.png | 825x1024 | portrait | 676 KB | Meera tour picture (meera-phone) |
-| meera/meera-phone.webp | 820x1024 | portrait | 14 KB | Meera tour picture (meera-phone) |
+| meera/meera-package.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-package) |
+| meera/meera-phone-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-phone) |
+| meera/meera-phone.webp | 820x1024 | portrait | 12 KB | Meera tour picture (meera-phone) |
 | meera/meera-point-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-point) |
-| meera/meera-point.png | 825x1024 | portrait | 687 KB | Meera tour picture (meera-point) |
-| meera/meera-point.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-point) |
+| meera/meera-point.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-point) |
 | meera/meera-scissors-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-scissors) |
-| meera/meera-scissors.png | 825x1024 | portrait | 690 KB | Meera tour picture (meera-scissors) |
-| meera/meera-scissors.webp | 820x1024 | portrait | 16 KB | Meera tour picture (meera-scissors) |
-| meera/meera-shield-512.webp | 410x512 | portrait | 7 KB | Meera tour picture (meera-shield) |
-| meera/meera-shield.png | 825x1024 | portrait | 704 KB | Meera tour picture (meera-shield) |
-| meera/meera-shield.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-shield) |
-| meera/meera-sorry-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-sorry) |
-| meera/meera-sorry.png | 825x1024 | portrait | 685 KB | Meera tour picture (meera-sorry) |
-| meera/meera-sorry.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-sorry) |
-| meera/meera-stars-512.webp | 410x512 | portrait | 7 KB | Meera tour picture (meera-stars) |
-| meera/meera-stars.png | 825x1024 | portrait | 700 KB | Meera tour picture (meera-stars) |
-| meera/meera-stars.webp | 820x1024 | portrait | 16 KB | Meera tour picture (meera-stars) |
-| meera/meera-waiting-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-waiting) |
-| meera/meera-waiting.png | 825x1024 | portrait | 701 KB | Meera tour picture (meera-waiting) |
-| meera/meera-waiting.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-waiting) |
-| meera/meera-wallet-512.webp | 410x512 | portrait | 7 KB | Meera tour picture (meera-wallet) |
-| meera/meera-wallet.png | 825x1024 | portrait | 696 KB | Meera tour picture (meera-wallet) |
-| meera/meera-wallet.webp | 820x1024 | portrait | 16 KB | Meera tour picture (meera-wallet) |
+| meera/meera-scissors.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-scissors) |
+| meera/meera-shield-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-shield) |
+| meera/meera-shield.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-shield) |
+| meera/meera-sorry-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-sorry) |
+| meera/meera-sorry.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-sorry) |
+| meera/meera-stars-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-stars) |
+| meera/meera-stars.webp | 820x1024 | portrait | 14 KB | Meera tour picture (meera-stars) |
+| meera/meera-waiting-512.webp | 410x512 | portrait | 5 KB | Meera tour picture (meera-waiting) |
+| meera/meera-waiting.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-waiting) |
+| meera/meera-wallet-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-wallet) |
+| meera/meera-wallet.webp | 820x1024 | portrait | 14 KB | Meera tour picture (meera-wallet) |
 | meera/meera-wave-512.webp | 410x512 | portrait | 6 KB | Meera tour picture (meera-wave) |
-| meera/meera-wave.png | 825x1024 | portrait | 683 KB | Meera tour picture (meera-wave) |
-| meera/meera-wave.webp | 820x1024 | portrait | 15 KB | Meera tour picture (meera-wave) |
-| meera/meera.png | 928x1152 | portrait | 1131 KB | Meera default picture (every pose without its own file) |
-| meera/meera.webp | 820x1024 | portrait | 15 KB | Meera default picture (every pose without its own file) |
+| meera/meera-wave.webp | 820x1024 | portrait | 13 KB | Meera tour picture (meera-wave) |
+| meera/meera.webp | 820x1024 | portrait | 13 KB | Meera default picture (every pose without its own file) |
 | parlor-background-960.jpg | 960x600 | landscape | 34 KB | Small-screen copy of parlor-background |
 | parlor-background-960.webp | 960x600 | landscape | 19 KB | Small-screen copy of parlor-background |
 | parlor-background.jpg | 1600x1000 | landscape | 78 KB | Home section 4; the /beauty-parlor pages; the booking page while Parlor is chosen. |

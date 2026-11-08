@@ -13,6 +13,10 @@
 //      wide variants the same way. Without one, phones held upright see the landscape photo in a
 //      short band (see docs/IMAGE_SLOTS.md).
 //   4. Meera's pictures (public/photos/meera/) are kept whole, transparent, WebP only.
+//      AIR's pictures (public/photos/air/) the same, square: 1024 px and a 512 px copy. An AIR
+//      picture without transparency gets its plain white surround cleared: only near-white
+//      pixels connected to the picture's edge become transparent, so white gloves and highlights
+//      inside the outline stay. The original is kept in photos-originals/air/.
 //      Pictures of Zenoti's leaders (public/photos/zenoti-leaders/) become 640 px wide WebP + JPG.
 //   5. A tiny blurred preview of each photo is written to public/photos/placeholders.json. It shows
 //      while the photo loads and is removed as soon as the sharp photo has loaded.
@@ -22,6 +26,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  AIR_FOLDER,
   JPEG_QUALITY,
   LEADER_FOLDER,
   MEERA_FOLDER,
@@ -29,6 +34,7 @@ import {
   PHOTO_EXTENSIONS,
   PHOTO_SLOTS,
   WEBP_QUALITY,
+  isAirSlot,
   isTransparentSlot,
   maxBytesForWidth,
   variantWidths,
@@ -215,8 +221,83 @@ async function meeraSlot(slot, size) {
   done += 1;
 }
 
+/** Near-white pixels connected to the edge become transparent (only when there is no alpha). */
+async function clearWhiteSurround(source) {
+  const { data, info } = await sharp(source)
+    .rotate()
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  let opaque = true;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 250) {
+      opaque = false;
+      break;
+    }
+  }
+  if (!opaque) return { input: source, cleared: false }; // already a cut-out: leave it alone
+  const white = (p) => data[p * 4] >= 240 && data[p * 4 + 1] >= 240 && data[p * 4 + 2] >= 240;
+  const seen = new Uint8Array(width * height);
+  const stack = [];
+  for (let x = 0; x < width; x += 1) stack.push(x, (height - 1) * width + x);
+  for (let y = 0; y < height; y += 1) stack.push(y * width, y * width + width - 1);
+  while (stack.length) {
+    const p = stack.pop();
+    if (seen[p] || !white(p)) continue;
+    seen[p] = 1;
+    data[p * 4 + 3] = 0;
+    const x = p % width;
+    if (x > 0) stack.push(p - 1);
+    if (x < width - 1) stack.push(p + 1);
+    if (p >= width) stack.push(p - width);
+    if (p < width * (height - 1)) stack.push(p + width);
+  }
+  return { input: sharp(data, { raw: { width, height, channels: 4 } }), cleared: true };
+}
+
+/** AIR: kept whole and square, WebP only (1024 px and a 512 px copy), transparency kept. */
+async function airSlot(slot, size) {
+  const outDir = path.join(photosDir, AIR_FOLDER);
+  const keepDir = path.join(originalsDir, AIR_FOLDER);
+  const made = new Set(previous[slot]?.outputs ?? []);
+  const original = newestOriginal(slot, [photosDir, outDir], keepDir, made, outDir);
+  if (!original) {
+    if (previous[slot]) previews[slot] = previous[slot];
+    return;
+  }
+  fs.mkdirSync(outDir, { recursive: true });
+  const clear = { r: 0, g: 0, b: 0, alpha: 0 };
+  const { input, cleared } = await clearWhiteSurround(original.path);
+  const base = cleared ? await input.png().toBuffer() : original.path;
+  const resized = (w, h) =>
+    sharp(base).rotate().resize(w, h, { fit: 'contain', background: clear });
+  const fullBuffer = await resized(size.width, size.height)
+    .webp({ quality: WEBP_QUALITY, effort: 5, alphaQuality: 100 })
+    .toBuffer();
+  fs.writeFileSync(path.join(outDir, `${slot}.webp`), fullBuffer);
+  fs.writeFileSync(
+    path.join(outDir, `${slot}-512.webp`),
+    await resized(Math.round(size.width / 2), Math.round(size.height / 2))
+      .webp({ quality: WEBP_QUALITY, effort: 5, alphaQuality: 100 })
+      .toBuffer(),
+  );
+  previews[slot] = {
+    file: `${AIR_FOLDER}/${slot}.webp`,
+    bytes: fullBuffer.length,
+    outputs: [`${slot}.webp`, `${slot}-512.webp`],
+    data: null,
+  };
+  console.log(
+    `  ${slot.padEnd(26)} ${original.name} -> ${AIR_FOLDER}/${slot}.webp ${kb(fullBuffer.length)}` +
+      (cleared ? ' (white surround made transparent)' : ''),
+  );
+  done += 1;
+}
+
 for (const [slot, size] of Object.entries(PHOTO_SLOTS)) {
-  if (isTransparentSlot(slot)) await meeraSlot(slot, size);
+  if (isAirSlot(slot)) await airSlot(slot, size);
+  else if (isTransparentSlot(slot)) await meeraSlot(slot, size);
   else await photoSlot(slot, size);
 }
 for (const [slot, size] of Object.entries(MOBILE_PHOTO_SLOTS)) await photoSlot(slot, size);

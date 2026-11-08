@@ -840,3 +840,156 @@ describe('approval and staff changes on My appointments', () => {
     expect(screen.queryByRole('button', { name: 'Cancel with refund' })).toBeNull();
   });
 });
+
+describe('who accepted my request, the timeline and the sorry notes', () => {
+  const FRONT_DESK = 'Accepted by our front desk';
+  const AIR = 'Accepted by AIR, our virtual receptionist (the front desk was closed)';
+  const step = (
+    key: bookingApi.TimelineStep['key'],
+    label: string,
+    state: bookingApi.TimelineStep['state'],
+    text: string,
+    at: string | null = null,
+  ): bookingApi.TimelineStep => ({ key, label, state, text, at });
+  const waitingSteps = [
+    step('requested', 'Requested', 'done', 'Requested', '2026-10-27T08:00:00Z'),
+    step('front_desk', 'Front desk accepted', 'waiting', 'Waiting'),
+    step('stylist', 'Stylist accepted', 'waiting', 'Waiting'),
+    step('payment_link', 'Payment link sent', 'waiting', 'Waiting'),
+    step('paid', 'Paid', 'waiting', 'Waiting'),
+    step('confirmed', 'Confirmed', 'waiting', 'Waiting'),
+  ];
+  const withTimeline = (steps: bookingApi.TimelineStep[], extra = {}) => ({
+    ...appointment,
+    id: 'ap-t',
+    timeline: steps,
+    ...extra,
+  });
+  const note: bookingApi.SorryNote = {
+    event: 'stylist_declined',
+    title: 'We are sorry: we could not take this slot',
+    parts: {
+      apology:
+        "We're sorry, Asha is not able to take this slot. We know this isn't what you were hoping for.",
+      what: 'Your request for Haircut on Wed 28 Oct was not accepted, so we released the time.',
+      next: 'Nothing else is needed from you for this request.',
+      step: 'Here are the nearest times that are free: A; B.',
+      money: 'Nothing has been charged.',
+    },
+    text: '',
+    nearest_slots: [
+      { start: SLOT_A, label: 'Wed 28 Oct, 10:00 AM' },
+      { start: SLOT_B, label: 'Wed 28 Oct, 10:15 AM' },
+    ],
+    phone: '+91 90000 00000',
+  };
+
+  it('shows every step as a list with a text status, and Waiting for the pending ones', async () => {
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([withTimeline(waitingSteps)]);
+    renderAt('/customer/appointments');
+    const list = await screen.findByRole('list', { name: 'Where your request is' });
+    const items = within(list).getAllByRole('listitem');
+    expect(items.map((li) => li.getAttribute('data-state'))).toEqual([
+      'done',
+      'waiting',
+      'waiting',
+      'waiting',
+      'waiting',
+      'waiting',
+    ]);
+    expect(within(list).getAllByText('Waiting')).toHaveLength(5);
+    expect(within(items[0]!).getAllByText('Requested')).toHaveLength(2); // label and status
+  });
+
+  it('says the front desk accepted it when a receptionist did', async () => {
+    const steps = waitingSteps.map((s) =>
+      s.key === 'front_desk'
+        ? { ...s, state: 'done' as const, text: FRONT_DESK, at: '2026-10-27T09:00:00Z' }
+        : s,
+    );
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([withTimeline(steps)]);
+    renderAt('/customer/appointments');
+    expect(await screen.findByText(FRONT_DESK)).toBeInTheDocument();
+    expect(screen.queryByText(/virtual receptionist/)).toBeNull();
+  });
+
+  it('says AIR, the virtual receptionist, accepted it while the front desk was closed', async () => {
+    const steps = waitingSteps.map((s) =>
+      s.key === 'front_desk'
+        ? {
+            ...s,
+            state: 'done' as const,
+            text: AIR,
+            at: '2026-10-27T09:00:00Z',
+            actor: 'air' as const,
+          }
+        : s,
+    );
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([withTimeline(steps)]);
+    renderAt('/customer/appointments');
+    expect(await screen.findByText(AIR)).toBeInTheDocument();
+    expect(screen.queryByText(FRONT_DESK)).toBeNull();
+  });
+
+  it.each([
+    ['declined', 'problem', 'Could not take this slot'],
+    ['expired', 'stopped', 'Not reached'],
+    ['paid', 'done', 'Paid'],
+    ['confirmed', 'done', 'Confirmed'],
+    ['payment link', 'done', 'Sent, pay by Wed 28 Oct, 10:45 AM'],
+    ['not needed', 'skipped', 'Not needed'],
+  ] as const)('renders a %s step with its own text', async (_name, state, text) => {
+    const steps = waitingSteps.map((s) => (s.key === 'confirmed' ? { ...s, state, text } : s));
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([withTimeline(steps)]);
+    renderAt('/customer/appointments');
+    const list = await screen.findByRole('list', { name: 'Where your request is' });
+    const item = within(list).getAllByRole('listitem')[5]!;
+    expect(item).toHaveAttribute('data-state', state);
+    expect(within(item).getAllByText(text).length).toBeGreaterThan(0); // "Confirmed" is label and text
+  });
+
+  it('shows a sorry note with the nearest times, Book again and the phone number', async () => {
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([
+      withTimeline(waitingSteps, {
+        status: 'declined_by_stylist' as const,
+        actions: [],
+        sorry_note: note,
+        rebook: { service: 'womens-haircut', variant: 'v1', addons: [], start: SLOT_A },
+        approval: {
+          stage: 'declined' as const,
+          label: 'Declined',
+          message: 'Old wording that must not show next to the note.',
+        },
+      }),
+    ]);
+    renderAt('/customer/appointments');
+    const region = await screen.findByRole('region', { name: note.title });
+    expect(
+      within(region).getByText(/We're sorry, Asha is not able to take this slot/),
+    ).toBeVisible();
+    expect(within(region).getByText('Nothing has been charged.')).toBeVisible();
+    const slot = within(region).getByRole('link', { name: /10:15/ });
+    expect(slot.getAttribute('href')).toContain('/customer/book?service=womens-haircut');
+    expect(slot.getAttribute('href')).toContain(encodeURIComponent(SLOT_B));
+    expect(within(region).getByRole('link', { name: 'Book again' })).toBeInTheDocument();
+    expect(
+      within(region).getByRole('link', { name: /Call us on \+91 90000 00000/ }),
+    ).toHaveAttribute('href', 'tel:+919000000000');
+    expect(screen.queryByText(/Old wording/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Choose another time or stylist' })).toBeNull();
+  });
+
+  it('offers Book again when there are no free times to suggest', async () => {
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([
+      withTimeline(waitingSteps, {
+        status: 'cancelled' as const,
+        actions: [],
+        sorry_note: { ...note, event: 'cancelled' as const, nearest_slots: [], phone: '' },
+      }),
+    ]);
+    renderAt('/customer/appointments');
+    expect(await screen.findByText('You can book again at any time.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Book again' })).toBeInTheDocument();
+    expect(screen.getByText('You can also contact our front desk.')).toBeInTheDocument();
+  });
+});

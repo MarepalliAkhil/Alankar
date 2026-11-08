@@ -2,6 +2,8 @@ import { ArrowDown, MapPin, Phone } from 'lucide-react';
 import type { SiteData } from '../../api/public';
 import { brand } from '../../config/brand';
 import { AlankarIcon, ButtonLink } from '../ui';
+import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { LoaderSlot } from '../brand/LogoLoader';
 import { PageContainer } from '../layout/PageContainer';
 
 export interface HomeHeroProps {
@@ -20,6 +22,7 @@ export interface HomeHeroProps {
  * shop's real hours, address and phone sit right under the buttons (all from the shop settings).
  */
 export function HomeHero({ site, loading, book, staffHome, tel }: HomeHeroProps) {
+  const loaderShown = useDelayedLoading(loading && !site);
   const hours = (site?.hours ?? []).slice(0, 2);
   const contact = site?.contact;
   return (
@@ -70,7 +73,12 @@ export function HomeHero({ site, loading, book, staffHome, tel }: HomeHeroProps)
             aria-label="Visit details"
             className="flex flex-col gap-sm border-t border-border pt-md text-sm text-text-muted sm:flex-row sm:flex-wrap sm:gap-lg"
           >
-            {loading && !site && <li>Loading hours and address…</li>}
+            {((loading && !site) || loaderShown) && (
+              <li className="flex items-center gap-sm">
+                <LoaderSlot visible={loaderShown} label="Loading hours and address" />
+                Loading hours and address…
+              </li>
+            )}
             {hours.map((row) => (
               <li key={row.days} className="flex items-center gap-sm">
                 <AlankarIcon name="door" className="h-4 w-4 text-primary-hover" />

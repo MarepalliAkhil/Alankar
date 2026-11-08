@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
+import { holdHero, whenIntro } from '../../intro/introPhase';
 
 /**
  * The For Zenotians entrance animation: the page assembles on an empty screen, sliding in from
@@ -195,6 +196,7 @@ export function useZenReveal(el: HTMLElement | null, routeKey = ''): void {
     let mine: Plan[] = [];
     let first = true;
     let doneTimer = 0;
+    let release: () => void = () => undefined;
     const run = () => {
       const page = content?.firstElementChild;
       if (!page || planned.has(page)) return;
@@ -216,8 +218,13 @@ export function useZenReveal(el: HTMLElement | null, routeKey = ''): void {
       el.setAttribute('data-reveal', 'playing' satisfies RevealState);
       window.clearTimeout(doneTimer);
       const longest = mine.reduce((most, item) => Math.max(most, item.delay), 0);
+      release();
+      release = holdHero(); // Meera's tour waits for the hero entrance (intro/introPhase.ts)
       doneTimer = window.setTimeout(
-        () => el.setAttribute('data-reveal', 'done' satisfies RevealState),
+        () => {
+          el.setAttribute('data-reveal', 'done' satisfies RevealState);
+          release();
+        },
         longest + (intro ? REVEAL.duration : REVEAL.shortDuration) + 100,
       );
     };
@@ -226,14 +233,20 @@ export function useZenReveal(el: HTMLElement | null, routeKey = ''): void {
       if (page) planned.delete(page);
       run();
     });
-    run();
-    const mutations = content ? new MutationObserver(run) : null;
-    if (content) mutations?.observe(content, { childList: true });
+    // The entrance starts only after the logo splash has finished (at once when there is none).
+    let mutations: MutationObserver | null = null;
+    const stopWaiting = whenIntro('hero', () => {
+      run();
+      mutations = content ? new MutationObserver(run) : null;
+      if (content) mutations?.observe(content, { childList: true });
+    });
     el.addEventListener('focusin', onFocusIn);
     return () => {
+      stopWaiting();
+      release();
       replanners.delete(el);
       window.clearTimeout(doneTimer);
-      mutations?.disconnect();
+      (mutations as MutationObserver | null)?.disconnect();
       el.removeEventListener('focusin', onFocusIn);
       for (const item of mine) {
         pending.delete(item.el);

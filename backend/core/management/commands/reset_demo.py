@@ -51,6 +51,7 @@ class Command(BaseCommand):
             demo.ensure_customers(demo.DEMO_CUSTOMERS)
         else:
             demo_story.build(write=self.stdout.write)
+        demo.ensure_air_cover()  # AIR desk cover is ON in the demo (OFF by default elsewhere)
         self.stdout.write(self.style.SUCCESS("Demo ready. Everything in it is fictional."))
         self.stdout.write(f"Password for every demo login: {demo.DEMO_PASSWORD}")
         for _role, email, name_, _profile, _phone in demo.DEMO_STAFF:

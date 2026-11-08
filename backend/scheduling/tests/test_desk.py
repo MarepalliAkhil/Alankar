@@ -160,7 +160,7 @@ def test_cancelling_a_paid_visit_asks_the_admin_for_the_refund(catalogue, custom
     assert refund.status == Refund.Status.PENDING_APPROVAL
     assert refund.amount == Decimal("300.00") and refund.processed_at is None
     assert audited("appointment_cancelled") == 1
-    assert "refunded once approved" in MailOutbox.objects.latest("created_at").body
+    assert "approve a refund" in MailOutbox.objects.latest("created_at").body
     # The slot is free again and a second cancel is refused.
     assert (
         post(

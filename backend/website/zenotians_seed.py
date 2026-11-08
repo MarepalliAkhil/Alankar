@@ -357,7 +357,9 @@ PROJECT = {
         "front desk and the chosen stylist must both accept it before anything is confirmed, and "
         "then a payment link follows. After payment the visit is scheduled; the guest checks in, "
         "the stylist runs the service, and the desk bills it. The customer then rates the "
-        "stylist, and the admin reviews payroll, reports and staff performance."
+        "stylist, and the admin reviews payroll, reports and staff performance. AIR, an optional "
+        "virtual receptionist that is off by default, can cover the front desk when no "
+        "receptionist is on shift or signed in; the stylist still has to accept every request."
     ),
     "roles": [
         {
@@ -390,6 +392,14 @@ PROJECT = {
                 "Manages staff, services, stock, marketing, content and settings.",
                 "Runs payroll (draft, adjust, approve, mark paid) and approves refunds.",
                 "Reads shop statistics, reports, staff summaries and the audit log. No access to chats.",
+            ],
+        },
+        {
+            "role": "AIR (optional virtual receptionist)",
+            "does": [
+                "Off by default. Covers the front desk only when no receptionist is on shift or signed in.",
+                "Helps customers in the chat: free times, a request the customer sends with a button, own orders; accepts only the desk side, never the stylist's.",
+                "Has no login. Every action is in an append-only log the desk and the admin can read and partly undo.",
             ],
         },
     ],
@@ -507,6 +517,17 @@ MAPPING = [
         "workflow": "Customer assistant",
         "built": "A rule-based chatbot that answers only from the shop's own data and the signed-in user's own records.",
         "limits": ["chatbot"],
+        "not_built": "",
+    },
+    {
+        "workflow": "Virtual receptionist (AIR)",
+        "built": (
+            "An optional, off-by-default receptionist that covers the desk only when nobody is on "
+            "shift or signed in: chat booking requests the customer sends with a button, product "
+            "orders, an activity page with charts and a needs-you list, and a spoken summary for "
+            "the receptionist in the browser."
+        ),
+        "limits": ["air", "payments", "messages"],
         "not_built": "",
     },
     {
@@ -968,12 +989,23 @@ LIMITATIONS = {
         {
             "id": "chatbot",
             "area": "The chatbot and the admin side",
-            "today": "A rule engine with no language model. It answers from the shop's own data and, for a signed-in customer, their own bookings, invoices and points. Measured on questions I wrote myself: 130 of 143 (90.9%) on the set it was tuned on and 67 of 91 (73.6%) on a holdout set, measured on 5 November 2026.",
-            "out_of_scope": "Open conversation and unusual phrasing (the holdout misses include 'what time do you shut' and 'which area are you in'), acting on the customer's behalf, and accuracy on real customers' questions, which I have not measured. There is no admin assistant: the admin side has shop statistics and a list of questions the bot could not answer.",
+            "today": "The chatbot's own engine is a rule program (text matching, a rule table and a search formula). It answers from the shop's own data and, for a signed-in customer, their own bookings, invoices and points. Measured on questions I wrote myself: 130 of 143 (90.9%) on the set it was tuned on and 67 of 91 (73.6%) on a holdout set, measured on 5 November 2026. In the same chat window, AIR (below) can prepare booking requests and orders.",
+            "out_of_scope": "Open conversation and unusual phrasing (the holdout misses include 'what time do you shut' and 'which area are you in'), and accuracy on real customers' questions, which I have not measured. There is no admin assistant: the admin side has shop statistics, the AIR Activity page and a list of questions the bot could not answer.",
             "where": [
                 "backend/chatbot/engine/",
                 "backend/chatbot/tests/test_accuracy.py",
                 "docs/CHATBOT_ALGORITHM.md",
+            ],
+        },
+        {
+            "id": "air",
+            "area": "AIR, the virtual receptionist",
+            "today": "Built, optional and off by default. When the admin switches it on, AIR covers the front desk only while no receptionist is on shift or signed in, and hands everything back when one signs in. It can accept the desk side of a request, never the stylist's; a booking is confirmed only after payment, and payments are simulated. Without any key it understands messages with rules: on booking and order messages I wrote myself, 54 of 55 (98.2%) on the set it was tuned on and 41 of 45 (91.1%) on a holdout set, measured on 8 November 2026. An optional AI service (a third-party language-model provider, used only with the admin's key, a spending cap and the customer's consent) can help it read messages; the rules take over when it fails.",
+            "out_of_scope": "Real phone calls: AIR works in the chat, and the receptionist's popup reads its summary aloud with the browser's own voice only. Real payments and text messages (both simulated). The accuracy of the optional AI service, which I have not measured, and anything a third-party provider does with the text it receives.",
+            "where": [
+                "backend/air/",
+                "backend/air/tests/test_eval.py",
+                "docs/AIR.md",
             ],
         },
         {

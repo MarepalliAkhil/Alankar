@@ -417,6 +417,26 @@ INTENTS += [
     ),
 ]
 
+# Who accepted a request, and why a request was declined or rescheduled. Both answers use the
+# shared wording of the appointments page (notifications/sorry.py, scheduling/acceptance.py).
+INTENTS.append(
+    Intent(
+        "who_accepted",
+        {"accept": 3, "booking": 1, "request": 1, "appointment": 1},
+        phrases=[("who accept", 4)],
+        requires=["who"],
+        template="Who accepted my booking?",
+    )
+)
+INTENTS.append(
+    Intent(
+        "why_declined",
+        {"declined": 3, "rescheduled": 2, "request": 1, "booking": 1, "moved": 1},
+        requires=["why"],
+        template="Why was my request declined or rescheduled?",
+    )
+)
+
 INTENTS.append(
     Intent(
         "service_details",
@@ -463,4 +483,6 @@ INTENT_TO_KB = {
     "products_with_booking": "products_with_booking",
     "package_cancel": "package_cancel",
     "membership_manage": "membership_manage",
+    "who_accepted": "who_accepted_booking",
+    "why_declined": "why_declined_or_rescheduled",
 }

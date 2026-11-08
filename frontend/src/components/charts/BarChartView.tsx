@@ -33,6 +33,7 @@ export default function BarChartView({ data, title, valueLabel, value2Label }: B
             name={valueLabel}
             fill="var(--color-primary)"
             radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
           />
           {value2Label && (
             <Bar
@@ -40,6 +41,7 @@ export default function BarChartView({ data, title, valueLabel, value2Label }: B
               name={value2Label}
               fill="var(--color-warning)"
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
           )}
         </BarChart>

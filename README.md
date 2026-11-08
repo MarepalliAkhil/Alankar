@@ -4,7 +4,7 @@ A website and management system for a unisex salon, spa and beauty parlor: publi
 booking with payment, front-desk POS and billing, stylist day view, ratings that feed stylist pay,
 stock, payroll, reports, gift cards and memberships, and a chat assistant.
 
-- **No AI services anywhere.** The chat assistant is a deterministic rule engine (`docs/CHATBOT_ALGORITHM.md`).
+- **AI is optional and off by default.** The chat assistant's own engine is a deterministic rule program (`docs/CHATBOT_ALGORITHM.md`). AIR, the optional virtual receptionist, can also use a third-party language-model provider, but only when the admin switches it on with a key and the customer agrees; with it off, everything works with rules (`docs/AIR.md`).
 - Brand names live only in `frontend/src/config/brand.ts` and `backend/core/brand.py`.
 - Rules for contributors: the project rules file. Full plan: `docs/MASTER_NOTES.md`. Build status and decisions: `docs/PROGRESS.md`.
 - Security: `docs/SECURITY.md`. Backups, jobs and checks: `docs/OPERATIONS.md`.

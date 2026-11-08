@@ -651,6 +651,27 @@ class Engine:
             for s in pool
         )
 
+    def help_answer(self, text: str, prefix: str, min_conf: float = 0.6) -> Reply | None:
+        """A knowledge-base answer only when the best match is one of the entries whose id starts
+        with `prefix` and the match is strong. Used by the AIR widget for its own help questions;
+        `answer()` and its ranking are unchanged."""
+        a = self.analyzer.analyze((text or "")[:MAX_QUERY_CHARS])
+        if not a.content:
+            return None
+        hits = self.index.search(a.canon)
+        if not hits:
+            return None
+        score, entry = hits[0]
+        kconf = score / (score + 3.0)
+        if not entry.id.startswith(prefix) or kconf < min_conf:
+            return None
+        return Reply(
+            text=self._fmt(entry.answer),
+            intent=f"kb:{entry.id}",
+            confidence=kconf,
+            source="kb",
+        )
+
     # ------------------------------------------------------------------ helpers
     def _rephrase(self, it: Intent, ents: dict) -> str:
         if ents.get("services"):
@@ -674,6 +695,8 @@ class Engine:
                 link_valid_hours=self.shop["link_valid_hours"],
                 delivery_fee=self.shop.get("delivery_fee", "49"),
                 free_delivery_over=self.shop.get("free_delivery_over", "999"),
+                air_stylist_minutes=self.shop.get("air_stylist_minutes", 15),
+                air_link_minutes=self.shop.get("air_link_minutes", 45),
             )
         )
 

@@ -14,6 +14,7 @@ import {
   type DeskFilter,
 } from '../../api/desk';
 import { AcceptDrawer } from '../../components/desk/AcceptDrawer';
+import { CallbackPanel } from '../../components/desk/CallbackPanel';
 import { CancelModal } from '../../components/desk/CancelModal';
 import { PlacementDrawer } from '../../components/desk/PlacementDrawer';
 import { PageHeader } from '../../components/layout/PageContainer';
@@ -142,6 +143,7 @@ export default function DeskAppointmentsPage() {
         title="Appointments"
         description="A request becomes a booking only when you and the stylist both accept. The customer then gets a payment link."
       />
+      <CallbackPanel />
       <Tabs
         items={tabs}
         value={filter}
@@ -259,7 +261,12 @@ function ApprovalChips({ appt }: { appt: DeskAppointment }) {
     <div className="flex flex-col gap-sm">
       <div className="flex flex-wrap gap-sm" aria-label="Who has answered">
         <Badge tone={chipTone[appt.reception_status]}>
-          Front desk: {appt.reception_status_label}
+          Front desk:{' '}
+          {appt.reception_by_air && appt.reception_status === 'accepted'
+            ? `Accepted by AIR (covering the desk)${
+                appt.reception_accepted_at ? `, ${formatDateTime(appt.reception_accepted_at)}` : ''
+              }`
+            : appt.reception_status_label}
         </Badge>
         <Badge tone={chipTone[appt.stylist_status]}>
           Stylist{appt.asked_stylist_name ? ` (${appt.asked_stylist_name})` : ''}:{' '}

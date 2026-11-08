@@ -56,6 +56,32 @@ def shop_facts() -> dict:
         "link_valid_hours": booking["hold_hours"],
         "delivery_fee": str(shop_rules.get("delivery_fee") or 0),
         "free_delivery_over": str(shop_rules.get("free_delivery_over") or "-"),
+        **_air_minutes(),
+    }
+
+
+def _air_minutes() -> dict:
+    """The assistant's own timings (Prompt 1 settings), for the help answers."""
+    # Read only: creating the settings row here would fire the rebuild signal mid-build.
+    from air.models import AirSettings
+
+    defaults = {
+        "air_stylist_minutes": AirSettings._meta.get_field("stylist_timeout_minutes").default,
+        "air_link_minutes": AirSettings._meta.get_field("payment_link_minutes").default,
+    }
+    try:
+        row = (
+            AirSettings.objects.filter(pk=1)
+            .values("stylist_timeout_minutes", "payment_link_minutes")
+            .first()
+        )
+    except Exception:  # noqa: BLE001 - the help text falls back to the defaults
+        row = None
+    if not row:
+        return defaults
+    return {
+        "air_stylist_minutes": row["stylist_timeout_minutes"],
+        "air_link_minutes": row["payment_link_minutes"],
     }
 
 

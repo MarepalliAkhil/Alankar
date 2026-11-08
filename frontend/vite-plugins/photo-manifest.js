@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  AIR_FOLDER,
   LEADER_FOLDER,
   MEERA_FOLDER,
   PHOTO_EXTENSIONS,
@@ -39,7 +40,8 @@ export function readManifest(dir) {
   // Meera's pictures live in public/photos/meera/ (listed as "meera/meera-wave.webp"), the
   // optional pictures of Zenoti's leaders in public/photos/zenoti-leaders/. A folder that does not
   // exist yet is simply skipped (the tour shows the letter "M", a leader card shows a monogram).
-  for (const folder of [MEERA_FOLDER, LEADER_FOLDER]) {
+  // AIR's pictures (Task AIR-3) live in public/photos/air/ ("air/air-01-welcome.webp").
+  for (const folder of [MEERA_FOLDER, LEADER_FOLDER, AIR_FOLDER]) {
     try {
       const sub = fs
         .readdirSync(path.join(dir, folder))
@@ -67,7 +69,7 @@ export function readManifest(dir) {
     } catch {
       continue;
     }
-    placeholders[slot] = entry.data;
+    if (entry.data) placeholders[slot] = entry.data; // AIR pictures have no blurred preview
   }
   return { files, placeholders };
 }

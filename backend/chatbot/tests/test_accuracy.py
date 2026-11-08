@@ -51,7 +51,7 @@ def test_each_hard_category_is_present_in_both_sets():
 
 def test_the_numbers_on_the_zenotians_page_are_the_measured_ones(engine):
     """The For Zenotians page quotes these accuracy figures; they must equal a fresh measurement."""
-    from website.zenotians_seed import DECISIONS, LIMITATIONS, QUALITY, QUESTIONS
+    from website.zenotians_seed import LIMITATIONS, QUALITY
 
     tuned = score(engine, TUNING)[:2]
     held = score(engine, HOLDOUT)[:2]
@@ -60,9 +60,10 @@ def test_the_numbers_on_the_zenotians_page_are_the_measured_ones(engine):
     for hits, total in (tuned, held):
         sentence = f"{hits} of {total}"
         percent = f"{hits / total:.1%}"
-        texts = [d["body"] for d in DECISIONS if "no AI" in d["title"]]
-        texts += [i["today"] for i in LIMITATIONS["items"] if i["id"] == "chatbot"]
-        texts += [i["a"] for i in QUESTIONS["items"] if "chatbot" in i["q"]]
+        # The Engineering decisions and Questions sections were retired from the page, so the
+        # only prose that still quotes the figures is the chatbot limitation.
+        texts = [i["today"] for i in LIMITATIONS["items"] if i["id"] == "chatbot"]
+        assert texts
         for text in texts:
             assert sentence in text or f"{hits} of {total}" in text.replace("right ", ""), text
             assert percent in text, text

@@ -1401,3 +1401,16 @@ html[data-switching] *::after {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+
+/* ---------------------------------------------------------------- colour-blind-safe chart set
+   AIR Task 3: the Okabe-Ito colours, distinguishable with the common kinds of colour blindness.
+   The same in every theme; charts that use them also show a text summary and a data table. */
+:root {
+  --chart-cb-blue: #0072b2;
+  --chart-cb-orange: #e69f00;
+  --chart-cb-green: #009e73;
+  --chart-cb-vermillion: #d55e00;
+  --chart-cb-purple: #cc79a7;
+  --chart-cb-sky: #56b4e9;
+  --chart-cb-grey: #6b7280;
+}

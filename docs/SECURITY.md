@@ -5,6 +5,8 @@ Written in Task 8a. This is the plain list of what protects the system, what was
 ## How access is decided
 - `shared/policy.json` is the single list of who may call what. Every endpoint declares one policy action; an endpoint without a known action is denied. Tests walk every endpoint as guest and as every role (`core/tests/test_sweep.py`) and check the answer against the file.
 - Object-level rules (a customer sees only their own bookings, a stylist only their own work, and so on) are tested per app, plus the field-exposure tests that check what each role's JSON contains.
+- AIR (the automatic receptionist) is not a user: it has no login, token or screen. `shared/policy.json` lists exactly what it may do under `service_actors.air` (everything else is denied), only while desk cover is active, and every action is written to the append-only action log. See `docs/AIR.md`.
+- AIR customer chat (Task 2): guests and customers only (staff get 403). Messages never create anything: only the customer's Send request / Place order / Yes buttons do, checked again by the server against what it holds for that chat. AI mode needs the master switch, the AIR switch and the customer's stored consent; without consent the provider is never called. Messages are redacted before any provider call and are not stored; the action log keeps ids and a hash only. Callback notes carry fixed wording, never chat text.
 - CSRF: sign-in is by HttpOnly cookies, so every state-changing call needs the `X-CSRFToken` header. `core/tests/test_csrf_sweep.py` signs in as each role with real cookies and proves that every unsafe endpoint refuses a call without the header.
 
 ## Sessions and passwords

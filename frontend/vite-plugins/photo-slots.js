@@ -90,8 +90,35 @@ for (const pose of MEERA_POSES) PHOTO_SLOTS[`meera-${pose}`] = { ...MEERA_SIZE }
  */
 export const MEERA_DEFAULT = 'meera';
 PHOTO_SLOTS[MEERA_DEFAULT] = { ...MEERA_SIZE };
-/** Meera's pictures may be cut-outs with transparency: kept as WebP, never flattened to JPG. */
-export const isTransparentSlot = (slot) => slot === MEERA_DEFAULT || slot.startsWith('meera-');
+// AIR, the virtual receptionist (AIR Task 3): square character pictures the owner supplies in
+// public/photos/air/ as `air-NN-<pose>.webp|png`, plus an optional default `air.webp`.
+export const AIR_FOLDER = 'air';
+export const AIR_POSES = {
+  welcome: 'air-01-welcome',
+  idle: 'air-02-idle',
+  explain: 'air-03-explain',
+  'point-right': 'air-04-point-right',
+  report: 'air-05-report',
+  'thumbs-up': 'air-06-thumbs-up',
+  thinking: 'air-07-thinking',
+  attention: 'air-08-attention',
+  concerned: 'air-09-concerned',
+  celebrate: 'air-10-celebrate',
+  'on-call': 'air-11-on-call',
+  handover: 'air-12-handover',
+  sleep: 'air-13-sleep',
+};
+/** The default AIR picture (`air.webp`), shown for any pose without its own file. */
+export const AIR_DEFAULT = 'air';
+/** AIR pictures are 1:1, 1024 px (a 512 px copy `<slot>-512.webp` is made too). */
+export const AIR_SIZE = { width: 1024, height: 1024 };
+for (const slot of Object.values(AIR_POSES)) PHOTO_SLOTS[slot] = { ...AIR_SIZE };
+PHOTO_SLOTS[AIR_DEFAULT] = { ...AIR_SIZE };
+export const isAirSlot = (slot) => slot === AIR_DEFAULT || slot.startsWith('air-');
+
+/** Meera's and AIR's pictures may be cut-outs with transparency: kept as WebP, never JPG. */
+export const isTransparentSlot = (slot) =>
+  slot === MEERA_DEFAULT || slot.startsWith('meera-') || isAirSlot(slot);
 
 /** What each slot should show (docs/IMAGE_SLOTS.md and the design-system page). */
 export const SLOT_SHOWS = {
@@ -132,6 +159,24 @@ const MEERA_SHOWS = {
 for (const pose of MEERA_POSES) SLOT_SHOWS[`meera-${pose}`] = MEERA_SHOWS[pose];
 SLOT_SHOWS[MEERA_DEFAULT] =
   'Meera, the default picture: shown in every tour pose that has no meera-<pose> file yet.';
+const AIR_SHOWS = {
+  welcome: 'AIR, the desk-bell receptionist, waving hello (the popup greeting).',
+  idle: 'AIR standing ready (nothing to report).',
+  explain: 'AIR explaining (reading out the numbers).',
+  'point-right': 'AIR pointing to the side (look at the list or the chart).',
+  report: 'AIR with a report (the briefing).',
+  'thumbs-up': 'AIR giving a thumbs-up (a good day).',
+  thinking: 'AIR thinking (loading).',
+  attention: 'AIR asking for attention (items need you).',
+  concerned: 'AIR looking concerned (expired links, declines, failures).',
+  celebrate: 'AIR celebrating (many bookings paid).',
+  'on-call': 'AIR on a call (covering the desk).',
+  handover: 'AIR handing the desk back to a person.',
+  sleep: 'AIR asleep (night cover banner; optional).',
+};
+for (const [pose, slot] of Object.entries(AIR_POSES)) SLOT_SHOWS[slot] = AIR_SHOWS[pose];
+SLOT_SHOWS[AIR_DEFAULT] =
+  'AIR, the default picture: shown for any pose that has no file of its own.';
 
 /** Photos above this size slow the page down; photos:check warns about them (older limit, kept). */
 export const MAX_PHOTO_BYTES = 200 * 1024;

@@ -113,7 +113,10 @@ describe('public site shell', () => {
     for (const name of ['Salon', 'Spa', 'Beauty Parlor', 'Register', 'For Zenotians']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
-    expect(within(nav).getByRole('link', { name: brand.logoText })).toHaveAttribute('href', '/');
+    expect(within(nav).getByRole('link', { name: `${brand.logoText} home` })).toHaveAttribute(
+      'href',
+      '/',
+    );
     expect(within(nav).getByRole('link', { name: 'Book Now' })).toHaveAttribute(
       'href',
       '/login?role=customer&intent=book',

@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { brand } from '../../config/brand';
 import { cn } from '../../lib/cn';
+import { BrandLink } from '../brand/BrandLink';
 import { menuGroupsFor, profilePathFor, type Role } from '../../policy/policy';
 import { CommandRow } from '../ui/CommandBar';
 import { DisplaySettings } from '../ui/DisplaySettings';
@@ -46,20 +47,12 @@ export function Sidebar({ role, collapsed, placement, onToggle, onNavigate }: Si
   return (
     <div className="flex h-full min-h-0 flex-col gap-md">
       <div className={cn('flex items-center gap-sm', collapsed ? 'flex-col' : 'justify-between')}>
-        <Link
-          to="/"
-          data-tour="brand"
-          onClick={onNavigate}
-          aria-label={collapsed ? `${brand.shopName}, home page` : undefined}
-          className="min-w-0 rounded-full px-2 py-1 focus-visible:shadow-focus focus-visible:outline-none"
-        >
-          <span className="block truncate text-xl font-semibold text-text">
-            {collapsed ? brand.logoText.slice(0, 1) : brand.logoText}
-          </span>
+        <div className="min-w-0">
+          <BrandLink placement="sidebar" collapsed={collapsed} onNavigate={onNavigate} />
           {!collapsed && (
-            <span className="block truncate text-xs text-text-muted">{brand.shopTagline}</span>
+            <p className="truncate pl-1.5 text-xs text-text-muted">{brand.shopTagline}</p>
           )}
-        </Link>
+        </div>
         {onToggle && (
           <IconButton
             label={collapsed ? 'Expand menu' : 'Collapse menu'}

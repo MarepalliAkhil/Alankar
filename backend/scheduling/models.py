@@ -261,6 +261,19 @@ class Appointment(models.Model):
     stylist_status = models.CharField(
         max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.NOT_ASKED
     )
+    # Who gave the FRONT DESK's yes, set by `scheduling.acceptance.record` (the one place both the
+    # receptionist and AIR go through). `reception_actor` is "receptionist" or "air" and is the
+    # only part customers ever see; `reception_user` is for staff views and is never sent to a
+    # customer.
+    reception_actor = models.CharField(max_length=12, blank=True, default="")
+    reception_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    reception_accepted_at = models.DateTimeField(null=True, blank=True)
     # When a request that nobody finished answering runs out; always before the visit starts.
     approval_expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
     # The tentative hold on the stylist's time while the request is pending (not on the room).

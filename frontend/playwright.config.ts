@@ -6,6 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
  * It starts its own backend (a throw-away database called alankar_e2e, never your real one)
  * and its own frontend on port 5174, runs the tests, and stops both.
  * Set E2E_USE_RUNNING=1 with E2E_BASE_URL to test servers you started yourself.
+ *
+ * The logo splash (docs/BRAND_LOGO.md) never plays for automated browsers (navigator.webdriver),
+ * and signIn() also marks it as seen, so no test waits behind it. Only e2e/splash.e2e.ts turns it
+ * on, with localStorage "alankar-splash" = "force".
  */
 const python = process.env.E2E_PYTHON || 'python';
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:5174';

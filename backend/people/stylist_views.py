@@ -381,6 +381,7 @@ def request_card(appt: Appointment, profile: StylistProfile, now) -> dict:
         "my_status_label": appt.get_stylist_status_display(),
         "reception_status": appt.reception_status,
         "reception_status_label": appt.get_reception_status_display(),
+        "reception_by_air": bool(getattr(getattr(appt, "air_state", None), "accepted_at", None)),
         "booking_status": appt.status,
         "booking_status_label": appt.get_status_display(),
         "answer_by": appt.approval_expires_at if waiting else None,

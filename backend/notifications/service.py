@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
-from notifications import templates
+from notifications import sorry, templates
 from notifications.models import Notification, SimulatedSms
 
 logger = logging.getLogger("salon.notifications")
@@ -77,12 +77,16 @@ def tell_customer(
     context.setdefault("service", appt.service_name)
     context.setdefault("when", booking.when_text(appt.start or appt.preferred_start))
     context.setdefault("stylist", stylist.display_name if stylist else "")
+    context = sorry.context_for(appt, key, context)  # who accepted, nearest times, contact line
     notify(appt.customer, kind, key, link=link, appointment_id=appt.id, **context)
     queue_mail(
         kind=mail_kind,
         to=appt.contact_email,
         subject=f"{brand.SHOP_NAME}: {templates.render(key, 'subject', **context)}",
-        body=f"Hello {appt.contact_name},\n\n{templates.render(key, 'body', **context)}",
+        body=(
+            f"Hello {appt.contact_name},\n\n"
+            f"{sorry.email_body(key, templates.render(key, 'body', **context), appt, context)}"
+        ),
         link=email_link if email_link is not None else frontend_link(link),
     )
     sms(appt.customer, appt.contact_phone, key, appointment_id=appt.id, **context)

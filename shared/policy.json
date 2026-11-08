@@ -181,6 +181,14 @@
     "chatbot.insights.read": "Read the chatbot's unanswered questions (anonymous keys) and intent usage",
     "chatbot.insights.manage": "Turn an unanswered chatbot question into an FAQ, or dismiss it (audited)",
     "chatbot.insights.test": "Try a question in the chatbot test box (guest context, nothing logged)",
+    "air.chat": "Talk to AIR in the chat widget (guests: general questions only; customers: booking and product orders; staff accounts are refused)",
+    "air.status": "Is AIR covering the front desk right now, and is the optional AI mode available (two yes/no answers)",
+    "air.send_request": "A customer presses Send request on the booking summary card (the only way a chat creates a booking request)",
+    "air.confirm": "A customer presses the confirm button on a summary card: place an order, change an unpaid order, add a product to a visit, or cancel a booking",
+    "air.consent.read": "Read my own AI-mode consent (given or not, when, which wording)",
+    "air.consent.update": "Give or withdraw my consent to send my chat messages to the optional AI service",
+    "desk.callbacks.list": "List callback requests that customers left through AIR",
+    "desk.callbacks.done": "Mark a callback request as done",
     "my.shop.browse": "See the products sold online",
     "my.shop.quote": "Price my cart (prices worked out by the server)",
     "my.addresses.list": "See my saved delivery addresses",
@@ -217,7 +225,19 @@
     "my.trusted_devices.list": "See my remembered devices",
     "my.trusted_devices.revoke": "Forget one remembered device",
     "my.trusted_devices.revoke_all": "Forget all my remembered devices",
-    "stats.view": "View the shop statistics dashboard and export its tables"
+    "stats.view": "View the shop statistics dashboard and export its tables",
+    "air.settings.read": "Admin: read the AIR (Alankar Intelligence Receptionist) settings and whether a key is configured",
+    "air.settings.update": "Admin: change the AIR settings (audited)",
+    "air.cover.read": "Admin: see whether AIR is covering the front desk",
+    "air.cover.status": "Admin: AIR desk-cover status box (cover on or off and why, last sweep, last error, waiting requests AIR could not handle)",
+    "air.cover.force": "Admin: force AIR cover on or off, or back to automatic, with a reason (audited)",
+    "air.log.list": "Admin: read the append-only AIR action log",
+    "air.desk.stats": "Receptionist and admin: AIR statistics for a range, compared with the period before",
+    "air.desk.activity": "Receptionist and admin: the list of what AIR did",
+    "air.desk.needs": "Receptionist and admin: claim or resolve an AIR needs-you item",
+    "air.desk.undo": "Receptionist and admin: undo one of AIR's own reversible actions (never a paid booking)",
+    "air.desk.phone": "Receptionist and admin: show a customer's phone number from the AIR activity page (audited)",
+    "air.desk.briefing": "Receptionist and admin: the AIR popup briefing (counts only)"
   },
   "public": {
     "api": [
@@ -244,7 +264,9 @@
       "public.team",
       "public.page",
       "public.unsubscribe",
-      "chatbot.ask"
+      "chatbot.ask",
+      "air.chat",
+      "air.status"
     ],
     "routes": [
       "/",
@@ -348,6 +370,10 @@
         "my.orders.cancel",
         "my.shop.next_visit",
         "my.visit_products.add",
+        "air.send_request",
+        "air.confirm",
+        "air.consent.read",
+        "air.consent.update",
         "my.visit_products.remove",
         "my.memberships.list",
         "notifications.list",
@@ -485,6 +511,8 @@
         "my.tour.write",
         "auth.password_change",
         "desk.appointments.list",
+        "desk.callbacks.list",
+        "desk.callbacks.done",
         "desk.appointments.read",
         "desk.appointments.confirm",
         "desk.appointments.reject",
@@ -524,7 +552,13 @@
         "notifications.mark_read",
         "desk.appointments.reassign",
         "auth.step_up",
-        "auth.step_up_verify"
+        "auth.step_up_verify",
+        "air.desk.stats",
+        "air.desk.activity",
+        "air.desk.needs",
+        "air.desk.undo",
+        "air.desk.phone",
+        "air.desk.briefing"
       ],
       "routes": [
         "/customers/:id",
@@ -539,6 +573,15 @@
           "path": "/dashboard",
           "description": "Today at the desk: new requests, held slots and customer requests that need you.",
           "task": "Task 3a",
+          "status": "available",
+          "group": "Overview"
+        },
+        {
+          "id": "air-activity",
+          "label": "AIR Activity",
+          "path": "/air-activity",
+          "description": "What AIR (the virtual receptionist) did: the needs-you list, numbers compared with the period before, charts with data tables, the activity list with Undo, customers and products.",
+          "task": "Task AIR-3",
           "status": "available",
           "group": "Overview"
         },
@@ -825,7 +868,19 @@
         "auth.step_up_verify",
         "stats.view",
         "notifications.list",
-        "notifications.mark_read"
+        "notifications.mark_read",
+        "air.settings.read",
+        "air.settings.update",
+        "air.cover.read",
+        "air.cover.force",
+        "air.cover.status",
+        "air.log.list",
+        "air.desk.stats",
+        "air.desk.activity",
+        "air.desk.needs",
+        "air.desk.undo",
+        "air.desk.phone",
+        "air.desk.briefing"
       ],
       "routes": [
         "/customers/:id",
@@ -1015,6 +1070,15 @@
           "group": "Insights"
         },
         {
+          "id": "air-activity",
+          "label": "AIR Activity",
+          "path": "/air-activity",
+          "description": "What AIR (the virtual receptionist) did: the needs-you list, numbers compared with the period before, charts with data tables, the activity list with Undo, customers and products.",
+          "task": "Task AIR-3",
+          "status": "available",
+          "group": "Insights"
+        },
+        {
           "id": "settings",
           "label": "Settings",
           "path": "/settings",
@@ -1057,5 +1121,69 @@
         "typing": "The other person is typing"
       }
     }
-  ]
+  ],
+  "service_actors": {
+    "_comment": "Internal service actors: code running on the server with NO login, NO token and NO UI session. Deny by default: anything not in 'allow' is refused, and 'allow' is checked together with cover mode. 'never' documents what the actor can never do; the policy tests prove each is refused.",
+    "air": {
+      "label": "AIR (Alankar Intelligence Receptionist)",
+      "login": false,
+      "cover_required": true,
+      "allow": [
+        "air.services.read",
+        "air.availability.read",
+        "air.hold.create",
+        "air.hold.release",
+        "air.booking.request",
+        "air.reception.accept",
+        "air.payment_link.create",
+        "air.payment_link.resend",
+        "air.payment_link.expire",
+        "air.notify.customer",
+        "air.requests.read_own",
+        "air.handoff",
+        "air.undo",
+        "air.products.read",
+        "air.order.create",
+        "air.order.update",
+        "air.order.read_own",
+        "air.visit_product.add",
+        "air.cancel_own",
+        "air.callback"
+      ],
+      "customer_assist": [
+        "air.services.read",
+        "air.availability.read",
+        "air.hold.create",
+        "air.booking.request",
+        "air.requests.read_own",
+        "air.products.read",
+        "air.order.create",
+        "air.order.update",
+        "air.order.read_own",
+        "air.visit_product.add",
+        "air.cancel_own",
+        "air.callback"
+      ],
+      "cover_free": [
+        "air.hold.release",
+        "air.payment_link.expire",
+        "air.notify.customer",
+        "air.handoff"
+      ],
+      "never": [
+        "stylist.accept",
+        "refund.create",
+        "discount.apply",
+        "price.change",
+        "fee.waive",
+        "booking.cancel_after_cutoff",
+        "rating_block.override",
+        "user.edit",
+        "staff.edit",
+        "customer.read_other",
+        "staff.private.read",
+        "chat.photo.open"
+      ]
+    }
+  }
 }

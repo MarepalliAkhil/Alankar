@@ -17,12 +17,12 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
+from notifications.models import Notification
 
 from accounts.audit import audit
 from accounts.models import AuditLog
 from notifications import service as notify_service
 from notifications import templates
-from notifications.models import Notification
 from scheduling import booking
 from scheduling.models import Appointment, SlotChange
 
@@ -46,7 +46,8 @@ def payment_note(appt: Appointment, kind: str, refund_amount: Decimal) -> str:
     if kind == SlotChange.Kind.CANCELLED:
         if refund_amount > 0:
             return templates.PAYMENT_NOTES["refund"].format(amount=refund_amount)
-        return templates.PAYMENT_NOTES["none"]
+        # Money is held but no refund was filed: say only that the front desk will be in touch.
+        return templates.PAYMENT_NOTES["contact" if paid > 0 else "none"]
     return templates.PAYMENT_NOTES["valid"] if paid > 0 else templates.PAYMENT_NOTES["none"]
 
 

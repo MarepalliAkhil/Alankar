@@ -151,7 +151,41 @@ export interface PendingChange {
   can_rebook: boolean;
 }
 
+/** One step of the request timeline. `text` is always shown, so no state relies on colour. */
+export interface TimelineStep {
+  key: 'requested' | 'front_desk' | 'stylist' | 'payment_link' | 'paid' | 'confirmed';
+  label: string;
+  state: 'done' | 'waiting' | 'stopped' | 'problem' | 'skipped';
+  text: string;
+  at: string | null;
+  actor?: 'receptionist' | 'air';
+  expires_at?: string | null;
+}
+
+/** The sorry note for a request the salon could not keep. Words come from the server, the same
+ * ones as the email and the bell notification. */
+export interface SorryNote {
+  event:
+    | 'stylist_declined'
+    | 'reception_declined'
+    | 'timed_out'
+    | 'link_expired'
+    | 'moved'
+    | 'reassigned'
+    | 'cancelled';
+  title: string;
+  parts: { apology: string; what: string; next: string; step: string; money: string };
+  text: string;
+  nearest_slots: { start: string; label: string }[];
+  phone: string;
+}
+
 export interface CustomerAppointment extends AppointmentBase {
+  /** Only the TYPE of who accepted and a ready-made label; never the receptionist. */
+  reception_actor?: '' | 'receptionist' | 'air';
+  reception_label?: string;
+  timeline?: TimelineStep[];
+  sorry_note?: SorryNote | null;
   approval?: ApprovalInfo | null;
   rebook?: RebookInfo | null;
   pending_change?: PendingChange | null;

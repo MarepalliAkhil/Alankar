@@ -15,7 +15,7 @@ from chatbot.engine import Engine
 _SYNONYMS = json.loads(
     (Path(__file__).parent / "engine" / "data" / "synonyms.json").read_text(encoding="utf-8")
 )
-_lock = threading.Lock()
+_lock = threading.RLock()  # re-entrant: a save during a build must not deadlock
 _engine: Engine | None = None
 _built_at = 0.0
 # Other server processes do not see our signals, and some admin changes use bulk updates,
@@ -43,10 +43,13 @@ def rebuild(**_kwargs) -> None:
 
 
 def connect_signals() -> None:
+    from air.models import AirSettings  # the assistant's timings appear in its help answers
     from people.models import Rating, StylistProfile
     from scheduling.models import Service, ServiceCategory
     from website.models import KnowledgeEntry, SiteContent
 
-    for model in (Service, ServiceCategory, StylistProfile, Rating, SiteContent, KnowledgeEntry):
+    for model in (
+        Service, ServiceCategory, StylistProfile, Rating, SiteContent, KnowledgeEntry, AirSettings
+    ):  # fmt: skip
         for signal in (post_save, post_delete):
             signal.connect(rebuild, sender=model, dispatch_uid=f"chatbot-{signal}-{model.__name__}")

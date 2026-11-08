@@ -33,6 +33,8 @@ export async function signIn(
     colorScheme?: 'light' | 'dark';
     reducedTransparency?: boolean;
     reducedMotion?: boolean;
+    /** The receptionist's AIR popup (AIR Task 3). Off unless a test is about it. */
+    airPopup?: boolean;
   } = {},
 ): Promise<Session> {
   const user = USERS[who];
@@ -41,6 +43,19 @@ export async function signIn(
     ...(options.colorScheme ? { colorScheme: options.colorScheme } : {}),
     ...(options.reducedMotion ? { reducedMotion: 'reduce' as const } : {}),
   });
+  // The logo splash never covers other tests: it already skips automated browsers, and this marks
+  // it as seen for the session as well (only e2e/splash.e2e.ts turns it on).
+  await context.addInitScript(() => {
+    try {
+      window.sessionStorage.setItem('alankar-splash-seen', '1');
+    } catch {
+      // no storage: the automated-browser rule still applies
+    }
+  });
+  if (!options.airPopup) {
+    // Other tests are not about the popup: without its briefing it does not open by itself.
+    await context.route('**/api/air/desk/briefing/**', (route) => route.abort());
+  }
   if (options.reducedTransparency) {
     await context.addInitScript(() =>
       window.localStorage.setItem('salon-display', JSON.stringify({ reduceTransparency: true })),

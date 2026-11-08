@@ -83,7 +83,13 @@ def booking_error(exc: booking.BookingError) -> Response:
 def appointment_queryset():
     return Appointment.objects.select_related(
         "service__category", "stylist", "preferred_stylist", "hold_stylist", "room"
-    ).prefetch_related(Prefetch("payments", queryset=Payment.objects.all()), "products", "changes")
+    ).prefetch_related(
+        Prefetch("payments", queryset=Payment.objects.prefetch_related("refunds")),
+        "products",
+        "changes",
+        Prefetch("events", queryset=AppointmentEvent.objects.select_related("actor")),
+        "payment_links",
+    )
 
 
 def get_service(slug: str) -> Service:
@@ -476,9 +482,7 @@ def flagged(qs):
 
 
 def desk_queryset():
-    return appointment_queryset().prefetch_related(
-        Prefetch("events", queryset=AppointmentEvent.objects.select_related("actor"))
-    )
+    return appointment_queryset().select_related("air_state")
 
 
 def desk_appointment(pk) -> Appointment:
@@ -519,6 +523,9 @@ class DeskAppointmentListView(APIView):
     )
     def get(self, request: Request) -> Response:
         booking.expire_due()
+        from air import desk as air_desk
+
+        air_desk.lazy_sweep()  # AIR (when it covers the desk) answers waiting requests first
         qs = desk_queryset()
         wanted = request.query_params.get("status", "")
         if wanted in DESK_FILTERS:

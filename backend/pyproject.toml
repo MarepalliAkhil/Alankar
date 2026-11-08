@@ -19,10 +19,12 @@ select = ["E", "F", "W", "I", "B", "UP", "DJ"]
 "chatbot/defaults.py" = ["E501"]
 # Customer-facing message texts read better on one line each.
 "notifications/templates.py" = ["E501"]
+"notifications/air_templates.py" = ["E501"]
+"notifications/sorry.py" = ["E501"]
 "chatbot/engine/*" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = [
   "config", "core", "accounts", "people", "scheduling",
-  "billing", "inventory", "chat", "marketing", "website", "chatbot", "wallet", "waitlist",
+  "billing", "inventory", "chat", "marketing", "website", "chatbot", "wallet", "waitlist", "air",
 ]

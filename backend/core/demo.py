@@ -69,3 +69,14 @@ def ensure_customers(rows, password=DEMO_PASSWORD) -> dict[str, User]:
     return {
         email: ensure_user("customer", email, name, password, phone) for email, name, phone in rows
     }
+
+
+def ensure_air_cover() -> None:
+    """Demo data only: AIR's desk cover is ON so the demo shows it working. (A real installation
+    keeps the migration default, OFF, until the admin switches it on in the AIR settings.)"""
+    from air import config
+
+    obj = config.get_settings()
+    if not obj.air_enabled:
+        obj.air_enabled = True
+        obj.save(update_fields=["air_enabled", "updated_at"])

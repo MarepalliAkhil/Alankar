@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "waitlist",
     "chatbot",
     "notifications",
+    "air",
 ]
 
 MIDDLEWARE = [

@@ -26,9 +26,9 @@ A paid invoice is never edited; a correction is a refund that the admin approves
 
 Where: `backend/billing/models.py`, `backend/billing/refunds.py`, `backend/inventory/models.py`
 
-## 5. Deterministic algorithms, no AI
+## 5. Deterministic algorithms first; AI only as an optional extra
 
-The product uses deterministic algorithms and no AI: no language model, no machine-learning library and no outside AI service. The chatbot is a rule engine over the shop's own data. On questions I wrote myself it got 130 of 143 right (90.9%) on the set I tuned it against and 67 of 91 (73.6%) on a holdout set; real customers will phrase things differently, so expect lower in practice.
+Everything works with deterministic algorithms: no machine-learning library, and with the default settings no outside AI service. The chatbot's engine is a rule program over the shop's own data. AIR, the optional virtual receptionist (off by default), can additionally send a customer's redacted message to a third-party language-model provider, but only when the admin switches it on with a key, under request and spending caps, and only for customers who agreed; the rules take over whenever it is off or fails, and the model can only propose, never book or pay (docs/AIR.md). On questions I wrote myself it got 130 of 143 right (90.9%) on the set I tuned it against and 67 of 91 (73.6%) on a holdout set; real customers will phrase things differently, so expect lower in practice.
 
 Where: `backend/chatbot/engine/`, `backend/chatbot/tests/test_accuracy.py`, `docs/CHATBOT_ALGORITHM.md`
 

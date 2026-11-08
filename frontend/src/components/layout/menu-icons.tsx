@@ -1,5 +1,6 @@
 import {
   Banknote,
+  BellRing,
   BarChart3,
   Boxes,
   CalendarCheck,
@@ -40,6 +41,7 @@ import {
 /** One icon per menu item id (the menu itself still comes from shared/policy.json). */
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
+  'air-activity': BellRing,
   appointments: CalendarCheck,
   schedule: CalendarDays,
   customers: Users,

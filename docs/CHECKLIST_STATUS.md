@@ -1,6 +1,6 @@
 # Alankar: checklist status (audit, second pass)
 
-Updated 2026-11-06. This pass replaces every "See PROGRESS" row with sub-items checked against the real code and test files. PROGRESS.md was used only to find names, never as proof.
+Updated 2026-11-06 (AI-K and X-LOCK rows updated 2026-11-08 for AIR task 3). This pass replaces every "See PROGRESS" row with sub-items checked against the real code and test files. PROGRESS.md was used only to find names, never as proof.
 
 Legend: **C** = code exists, **T** = tests exist (names given), **R** = I ran it here and it passed, **B** = seen in a browser (never, no browser here).
 
@@ -98,9 +98,9 @@ What ran in this pass (R): the whole frontend vitest suite (794 of 795 passed; t
 | AI-H | Assistant UI | NOT STARTED | Admin ChatbotInsightsPage exists for the public bot only; DashboardShell has an unused `assistant` hook | Build |
 | AI-I | Assistant tests | NOT STARTED | n/a | Build |
 | AI-J | Accuracy report, tuning and holdout sets | UNVERIFIED | For the public bot: chatbot/tests/eval_sets.py (278 lines), ported_sets.py; test_accuracy.py (test_tuning_accuracy, test_holdout_accuracy, test_the_sets_are_big_enough_and_do_not_overlap, test_each_hard_category_is_present_in_both_sets, test_the_numbers_on_the_zenotians_page_are_the_measured_ones). CHATBOT_ALGORITHM.md says 58 tuning and 36 second-set questions (read, not counted) | pytest on PC |
-| AI-K | Optional AI layer | NOT STARTED | Locked rule: no LLMs. Not built | Your decision |
+| AI-K | Optional AI layer (AIR) | UNVERIFIED | C+T: backend/air (provider adapter, orchestrator, consent, caps; fake provider only in tests). Off by default; owner decision in AIR tasks 1 to 3 (docs/AIR.md) | Real-key run of scripts/air_live_eval.py on PC |
 | X-POL | policy.json deny-by-default, 216 actions | UNVERIFIED | C: core.permissions.PolicyPermission; T: core/tests/test_policy.py, test_sweep.py (every endpoint as every role) | pytest on PC |
-| X-LOCK | No LLM / Ollama imports | PARTIAL | Not re-grepped for Ollama/LLM names in this pass | Re-grep on PC |
+| X-LOCK | No LLM / Ollama imports outside AIR | PARTIAL | The only provider code is backend/air/llm/providers.py (standard library HTTPS, off by default). Not re-grepped for Ollama names in this pass | Re-grep on PC |
 | B2-1..4 | "Second brief" (glass, mobile images, Salon hero, Zenotians scrollbar test) | NOT STARTED | You asked me not to start it | Your separate prompt |
 | U-12 | The 12 usability fixes (separate brief A) | NOT STARTED | Not in this run | Next run |
 | U-ANIM | Zenotians entrance animation (brief B) | NOT STARTED | Not in this run | Next run |

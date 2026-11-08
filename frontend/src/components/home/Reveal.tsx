@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
+import { useIntroReached } from '../../intro/introPhase';
 import { cn } from '../../lib/cn';
 
 /**
@@ -19,9 +20,11 @@ export function Reveal({
 }) {
   const ref = useRef<HTMLElement>(null);
   const [shown, setShown] = useState(() => typeof IntersectionObserver === 'undefined');
+  // The entrance starts only after the logo splash has finished (intro/introPhase.ts).
+  const allowed = useIntroReached('hero');
   useEffect(() => {
     const element = ref.current;
-    if (shown || !element) return;
+    if (shown || !element || !allowed) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -33,7 +36,7 @@ export function Reveal({
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [shown]);
+  }, [shown, allowed]);
   return (
     <Tag ref={ref} className={cn('reveal', shown && 'reveal-in', className)} {...rest}>
       {children}

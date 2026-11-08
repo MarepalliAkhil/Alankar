@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { Splash } from '../brand/Splash';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { CommandBar } from '../ui/CommandBar';
@@ -35,6 +36,7 @@ export function PublicLayout() {
       <Footer />
       <CommandBar />
       <ChatWidget />
+      <Splash />
     </div>
   );
 }

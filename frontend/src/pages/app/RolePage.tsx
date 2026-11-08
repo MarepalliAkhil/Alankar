@@ -55,6 +55,7 @@ const MembershipsPage = lazy(() => import('../customer/MembershipsPage'));
 const MembersPage = lazy(() => import('../desk/MembersPage'));
 const NotificationsPage = lazy(() => import('./NotificationsPage'));
 const AdminDashboardPage = lazy(() => import('../admin/AdminDashboardPage'));
+const AirActivityPage = lazy(() => import('../air/AirActivityPage'));
 
 /** Picks the page for a policy path. Built pages are listed here; the rest are planned. */
 export default function RolePage({ path }: { path: string }) {
@@ -121,5 +122,6 @@ export default function RolePage({ path }: { path: string }) {
   if (path === '/inventory' && user.role === 'receptionist') return <InventoryPage />;
   if (path === '/customers' && isDesk) return <CustomersPage />;
   if (path === '/appointments' && user.role === 'receptionist') return <DeskAppointmentsPage />;
+  if (path === '/air-activity' && isDesk) return <AirActivityPage />;
   return <PlannedPage item={item} homePath={homeFor(user.role)} />;
 }

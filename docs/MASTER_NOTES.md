@@ -525,3 +525,6 @@ the owner's resume is loaded.
 - After sending a booking request the customer sees a "request sent" screen (confirmed only when both the front desk and the stylist accept). Meera's celebrate pose appears only once a booking is confirmed. A skip-confirmation Meera moment is not part of the product.
 - Test totals quoted anywhere are counted from files, not from a passing run.
 
+# UPDATE: AIR, the optional virtual receptionist (owner decision, AIR tasks 1 to 3)
+
+This narrows UPDATE 3 ("No LLMs anywhere") for AIR only. AIR is built and OFF by default. It covers the front desk only when no receptionist is on shift or signed in, accepts only the desk side of a request (the stylist must still accept), never confirms before payment (payments simulated), and works with rules when nothing else is on. An optional third-party language-model provider (adapter: Anthropic) can help it read customer messages only when the admin switches it on with a server-side key, under request and spending caps, and only for customers who agreed; the model can only propose, never act. The chatbot engine itself is unchanged and still has no language model. Details, metrics and limits: docs/AIR.md.

@@ -228,5 +228,122 @@
       "meera-512.webp"
     ],
     "data": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACwAwCdASoQABQAPu1iqU2ppaOiMAgBMB2JaQAASopc9k4hjJVEAAD+05Zx5Vb/fHx2uNQZaKX8wEawS1JWlMAmWY6e8ZnsVIAAAA=="
+  },
+  "air-01-welcome": {
+    "file": "air/air-01-welcome.webp",
+    "bytes": 45466,
+    "outputs": [
+      "air-01-welcome.webp",
+      "air-01-welcome-512.webp"
+    ],
+    "data": null
+  },
+  "air-02-idle": {
+    "file": "air/air-02-idle.webp",
+    "bytes": 45146,
+    "outputs": [
+      "air-02-idle.webp",
+      "air-02-idle-512.webp"
+    ],
+    "data": null
+  },
+  "air-03-explain": {
+    "file": "air/air-03-explain.webp",
+    "bytes": 44348,
+    "outputs": [
+      "air-03-explain.webp",
+      "air-03-explain-512.webp"
+    ],
+    "data": null
+  },
+  "air-04-point-right": {
+    "file": "air/air-04-point-right.webp",
+    "bytes": 43352,
+    "outputs": [
+      "air-04-point-right.webp",
+      "air-04-point-right-512.webp"
+    ],
+    "data": null
+  },
+  "air-05-report": {
+    "file": "air/air-05-report.webp",
+    "bytes": 44436,
+    "outputs": [
+      "air-05-report.webp",
+      "air-05-report-512.webp"
+    ],
+    "data": null
+  },
+  "air-06-thumbs-up": {
+    "file": "air/air-06-thumbs-up.webp",
+    "bytes": 42778,
+    "outputs": [
+      "air-06-thumbs-up.webp",
+      "air-06-thumbs-up-512.webp"
+    ],
+    "data": null
+  },
+  "air-07-thinking": {
+    "file": "air/air-07-thinking.webp",
+    "bytes": 40484,
+    "outputs": [
+      "air-07-thinking.webp",
+      "air-07-thinking-512.webp"
+    ],
+    "data": null
+  },
+  "air-08-attention": {
+    "file": "air/air-08-attention.webp",
+    "bytes": 43316,
+    "outputs": [
+      "air-08-attention.webp",
+      "air-08-attention-512.webp"
+    ],
+    "data": null
+  },
+  "air-09-concerned": {
+    "file": "air/air-09-concerned.webp",
+    "bytes": 37392,
+    "outputs": [
+      "air-09-concerned.webp",
+      "air-09-concerned-512.webp"
+    ],
+    "data": null
+  },
+  "air-10-celebrate": {
+    "file": "air/air-10-celebrate.webp",
+    "bytes": 53612,
+    "outputs": [
+      "air-10-celebrate.webp",
+      "air-10-celebrate-512.webp"
+    ],
+    "data": null
+  },
+  "air-11-on-call": {
+    "file": "air/air-11-on-call.webp",
+    "bytes": 47332,
+    "outputs": [
+      "air-11-on-call.webp",
+      "air-11-on-call-512.webp"
+    ],
+    "data": null
+  },
+  "air-12-handover": {
+    "file": "air/air-12-handover.webp",
+    "bytes": 45246,
+    "outputs": [
+      "air-12-handover.webp",
+      "air-12-handover-512.webp"
+    ],
+    "data": null
+  },
+  "air-13-sleep": {
+    "file": "air/air-13-sleep.webp",
+    "bytes": 44828,
+    "outputs": [
+      "air-13-sleep.webp",
+      "air-13-sleep-512.webp"
+    ],
+    "data": null
   }
 }

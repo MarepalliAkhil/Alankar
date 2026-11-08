@@ -8,6 +8,7 @@ import { TrustedDevicesCard } from '../../components/customer/TrustedDevicesCard
 import { PageTip } from '../../components/tour';
 import { changePassword, getProfile, updateProfile, type ProfilePayload } from '../../api/booking';
 import { serverFieldErrors } from '../../api/client';
+import { AiHelpCard } from '../../components/customer/AiHelpCard';
 import { YourDataCard } from '../../components/customer/YourDataCard';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
@@ -78,6 +79,9 @@ export default function ProfilePage() {
               Devices you remember skip the emailed code when you sign in. Review them here.
             </PageTip>
             <TrustedDevicesCard />
+          </div>
+          <div id="ai-help" className="scroll-mt-lg lg:col-span-2">
+            <AiHelpCard />
           </div>
           <div id="your-data" className="scroll-mt-lg lg:col-span-2">
             <YourDataCard />

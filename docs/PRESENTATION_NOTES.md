@@ -34,7 +34,7 @@ Timing rules: if the demo runs long, drop slide 2 and shorten slide 8. Never dro
 
 1. (20 s) "Alankar is a working salon platform I built on my own: four roles, one policy file, 69 pages and 259 API endpoints behind it. It is independent of Zenoti and uses only public facts about you."
 2. (40 s) Open A day at Alankar and press Play on chapters 1 to 3: a request needs two yeses, and a decline is handled kindly with no double booking.
-3. (30 s) "It is tested: [stats script number] automated tests, a measured chatbot accuracy of 90.9% on the tuning set and 73.6% on a holdout I wrote myself, and no AI in it by design."
+3. (30 s) "It is tested: [stats script number] automated tests, a measured chatbot accuracy of 90.9% on the tuning set and 73.6% on a holdout I wrote myself, and AI only as an optional, off-by-default extra for AIR, with the rules always as the fallback."
 4. (20 s) Open Limitations: "It is a prototype. Payments and messages are simulated, there is one shop, and I have not load tested it."
 5. (10 s) "Questions? The hard ones are on the page."
 

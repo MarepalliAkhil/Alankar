@@ -30,7 +30,7 @@ from marketing.models import CouponRedemption
 from notifications import templates
 from people import ratings
 from people.models import DayOffRequest, StylistProfile
-from scheduling import products
+from scheduling import acceptance, products
 from scheduling.models import (
     BLOCKING_STATUSES,
     Appointment,
@@ -281,6 +281,12 @@ def busy_ranges(
         )
         for a in pending.only("id", "hold_stylist", "hold_start", "hold_end")
     ]
+    # AIR's slot holds (none unless the optional AIR assistant is on and has made some).
+    from air import holds as air_holds
+
+    busy += air_holds.busy_ranges(
+        stylist_ids=stylist_ids, day_from=day_from, day_to=day_to, exclude=exclude
+    )
     return busy
 
 
@@ -404,11 +410,17 @@ def email_customer(
     kind=MailOutbox.Kind.BOOKING,
     link: str | None = None,
 ) -> None:
+    from notifications import sorry
+
+    who = sorry.email_footer(appt)  # who accepted the request, in the shared words
     queue_mail(
         kind=kind,
         to=appt.contact_email,
         subject=f"{brand.SHOP_NAME}: {subject}",
-        body=f"Hello {appt.contact_name},\n\n{intro}\n\n{booking_lines(appt)}",
+        body=(
+            f"Hello {appt.contact_name},\n\n{intro}\n\n"
+            f"{who + chr(10) * 2 if who else ''}{booking_lines(appt)}"
+        ),
         link=link if link is not None else frontend_link("/customer/appointments"),
     )
 
@@ -440,12 +452,14 @@ def expire_due(now: datetime | None = None) -> int:
             packagecodes.release(appt, note="Payment link expired")
             products.release(appt, note="Payment link expired")
             record(appt, "payment_expired", from_status=S.AWAITING_PAYMENT)
-            email_customer(
-                appt,
-                "payment link expired",
-                "The payment link for your booking expired, so the held time was released. "
-                "Please contact us or send a new request if you still want this visit.",
-            )
+            if not hasattr(appt, "air_state"):  # AIR tells its own customers (air/lifecycle.py)
+                from notifications.models import Notification
+
+                from notifications import service as notify_service
+
+                notify_service.tell_customer(
+                    appt, Notification.Kind.BOOKING_OUTCOME, "customer_link_expired"
+                )
             _offer_freed(_slot_of(appt))
             count += 1
     from scheduling import approvals
@@ -684,6 +698,7 @@ def confirm(
         # Placed by the system (waitlist offer, demo story): both sides count as having agreed.
         appt.reception_status = ApprovalStatus.ACCEPTED
         appt.stylist_status = ApprovalStatus.ACCEPTED
+        acceptance.record(appt, user=actor)
         appt.hold_stylist = appt.hold_start = appt.hold_end = None
         appt.approval_expires_at = None
         packagecodes.consume(appt, actor=actor)
@@ -972,6 +987,7 @@ def create_desk_booking(
         appt.confirmed_by = actor
         appt.reception_status = ApprovalStatus.ACCEPTED
         appt.stylist_status = ApprovalStatus.ACCEPTED
+        acceptance.record(appt, user=actor)
         appt.status = S.CHECKED_IN if check_in_now else S.SCHEDULED
         if check_in_now:
             appt.arrived_at = timezone.now()

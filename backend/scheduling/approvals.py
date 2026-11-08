@@ -21,14 +21,14 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from notifications.models import Notification
 
 from accounts.audit import audit
 from accounts.models import AuditLog
 from notifications import service as notify_service
-from notifications import templates
-from notifications.models import Notification
+from notifications import sorry, templates
 from people.models import DayOffRequest, StylistProfile
-from scheduling import booking, products
+from scheduling import acceptance, booking, products
 from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus, Room
 from wallet import packagecodes
 from website.content import booking_settings
@@ -63,6 +63,7 @@ def _vars(appt: Appointment, **extra) -> dict:
         "service": appt.service_name,
         "when": booking.when_text(appt.start or appt.preferred_start),
         "stylist": stylist.display_name if stylist else "",
+        **sorry.reception_vars(appt),
         **extra,
     }
 
@@ -260,8 +261,11 @@ def _assign(appt: Appointment, stylist: StylistProfile) -> None:
     appt.save()
 
 
-def reception_accept(appt_id, *, actor, stylist=None, room=None) -> Appointment:
-    """The front desk's Accept. For an "any" request a stylist must be chosen with it."""
+def reception_accept(
+    appt_id, *, actor, stylist=None, room=None, by_air: bool = False
+) -> Appointment:
+    """The front desk's Accept. For an "any" request a stylist must be chosen with it. AIR's
+    desk cover calls this too (`by_air=True`), so both record the acceptance the same way."""
     booking.expire_due()
     with transaction.atomic():
         appt = _lock(appt_id)
@@ -288,6 +292,7 @@ def reception_accept(appt_id, *, actor, stylist=None, room=None) -> Appointment:
         appt.room = room
         appt.reception_status = A.ACCEPTED
         appt.confirmed_by = actor
+        acceptance.record(appt, user=actor, by_air=by_air)
         appt.save()
         booking.record(appt, "reception_accepted", actor=actor, from_status=S.REQUESTED)
         ctx = _vars(appt)
@@ -302,6 +307,9 @@ def reception_accept(appt_id, *, actor, stylist=None, room=None) -> Appointment:
             )
         if appt.stylist_status == A.ACCEPTED:
             _finalize(appt, actor)
+        else:
+            # Good news for the customer, worded with the shared "who accepted" label.
+            notify_service.tell_customer(appt, K.BOOKING_OUTCOME, "customer_front_desk_accepted")
     return appt
 
 
