@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from shop.urls import my_order_patterns, my_shop_patterns, order_patterns
 
 from accounts.staff_views import AuditLogListView, PosSettingsView
 from accounts.urls import auth_patterns, staff_patterns
@@ -10,6 +9,7 @@ from marketing.private_views import MyCouponsView
 from people.admin_urls import admin_patterns, payslip_patterns
 from people.stylist_urls import stylist_patterns
 from scheduling.urls import booking_patterns, desk_patterns, my_patterns
+from shop.urls import my_order_patterns, my_shop_patterns, order_patterns
 from wallet.urls import (
     desk_wallet_patterns,
     member_patterns,

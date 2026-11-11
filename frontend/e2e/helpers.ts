@@ -3,6 +3,7 @@ import {
   type APIResponse,
   type Browser,
   type BrowserContext,
+  type BrowserContextOptions,
   type Page,
 } from '@playwright/test';
 
@@ -35,10 +36,13 @@ export async function signIn(
     reducedMotion?: boolean;
     /** The receptionist's AIR popup (AIR Task 3). Off unless a test is about it. */
     airPopup?: boolean;
+    /** A phone or tablet (viewport, touch, pixel ratio, user agent): the mobile matrix. */
+    device?: BrowserContextOptions;
   } = {},
 ): Promise<Session> {
   const user = USERS[who];
   const context = await browser.newContext({
+    ...(options.device ?? {}),
     ...(viewport ? { viewport } : {}),
     ...(options.colorScheme ? { colorScheme: options.colorScheme } : {}),
     ...(options.reducedMotion ? { reducedMotion: 'reduce' as const } : {}),

@@ -138,7 +138,7 @@ function ServicePicker() {
               <Card variant="plain" padding="md" className="flex h-full flex-col gap-sm">
                 <p className="text-xs font-medium text-text-muted">{s.category.name}</p>
                 <h2 className="text-base font-semibold text-text">{s.name}</h2>
-                <p className="flex-1 text-sm text-text-muted">{s.summary}</p>
+                <p className="min-w-0 flex-1 text-sm text-text-muted">{s.summary}</p>
                 <div className="flex items-center justify-between gap-sm">
                   <span className="text-sm font-semibold text-text">
                     from {formatINR(s.from_price)}

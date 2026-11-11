@@ -174,6 +174,7 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
             />
             <Input
               label="View code on GitHub link"
+              inputMode="url"
               hint="Leave empty to hide the button."
               value={o.github_url ?? ''}
               onChange={(e) => set('overview', { github_url: e.target.value })}
@@ -296,6 +297,7 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
                   />
                   <Input
                     label="Code link"
+                    inputMode="url"
                     value={item.url ?? ''}
                     onChange={(e) => change({ url: e.target.value })}
                   />
@@ -941,6 +943,7 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
                   />
                   <Input
                     label="Email"
+                    inputMode="email"
                     value={item.email}
                     onChange={(e) => change({ email: e.target.value })}
                   />

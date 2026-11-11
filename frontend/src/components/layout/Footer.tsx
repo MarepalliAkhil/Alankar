@@ -35,7 +35,7 @@ export function Footer() {
                   href={contact.map_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-primary-hover underline-offset-4 hover:underline"
+                  className="touch-target inline-flex items-center font-medium text-primary-hover underline-offset-4 hover:underline"
                 >
                   Open in Maps
                 </a>
@@ -66,7 +66,7 @@ export function Footer() {
               {contact?.email && (
                 <a
                   href={`mailto:${contact.email}`}
-                  className="text-primary-hover underline-offset-4 hover:underline"
+                  className="touch-target inline-flex items-center break-all text-primary-hover underline-offset-4 hover:underline"
                 >
                   {contact.email}
                 </a>
@@ -77,7 +77,7 @@ export function Footer() {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-hover underline-offset-4 hover:underline"
+                  className="touch-target inline-flex items-center text-primary-hover underline-offset-4 hover:underline"
                 >
                   {link.label}
                 </a>
@@ -94,7 +94,7 @@ export function Footer() {
               <Link
                 key={policy.key}
                 to={policyPaths[policy.key]}
-                className="underline-offset-4 hover:text-text hover:underline"
+                className="touch-target inline-flex items-center underline-offset-4 hover:text-text hover:underline"
               >
                 {policy.title}
               </Link>

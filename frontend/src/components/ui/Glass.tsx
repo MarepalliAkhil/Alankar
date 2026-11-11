@@ -89,7 +89,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(funct
       ref={ref}
       type={type}
       className={cn(
-        'glass-button inline-flex select-none items-center justify-center gap-2 rounded-full font-medium text-text',
+        'touch-target glass-button inline-flex select-none items-center justify-center gap-2 rounded-full font-medium text-text',
         'transition-transform duration-base ease-brand hover:-translate-y-px active:translate-y-0',
         'focus-visible:shadow-focus focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
         size === 'sm' ? 'h-9 px-4 text-sm' : 'h-11 px-5 text-sm',

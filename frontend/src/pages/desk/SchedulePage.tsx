@@ -151,7 +151,7 @@ export default function SchedulePage() {
           aria-label="Day"
           value={day}
           onChange={(event) => event.target.value && setDay(event.target.value)}
-          className="h-9 rounded-input border border-border bg-surface px-3 text-sm text-text focus-visible:shadow-focus focus-visible:outline-none"
+          className="h-11 rounded-input border border-border bg-surface px-3 text-[16px] lg:text-sm text-text focus-visible:shadow-focus focus-visible:outline-none"
         />
         <Button
           size="sm"

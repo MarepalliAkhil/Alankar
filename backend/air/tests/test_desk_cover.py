@@ -9,7 +9,6 @@ scenario with the language-model layer OFF.
 from datetime import timedelta
 
 import pytest
-from conftest import login  # noqa: F401
 from django.core.management import call_command
 from django.db import connection
 from django.test import Client
@@ -20,6 +19,7 @@ from air import actor, config, cover, desk
 from air.models import AIActionLog, AirRequestState, CoverState
 from air.tests.conftest import payment_token_for, shift_around
 from billing.models import PaymentLink
+from conftest import login  # noqa: F401
 from core import policy
 from people.models import CustomerProfile
 from scheduling import booking

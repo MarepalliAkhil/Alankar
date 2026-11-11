@@ -97,6 +97,7 @@ and AIR animations are unchanged.
 ## Favicon and head
 
 `index.html` points the favicon at `/brand/alankar-logo.svg` (`image/svg+xml`). The existing
-`theme-color` meta stays (the app updates it to the theme's background at runtime). There is no
-512 px PNG yet: export `frontend/public/brand/alankar-logo-512.png` to add an apple-touch-icon and
-a web-manifest icon for phone home screens.
+`theme-color` meta stays (the app updates it to the theme's background at runtime). PNG copies
+rendered from that same SVG (no redrawing) are `frontend/public/brand/alankar-logo-512.png` and
+`alankar-logo-180.png`; the 180 px one is the `apple-touch-icon` for phone home screens. There is no
+web manifest (installing the site as an app is out of scope).

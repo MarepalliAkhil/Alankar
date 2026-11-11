@@ -14,7 +14,7 @@ import { Navbar } from './Navbar';
 export function PublicLayout() {
   const { pathname } = useLocation();
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen min-h-dvh flex-col">
       <PageBackground />
       <a
         href="#main"
@@ -24,7 +24,7 @@ export function PublicLayout() {
       </a>
       <AnnouncementBar />
       <Navbar />
-      <main id="main" className="flex-1">
+      <main id="main" className="min-w-0 flex-1">
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<DelayedLoader label="Loading page…" />}>
             <PageTransition>

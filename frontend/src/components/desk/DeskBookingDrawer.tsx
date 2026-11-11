@@ -221,7 +221,7 @@ export function DeskBookingDrawer({
               setStylist('');
               setCheckInNow(false);
             }}
-            className="h-11 w-full rounded-input border border-border bg-surface px-4 text-sm text-text focus-visible:shadow-focus focus-visible:outline-none"
+            className="h-11 w-full rounded-input border border-border bg-surface px-4 text-[16px] text-text focus-visible:shadow-focus focus-visible:outline-none lg:text-sm"
           />
           <p className="text-xs text-text-muted">{date ? formatDay(date) : ''}</p>
         </div>

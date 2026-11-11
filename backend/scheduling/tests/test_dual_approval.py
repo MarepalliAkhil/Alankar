@@ -4,14 +4,14 @@ staff change a slot)."""
 from datetime import timedelta
 
 import pytest
-from conftest import login
 from django.test import Client
 from django.utils import timezone
-from notifications.models import Notification, SimulatedSms
 
 from accounts.models import AuditLog
+from conftest import login
 from core.jobs import booking_request_reminders
 from core.models import MailOutbox
+from notifications.models import Notification, SimulatedSms
 from scheduling import approvals
 from scheduling.models import Appointment, AppointmentStatus, SlotChange
 from scheduling.tests.test_booking import (  # noqa: F401  (shared fixtures and helpers)

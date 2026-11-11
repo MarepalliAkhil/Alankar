@@ -173,7 +173,7 @@ export function CommandBar({ assistant }: CommandBarProps) {
               )}
             >
               {command.icon}
-              <span className="flex-1 truncate">{command.label}</span>
+              <span className="min-w-0 flex-1 truncate">{command.label}</span>
               <span className="text-xs text-text-muted">{command.group}</span>
               {index === current && <CornerDownLeft aria-hidden="true" className="h-4 w-4" />}
             </li>

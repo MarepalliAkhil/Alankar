@@ -49,7 +49,9 @@ describe('image slot registry', () => {
 
 describe('the owner photos', () => {
   it('has the four main pictures (Alankar reception, salon, spa, parlor) and the three heroes', () => {
-    expect(Object.keys(PHOTO_SLOTS).filter((k) => !k.startsWith('meera'))).toEqual(BASE_ORDER);
+    // Meera's and AIR's pose pictures are slots too (their own folders); only the page photos here.
+    const isPose = (k: string) => k.startsWith('meera') || k === 'air' || k.startsWith('air-');
+    expect(Object.keys(PHOTO_SLOTS).filter((k) => !isPose(k))).toEqual(BASE_ORDER);
     expect(HOME_PHOTOS).toEqual([
       'shop-background',
       'salon-background',

@@ -203,7 +203,7 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="inline-flex items-center gap-1 rounded-full px-sm py-1 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                      className="touch-target inline-flex items-center gap-1 rounded-full px-sm py-1 text-sm font-medium text-primary-hover hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
                     >
                       <X aria-hidden="true" className="h-4 w-4" /> Reset filters
                     </button>

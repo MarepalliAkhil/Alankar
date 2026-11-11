@@ -5,11 +5,11 @@ import json
 from datetime import date, datetime, time, timedelta
 
 import pytest
-from conftest import login
 from django.test import Client
 from django.utils import timezone
 
 from accounts.models import AuditLog, User
+from conftest import login
 from core.models import MailOutbox
 from people import dayoff
 from people.models import DayOffRequest, StylistProfile

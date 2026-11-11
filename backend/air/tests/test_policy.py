@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import login
 from django.conf import settings
 from django.test import Client
 
@@ -13,6 +12,7 @@ from accounts.models import AuditLog
 from air import actor, handover, service
 from air.models import AirRequestState, SlotHold
 from air.tests.conftest import make_hold, stylist_says_yes, submit
+from conftest import login
 from core import policy
 from people.models import Rating
 from scheduling import approvals, booking

@@ -10,7 +10,7 @@ const OPTIONS: { value: ModePreference; label: string; Icon: typeof Sun }[] = [
 ];
 
 const segment =
-  'inline-flex h-8 min-w-8 flex-1 items-center justify-center rounded-full transition-colors duration-base ease-brand focus-visible:shadow-focus focus-visible:outline-none';
+  'touch-target inline-flex h-8 min-w-8 flex-1 items-center justify-center rounded-full transition-colors duration-base ease-brand focus-visible:shadow-focus focus-visible:outline-none';
 
 /**
  * Appearance as a compact switch inside the menu: system, light, dark, plus a "reduce

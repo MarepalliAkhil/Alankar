@@ -353,7 +353,7 @@ export function Tour({
         aria-labelledby={titleId}
         data-tour-card
         data-chapter={done ? 'finale' : index + 1}
-        className="tour-card glass-photo fixed bottom-0 left-0 z-toast flex max-h-[calc(100dvh-32px)] w-[clamp(320px,92vw,520px)] flex-col gap-sm overflow-y-auto p-md max-sm:max-h-[85dvh] max-sm:w-full max-sm:rounded-b-none sm:rounded-card sm:p-lg max-sm:rounded-t-card"
+        className="tour-card glass-photo fixed bottom-0 left-0 z-toast flex max-h-[calc(100dvh-32px)] w-[clamp(320px,92vw,520px)] flex-col gap-sm overflow-y-auto p-md max-sm:max-h-[85dvh] max-sm:w-full max-sm:pb-[max(theme(spacing.md),env(safe-area-inset-bottom))] max-sm:rounded-b-none sm:rounded-card sm:p-lg max-sm:rounded-t-card"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs">
           <p className="tabular text-xs font-semibold text-text-muted">{countText}</p>

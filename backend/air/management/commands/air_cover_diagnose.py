@@ -33,7 +33,8 @@ class Command(BaseCommand):
         if not cfg.air_enabled:
             say("  >>> AIR desk cover is OFF, AIR will not act. Turn it on in the AIR settings.")
         say(
-            f"  cover active now: {'YES' if st['cover_active'] else 'NO'} ({st['cover_reason_text']})"
+            f"  cover active now: {'YES' if st['cover_active'] else 'NO'} "
+            f"({st['cover_reason_text']})"
         )
         say(f"  admin override: {st['force']}")
         say(f"  receptionist on shift (Asia/Kolkata): {cover.receptionist_on_shift(now)}")
@@ -77,7 +78,8 @@ class Command(BaseCommand):
         cfg = config.get_settings()
         active, why = cover.evaluate(now)
         say(
-            f"  [{'PASS' if cfg.air_enabled else 'FAIL'}] switch_on: AIR desk cover enabled = {cfg.air_enabled}"
+            f"  [{'PASS' if cfg.air_enabled else 'FAIL'}] switch_on: "
+            f"AIR desk cover enabled = {cfg.air_enabled}"
         )
         say(f"  [{'PASS' if active else 'FAIL'}] cover_active: {desk.REASON_TEXT.get(why, why)}")
         for check in desk.run_checks(appt, now):
@@ -86,5 +88,6 @@ class Command(BaseCommand):
         say("  log rows for this request:")
         for row in AIActionLog.objects.filter(booking_ref=appt.pk).order_by("created_at"):
             say(
-                f"    {row.created_at:%H:%M:%S} {row.action_type} {row.status} {row.reason_code or '-'}"
+                f"    {row.created_at:%H:%M:%S} {row.action_type} {row.status} "
+                f"{row.reason_code or '-'}"
             )

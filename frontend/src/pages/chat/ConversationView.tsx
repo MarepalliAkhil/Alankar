@@ -178,7 +178,7 @@ export default function ConversationView({ id, base }: { id: string; base: strin
       </ButtonLink>
       <Card className="flex items-center gap-md">
         <Avatar name={card?.other.name ?? ''} src={card?.other.photo_url || undefined} />
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold text-text">{card?.other.name}</h1>
           {card?.appointment && (
             <p className="text-xs text-text-muted">

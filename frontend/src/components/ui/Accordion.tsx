@@ -13,7 +13,7 @@ export function Accordion({ items }: { items: readonly AccordionItem[] }) {
     <div className="flex flex-col gap-sm">
       {items.map((item) => (
         <details key={item.id} className="glass-dense group rounded-nested px-md py-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-md py-1 font-medium text-text focus-visible:shadow-focus focus-visible:outline-none">
+          <summary className="touch-target flex cursor-pointer list-none items-center justify-between gap-md py-1 font-medium text-text focus-visible:shadow-focus focus-visible:outline-none">
             {item.title}
             <ChevronDown
               aria-hidden="true"

@@ -10,7 +10,7 @@ NO SILENT FAILURES. Every time AIR looks at a request it writes one `AIActionLog
 machine-readable reason code (once per request and outcome, so a sweep that runs every minute does
 not flood the log):
 
-  done        accept_reception                                  (written by `service.accept_reception`)
+  done        accept_reception                          (written by `service.accept_reception`)
   skipped     desk_cover_check  switch_off | cover_inactive | claim_busy | policy_denied
   handed_off  desk_cover_check  check_failed:<name>             (a person takes it from here)
   failed      desk_cover_check  error:<ExceptionClass>          (caught per request, no message)

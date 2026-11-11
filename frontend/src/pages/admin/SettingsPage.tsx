@@ -178,6 +178,7 @@ function ShopSection({ value }: { value: BusinessSettings['shop'] }) {
         />
         <Input
           label="Phone"
+          type="tel"
           value={form.phone}
           onChange={set('phone')}
           error={nested(fields, 'phone')}

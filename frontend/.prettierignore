@@ -7,3 +7,5 @@ e2e-report
 test-results
 .pytest_cache
 public/photos/
+# Written by scripts (photo-stats --check compares the exact text)
+src/generated/

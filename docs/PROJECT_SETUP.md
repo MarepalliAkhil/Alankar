@@ -15,6 +15,7 @@ You are building "Alankar", a unisex salon, spa and beauty-parlor website and ma
 At the start of EVERY session, read the project rules file, docs/MASTER_NOTES.md and docs/PROGRESS.md fully before doing anything.
 Rules: follow the project rules file strictly. No LLMs or external AI APIs anywhere. The chatbot is a deterministic engine. Do one task at a time. Commit before and after each task. At the end of each task, update docs/PROGRESS.md. If something conflicts with the notes, ask me instead of guessing.
 ```
+*(Note, 2026-11: the "no LLMs" rule was later narrowed by the owner for AIR only: AIR may use an optional third-party language model, off by default, with a server-side key, caps and customer consent. See docs/AIR.md. The chatbot engine is still deterministic.)*
 
 ## 4. First message
 ```

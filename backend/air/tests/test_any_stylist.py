@@ -8,15 +8,15 @@ import threading
 from datetime import timedelta
 
 import pytest
-from conftest import login
 from django.db import connection
 from django.test import Client
 from django.utils import timezone
-from notifications.models import Notification
 
 from air import config
 from air.models import AIActionLog
+from conftest import login
 from core.models import MailOutbox
+from notifications.models import Notification
 from people.models import DayOffRequest, Rating, StylistProfile
 from scheduling import anystylist, approvals, booking
 from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus, StylistOffer

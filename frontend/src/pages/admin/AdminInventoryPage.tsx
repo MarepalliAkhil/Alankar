@@ -787,6 +787,7 @@ function SuppliersTab() {
           />
           <Input
             label="Phone"
+            type="tel"
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
           />

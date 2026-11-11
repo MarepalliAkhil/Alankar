@@ -452,7 +452,7 @@ function NeedsYou({ items }: { items: NeedsItem[] }) {
                   {item.link && (
                     <Link
                       to={item.link}
-                      className="inline-flex h-9 items-center rounded-full border border-border bg-surface px-md text-sm text-text hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                      className="touch-target inline-flex h-9 items-center rounded-full border border-border bg-surface px-md text-sm text-text hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
                     >
                       Open
                     </Link>

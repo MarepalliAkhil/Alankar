@@ -13,6 +13,10 @@ export interface TableProps<T> {
   rows: readonly T[];
   rowKey: (row: T) => string;
   caption: string;
+  /** Name of the scrollable region around the table. Defaults to the caption; set it when the
+   * table sits inside a landmark that already carries the caption as its name (landmarks must be
+   * unique, axe `landmark-unique`). */
+  regionLabel?: string;
   emptyMessage?: string;
 }
 
@@ -22,12 +26,13 @@ export function Table<T>({
   rows,
   rowKey,
   caption,
+  regionLabel,
   emptyMessage = 'Nothing to show yet.',
 }: TableProps<T>) {
   return (
     <div
       role="region"
-      aria-label={caption}
+      aria-label={regionLabel ?? caption}
       tabIndex={0}
       className="glass-dense overflow-x-auto rounded-card focus-visible:shadow-focus focus-visible:outline-none"
     >

@@ -55,7 +55,7 @@ export function AppShell() {
       openMenu={setDrawer}
       onNavigate={navigate}
     >
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen min-h-dvh">
         <PageBackground />
         <a
           href="#main"
@@ -67,7 +67,7 @@ export function AppShell() {
         <aside
           aria-label={`${roleLabel(user.role)} sidebar`}
           className={cn(
-            'glass-bar sticky top-md z-nav ml-md mt-md hidden h-[calc(100vh-2rem)] shrink-0 self-start rounded-card p-md lg:block',
+            'glass-bar sticky top-md z-nav ml-md mt-md hidden h-[calc(100dvh-2rem)] shrink-0 self-start rounded-card p-md lg:block',
             collapsed ? 'w-[76px]' : 'w-[260px]',
           )}
         >
@@ -82,7 +82,10 @@ export function AppShell() {
         {/* The bell: the only control outside the menu. It floats in the top-right corner, with no bar
             behind it, on every screen size. Pages keep a 4rem band clear at the top for it. */}
         {canCall(user.role, 'notifications.list') && (
-          <div className="fixed right-md top-md z-nav" data-floating="bell">
+          <div
+            className="fixed right-[max(theme(spacing.md),env(safe-area-inset-right))] top-[max(theme(spacing.md),env(safe-area-inset-top))] z-nav"
+            data-floating="bell"
+          >
             <NotificationBell listPath={notificationsPathFor(user.role)} />
           </div>
         )}
@@ -95,7 +98,7 @@ export function AppShell() {
           aria-haspopup="dialog"
           aria-expanded={drawer}
           onClick={() => setDrawer(true)}
-          className="glass-button fixed left-md top-md z-nav inline-flex h-10 w-10 items-center justify-center rounded-full text-text focus-visible:shadow-focus focus-visible:outline-none lg:hidden"
+          className="glass-button fixed left-[max(theme(spacing.md),env(safe-area-inset-left))] top-[max(theme(spacing.md),env(safe-area-inset-top))] z-nav inline-flex h-11 w-11 items-center justify-center rounded-full text-text focus-visible:shadow-focus focus-visible:outline-none lg:hidden"
         >
           <Menu aria-hidden="true" className="h-5 w-5" />
         </button>

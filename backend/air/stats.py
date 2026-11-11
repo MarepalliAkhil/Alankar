@@ -17,13 +17,13 @@ from zoneinfo import ZoneInfo
 
 from django.db.models import Q
 from django.utils import timezone
-from shop.models import Order
 
 from accounts.models import LoginAttempt, WorkSession
 from air.models import AIActionLog, AirRequestState, CallbackNote, NeedsYouState
 from billing.models import PaymentLink
 from inventory.models import Product
 from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus
+from shop.models import Order
 
 IST = ZoneInfo("Asia/Kolkata")
 S = AppointmentStatus

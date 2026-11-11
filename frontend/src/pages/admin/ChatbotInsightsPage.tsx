@@ -116,7 +116,7 @@ function TestBox() {
         Ask as a guest would. Nothing is logged and no customer data is used.
       </p>
       <form onSubmit={submit} className="mt-md flex flex-col gap-sm sm:flex-row sm:items-end">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <Input
             label="Test question"
             value={message}

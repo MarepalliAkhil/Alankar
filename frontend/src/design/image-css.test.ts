@@ -9,9 +9,9 @@ describe('pictures stay sharp (static CSS checks)', () => {
   it('has no permanent blur on page backgrounds or heroes', () => {
     // The only blur filters left on pictures: the tiny preview while loading (removed once the
     // photo has loaded) and the light 4 px blur on data-heavy staff screens.
-    const filters = Array.from(css.matchAll(/([^{}]+)\{[^{}]*(?<![-\w])filter:\s*blur\(([\d.]+)px\)/g)).map(
-      (m) => ({ selector: m[1]!.trim(), px: Number(m[2]) }),
-    );
+    const filters = Array.from(
+      css.matchAll(/([^{}]+)\{[^{}]*(?<![-\w])filter:\s*blur\(([\d.]+)px\)/g),
+    ).map((m) => ({ selector: m[1]!.trim(), px: Number(m[2]) }));
     const onPictures = filters.filter((f) =>
       /art-|page-backdrop|home-|division-hero|zen-photo/.test(f.selector),
     );

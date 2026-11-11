@@ -18,10 +18,19 @@
     color: var(--color-text);
     background-color: var(--color-background);
     -webkit-font-smoothing: antialiased;
+    /* Phones in landscape must not enlarge text on their own. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Room above the on-screen keyboard and under the sticky navbar when a field gets focus. */
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 6rem;
   }
 
   body {
     min-height: 100vh;
+    min-height: 100dvh; /* phones: the visible height, without the browser bars */
+    /* Long words (emails, ids, links) wrap instead of pushing the page sideways. */
+    overflow-wrap: break-word;
     font-size: var(--text-base);
     line-height: 1.5;
     background-image:
@@ -1413,4 +1422,14 @@ html[data-switching] *::after {
   --chart-cb-purple: #cc79a7;
   --chart-cb-sky: #56b4e9;
   --chart-cb-grey: #6b7280;
+}
+
+/* ---------------------------------------------------------------- touch targets (mobile audit)
+   On touch screens (finger, not mouse) every button-like control is at least 44 x 44 px. Mouse
+   and trackpad layouts keep their compact sizes. docs/MOBILE_AUDIT.md lists where it is used. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

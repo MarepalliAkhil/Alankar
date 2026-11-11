@@ -10,18 +10,18 @@ import re
 from datetime import timedelta
 
 import pytest
-from conftest import login
 from django.apps import apps as django_apps
 from django.test import Client
 from django.utils import timezone
-from notifications.models import Notification, SimulatedSms
 
 from air import config
 from air.models import AIActionLog
 from billing.models import Payment
+from conftest import login
 from core import mail
 from core.models import MailOutbox
 from notifications import sorry, templates
+from notifications.models import Notification, SimulatedSms
 from scheduling import acceptance, approvals, booking, timeline
 from scheduling.models import Appointment, AppointmentStatus, SlotChange
 from scheduling.tests.test_booking import day_at

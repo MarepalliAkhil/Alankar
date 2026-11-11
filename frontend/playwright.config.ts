@@ -15,6 +15,28 @@ const python = process.env.E2E_PYTHON || 'python';
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:5174';
 const useRunning = process.env.E2E_USE_RUNNING === '1';
 
+/**
+ * A device descriptor without `defaultBrowserType` (the iPhone and iPad descriptors say WebKit;
+ * these tests run in the installed Chromium, with everything else that makes them a phone:
+ * viewport, deviceScaleFactor, isMobile, hasTouch and userAgent).
+ */
+function device(name: string, viewport?: { width: number; height: number }) {
+  const descriptor = devices[name];
+  if (!descriptor) throw new Error(`Unknown Playwright device: ${name}`);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { defaultBrowserType, ...rest } = descriptor;
+  return { ...rest, ...(viewport ? { viewport } : {}) };
+}
+
+/** The mobile matrix (docs/MOBILE_AUDIT.md): e2e/mobile-matrix.e2e.ts runs once per device. */
+export const MOBILE_PROJECTS = [
+  { name: 'mobile-320', use: device('iPhone SE') }, // 320 x 568
+  { name: 'mobile-360', use: device('Galaxy S9+', { width: 360, height: 740 }) }, // Android 360
+  { name: 'mobile-390', use: device('iPhone 14') }, // 390 x 664
+  { name: 'tablet-768', use: device('iPad Mini') }, // 768 x 1024 portrait
+  { name: 'landscape-844', use: device('iPhone 14', { width: 844, height: 390 }) },
+];
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
@@ -35,7 +57,13 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
+      testIgnore: '**/mobile-matrix.e2e.ts',
     },
+    ...MOBILE_PROJECTS.map((project) => ({
+      name: project.name,
+      testMatch: '**/mobile-matrix.e2e.ts',
+      use: { ...project.use, browserName: 'chromium' as const },
+    })),
   ],
   webServer: useRunning
     ? undefined

@@ -18,6 +18,8 @@ DEMO_STAFF = [
     ("stylist", "rahul@demo.example.com", "Rahul Demo", "Rahul", ""),
     ("stylist", "kiran@demo.example.com", "Kiran Demo", "Kiran", ""),
     ("stylist", "priya@demo.example.com", "Priya Demo", "Priya", ""),
+    # Arun has a login too, so an "Any stylist" salon request that AIR gives him can be answered.
+    ("stylist", "arun@demo.example.com", "Arun Demo", "Arun", ""),
 ]
 
 DEMO_CUSTOMERS = [
@@ -27,6 +29,12 @@ DEMO_CUSTOMERS = [
     ("sameer@demo.example.com", "Sameer Demo", "9000000004"),
     ("divya@demo.example.com", "Divya Demo", "9000000005"),
     ("karthik@demo.example.com", "Karthik Demo", "9000000006"),
+    # New customers used by the demo story to show every request state (declined, expired,
+    # payment expired, "Any stylist", AIR-accepted and paid). See core/demo_story.py `_states`.
+    ("nisha@demo.example.com", "Nisha Demo", "9000000007"),
+    ("arjun@demo.example.com", "Arjun Demo", "9000000008"),
+    ("rohan@demo.example.com", "Rohan Demo", "9000000009"),
+    ("lakshmi@demo.example.com", "Lakshmi Demo", "9000000010"),
 ]
 
 

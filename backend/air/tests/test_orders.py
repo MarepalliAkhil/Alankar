@@ -6,8 +6,6 @@ from decimal import Decimal
 import pytest
 from django.db import connection
 from django.utils import timezone
-from shop.models import Order, OrderStatus
-from shop.tests.test_shop import ADDRESS, make_product
 
 from air import actor, config, orders
 from air.models import AIActionLog
@@ -15,6 +13,8 @@ from air.tests.test_chat_flow import ask, date_text, reply_of, send, signed_in
 from inventory import stock
 from scheduling.models import AppointmentProduct
 from shop import orders as shop
+from shop.models import Order, OrderStatus
+from shop.tests.test_shop import ADDRESS, make_product
 
 POSTGRES = connection.vendor == "postgresql"
 S = OrderStatus

@@ -2671,3 +2671,52 @@ Rules, reassignment and limits are in docs/AIR.md section 17.
   stylist. Existing tests that assumed that were updated (the test helper `confirm()` now moves an
   "Any stylist" request to the stylist a test names, as the Reassign button would).
 - Tests: `air/tests/test_any_stylist.py` (19, two need PostgreSQL), frontend tests.
+
+
+## Every page on mobile: DONE in code (static review; unit tests run in a Linux copy; Playwright not run here)
+
+Details, inventory and per-page findings in docs/MOBILE_AUDIT.md.
+- Shared fixes: `viewport-fit=cover` (safe areas were 0 on notched phones) and
+  `interactive-widget=resizes-content`; 16 px form fields below 1024 px (no iOS zoom); 44 px touch
+  targets on touch screens only (`.touch-target`); `dvh` heights; safe areas on the bell, menu
+  button, modal, drawer and tour card; long-word wrapping; `min-w-0` on text columns.
+- Per page: phone and email keyboards on admin fields, a scroll region for purchase-order lines,
+  44 px date fields and AIR links.
+- New `e2e/mobile-matrix.e2e.ts` with five device projects; screenshots to
+  `frontend/mobile-screens/` (git-ignored).
+
+
+## Final audit and finish (2026-11-11): DONE in code (backend tests run on SQLite here; Playwright, build and PostgreSQL not run)
+
+Checklist re-audited against the code: `docs/CHECKLIST_STATUS.md` (115 rows: 83 DONE, 15 UNVERIFIED,
+6 PARTIAL, 11 NOT STARTED, with evidence and the five sandbox limits that explain every failure seen
+here). Test plan and 15-minute demo walkthrough: `docs/FINAL_TEST_PLAN.md`.
+- Demo data: `reset_demo --yes` now also gives Arun a login, four new customers, a weekly day off for
+  each linked stylist, one request in every end state (declined by desk / stylist, expired, payment
+  expired), an "Any stylist" request, a desk move with a sorry note, today's check-in and in-progress
+  visit when built during opening hours, and AIR desk activity (accepted by AIR, stylist accepted,
+  paid through the simulated link; an "Any stylist" request accepted by AIR). New test
+  `core/tests/test_demo.py::test_the_demo_shows_every_request_state_shifts_and_air`. Logins are in
+  `docs/START_HERE.md` (top) and README.
+- Phone home-screen icon: `public/brand/alankar-logo-180.png` and `-512.png` rendered from the SVG;
+  `apple-touch-icon` in index.html.
+- Security: `.env.example` files have empty secrets and list every variable the settings read
+  (added `SALON_CUSTOMER_OTP`, `SALON_POLICY_PATH`, `SALON_PG_BIN`, `SALON_SSL_REDIRECT`,
+  `VITE_API_BASE_URL`). deploy_check passed with production-like values (2 warnings).
+- Lint: ruff (whole backend), ESLint, tsc (app and e2e) and Prettier clean. ruff config knows `shop`
+  and `notifications` as first-party; import order fixed in 21 files; `air/tests` may redefine fixtures.
+- Docs made true: exclusion constraints exist on AIR holds (QA_PREP 7, ENGINEERING_DECISIONS,
+  PRESENTATION_NOTES), "no LLM" narrowed for AIR (MASTER_NOTES, PROJECT_SETUP), no admin
+  assistant (MASTER_NOTES demo flow, QA_PREP 27), Any stylist rules (QA_PREP 8).
+- Deleted junk: the stray root file `k cover for booking-form requests...` and `backend/air/tests/test_zz_dbg.py`.
+  Waiting for the owner: `src/hooks/useScrollProgress.ts`, `src/pages/public/ZenotiansPage.tsx` (unused),
+  `photos-originals/_sheet.png`.
+- Not run here: npm audit / pip-audit (no registry), `npm run build`, Playwright, PostgreSQL.
+
+### Fixes from the owner's `npm test` run (2026-11-11)
+- AIR Activity: each chart card was a region named after the chart and its table was a second region
+  with the same name (axe `landmark-unique`, also on the admin dashboard cards). `Table` has a new
+  `regionLabel`; `StatsTableCard` names the table region "<title>: table".
+- `AirActivityPage.test.tsx`: two KPI fixtures had the same numbers, so "Up 150% from 2" matched twice.
+- `art.test.ts`: the AIR pose slots are photo slots too; the test now leaves out Meera's and AIR's poses.
+- `repo-stats.json` regenerated. `window.scrollTo` stubbed in the test setup (jsdom noise).

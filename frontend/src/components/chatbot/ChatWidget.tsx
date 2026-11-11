@@ -515,7 +515,7 @@ export function ChatWidget() {
               autoComplete="off"
               onChange={(e) => setDraft(e.target.value)}
               placeholder={aiOn ? 'Type in any words…' : 'e.g. haircut Saturday evening'}
-              className="h-11 min-w-0 flex-1 rounded-input border border-border bg-surface px-md text-sm text-text placeholder:text-text-muted focus-visible:shadow-focus focus-visible:outline-none"
+              className="h-11 min-w-0 flex-1 rounded-input border border-border bg-surface px-md text-[16px] lg:text-sm text-text placeholder:text-text-muted focus-visible:shadow-focus focus-visible:outline-none"
             />
             <button
               type="submit"

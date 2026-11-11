@@ -391,29 +391,36 @@ function OrderDialog({
             {o.supplier_name} · <Badge tone={STATUS[o.status]}>{o.status_label}</Badge>
           </p>
           {o.close_reason && <p className="text-sm text-text-muted">Reason: {o.close_reason}</p>}
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">Products on {o.number}</caption>
-            <thead>
-              <tr className="text-text-muted">
-                <th scope="col">Product</th>
-                <th scope="col">Ordered</th>
-                <th scope="col">Received</th>
-                <th scope="col">Cost each</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(o.lines ?? []).map((l) => (
-                <tr key={l.id}>
-                  <th scope="row" className="font-medium text-text">
-                    {l.product_name}
-                  </th>
-                  <td>{l.quantity}</td>
-                  <td>{l.received}</td>
-                  <td>{formatINRExact(l.unit_cost)}</td>
+          <div
+            role="region"
+            aria-label={`Products on ${o.number}`}
+            tabIndex={0}
+            className="overflow-x-auto focus-visible:shadow-focus focus-visible:outline-none"
+          >
+            <table className="w-full text-left text-sm">
+              <caption className="sr-only">Products on {o.number}</caption>
+              <thead>
+                <tr className="text-text-muted">
+                  <th scope="col">Product</th>
+                  <th scope="col">Ordered</th>
+                  <th scope="col">Received</th>
+                  <th scope="col">Cost each</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(o.lines ?? []).map((l) => (
+                  <tr key={l.id}>
+                    <th scope="row" className="font-medium text-text">
+                      {l.product_name}
+                    </th>
+                    <td>{l.quantity}</td>
+                    <td>{l.received}</td>
+                    <td>{formatINRExact(l.unit_cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="text-sm text-text">
             Ordered {formatINRExact(o.ordered_value)} · received {formatINRExact(o.received_value)}{' '}
             (before GST)

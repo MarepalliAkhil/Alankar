@@ -163,9 +163,9 @@ Key page flows: Login -> role home; Dashboard -> Appointments/Customers/Staff/In
 
 ## 13. Deployment (decide later) and demo
 
-- **Plan:** Vercel (frontend), Render or Railway (Django + Daphne for WebSockets), Neon/Supabase (PostgreSQL), Cloudinary/Supabase Storage (images), no AI API keys (Ollama on a VPS, or rule-based fallback).
+- **Plan:** Vercel (frontend), Render or Railway (Django + Daphne for WebSockets), Neon/Supabase (PostgreSQL), Cloudinary/Supabase Storage (images), no AI API keys (Ollama on a VPS, or rule-based fallback). *(Superseded: no Ollama anywhere (UPDATE 3); AIR's optional provider key lives only in the server's environment and is off by default (see the AIR update below and docs/AIR.md). Not deployed.)*
 - **Cookie note:** cookie auth across Vercel and Render needs a shared parent domain or a reverse proxy.
-- **Demo flow:** owner logs in -> customer books a request -> receptionist assigns on the schedule -> stylist and customer chat -> stylist completes -> receptionist checks out -> stock drops, commission updates -> owner asks the assistant "Which service earned most this month?".
+- **Demo flow:** owner logs in -> customer books a request -> receptionist assigns on the schedule -> stylist and customer chat -> stylist completes -> receptionist checks out -> stock drops, commission updates -> owner asks the assistant "Which service earned most this month?". *(Not built: there is no admin assistant; the owner uses Shop statistics and AIR Activity. The current demo walkthrough is docs/FINAL_TEST_PLAN.md.)*
 - **Outreach email (template):** introduces Akhil, says ZenFlow is an original prototype inspired by Zenoti's workflow, asks for 10 minutes of feedback, attaches demo video, GitHub, resume. Fill phone/LinkedIn/GitHub/live demo links.
 
 ## 14. What happened during the build attempts (lessons for the rebuild)
@@ -431,7 +431,7 @@ New notifications: payment link sent (customer); payment received (customer rece
 
 # UPDATE 3: No LLMs anywhere; chatbot algorithm
 
-**LOCKED (owner decision): no Ollama, no LLM, no hosted AI service and no API keys anywhere in the product.** This overrides every earlier mention of Ollama, "hybrid AI", or local models (sections 9, 12, 19-32 and the earlier prompt files).
+**LOCKED (owner decision): no Ollama, no LLM, no hosted AI service and no API keys anywhere in the product.** *(Narrowed later for AIR only: an optional, off-by-default language-model provider with a server-side key. See the AIR update below and docs/AIR.md. The chatbot engine itself still has no language model.)* This overrides every earlier mention of Ollama, "hybrid AI", or local models (sections 9, 12, 19-32 and the earlier prompt files).
 
 - The "AI Alankar Intelligence" chatbot is a **deterministic question-understanding engine**: normalize -> spell-correct (shop vocabulary) -> stem -> canonicalize (synonym and phrase tables, the "rephrase") -> entities -> weighted intent scoring -> BM25 knowledge search -> grounded answer from templates, catalogue, knowledge base and the user's own records. Full specification: `docs/CHATBOT_ALGORITHM.md`. Tested reference code: `reference/chatbot_reference/` (standard library only, 16 tests).
 - Other "smart" features are also deterministic: admin insights = SQL aggregations + templates; no-show risk = rule-based score; suggested replies in Stylist Chat = keyword-to-template suggestions; review-reply generator = templates by rating and keywords; service recommendations = rules on tags, audience and division.

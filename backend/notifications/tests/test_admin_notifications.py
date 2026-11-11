@@ -1,4 +1,5 @@
-"""The admin gets the notification bell too, with the same rule as everybody: own notifications only."""
+"""The admin gets the notification bell too, with the same rule as everybody: own notifications
+only."""
 
 import pytest
 from django.test import Client

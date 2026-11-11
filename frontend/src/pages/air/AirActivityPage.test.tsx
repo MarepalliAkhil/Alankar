@@ -67,7 +67,7 @@ const STATS: AirStats = {
   kpis: {
     conversations: kpi(6, 3, 100),
     booking_requests: kpi(5, 2, 150),
-    reception_accepted: kpi(5, 2, 150),
+    reception_accepted: kpi(4, 2, 100),
     stylist_accepted: kpi(2, 1, 100),
     declined_or_timed_out: kpi(2, 0),
     links_sent: kpi(2, 1, 100),

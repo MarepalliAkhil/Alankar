@@ -24,7 +24,6 @@ from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from shop.orders import ShopError
 
 from accounts.audit import audit
 from accounts.models import User
@@ -37,6 +36,7 @@ from chatbot.api import MAX_QUERY_CHARS, over_limit
 from chatbot.engine import Session
 from chatbot.tools import UserTools
 from scheduling import booking
+from shop.orders import ShopError
 
 SESSION_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 AUDIT_CONSENT = "air_consent_changed"

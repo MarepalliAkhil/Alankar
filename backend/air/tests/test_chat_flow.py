@@ -4,13 +4,13 @@ who may use it, and how it behaves with and without desk cover."""
 from datetime import datetime, timedelta
 
 import pytest
-from conftest import login
 from django.test import Client
 from django.utils import timezone
 
 from accounts import work
 from air.models import AIActionLog, AirRequestState, SlotHold
 from air.tests.conftest import day_at, stylist_says_yes
+from conftest import login
 from people.models import Rating
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus, Service

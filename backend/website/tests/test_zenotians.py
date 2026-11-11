@@ -250,8 +250,14 @@ def test_no_planned_or_future_wording_and_ai_only_as_optional():
 
 def test_air_is_described_as_built_optional_and_limited():
     air = next(i for i in SEED["limitations"]["items"] if i["id"] == "air")
-    for words in ("off by default", "no receptionist is on shift or signed in", "stylist",
-                  "simulated", "third-party", "rules"):
+    for words in (
+        "off by default",
+        "no receptionist is on shift or signed in",
+        "stylist",
+        "simulated",
+        "third-party",
+        "rules",
+    ):
         assert words in air["today"], words
     assert "phone calls" in air["out_of_scope"] and "browser's own voice" in air["out_of_scope"]
     assert any(row["workflow"] == "Virtual receptionist (AIR)" for row in SEED["mapping"])
@@ -418,7 +424,9 @@ def test_the_air_migration_updates_stored_content_once_and_keeps_admin_edits():
     migration = importlib.import_module("website.migrations.0008_zenotians_air")
     old = copy.deepcopy(SEED)
     old["project"]["intro"] = old["project"]["intro"].split(" AIR, an optional")[0]
-    old["project"]["roles"] = [r for r in old["project"]["roles"] if not r["role"].startswith("AIR")]
+    old["project"]["roles"] = [
+        r for r in old["project"]["roles"] if not r["role"].startswith("AIR")
+    ]
     old["mapping"] = [r for r in old["mapping"] if r["workflow"] != "Virtual receptionist (AIR)"]
     old["limitations"]["items"] = [i for i in old["limitations"]["items"] if i["id"] != "air"]
     chat = next(i for i in old["limitations"]["items"] if i["id"] == "chatbot")

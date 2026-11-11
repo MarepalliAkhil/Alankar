@@ -83,3 +83,7 @@ vi.mock('../api/airDesk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/airDesk')>()),
   getAirBriefing: vi.fn(() => new Promise(() => {})),
 }));
+
+// jsdom has no window.scrollTo (the booking-submitted screen scrolls to the top); a no-op keeps
+// the test output free of "Not implemented" noise.
+window.scrollTo = (() => undefined) as typeof window.scrollTo;

@@ -16,7 +16,6 @@ from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.utils import timezone
-from shop.models import Address, Order, OrderLine, OrderStatus
 
 from accounts.audit import audit
 from air import actionlog, actor, config
@@ -25,6 +24,7 @@ from inventory import stock
 from inventory.models import Product, StockMovement
 from scheduling import products as visit_products
 from shop import orders as shop
+from shop.models import Address, Order, OrderLine, OrderStatus
 from website.content import shop_settings
 
 S = OrderStatus

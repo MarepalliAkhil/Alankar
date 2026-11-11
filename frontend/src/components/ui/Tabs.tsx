@@ -72,7 +72,7 @@ export function Tabs<T extends string>({
             onClick={() => onChange(item.id)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cn(
-              'inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium',
+              'touch-target inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm font-medium',
               'focus-visible:shadow-focus focus-visible:outline-none',
               selected
                 ? 'bg-primary-soft text-text ring-1 ring-primary-light'

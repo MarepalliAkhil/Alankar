@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 from django.db import connection
 from django.utils import timezone
-from notifications.models import Notification, SimulatedSms
 
 from air import actor, config, holds, lifecycle, links, service
 from air.models import AirRequestState, SlotHold
@@ -18,6 +17,7 @@ from air.tests.conftest import (
     submit,
 )
 from billing.models import PaymentLink
+from notifications.models import Notification, SimulatedSms
 from scheduling import approvals, booking
 from scheduling.models import Appointment, AppointmentStatus
 

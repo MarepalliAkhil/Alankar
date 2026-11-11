@@ -47,6 +47,7 @@ export function StatsTableCard({
   const grid = (
     <Table
       caption={title}
+      regionLabel={`${title}: table`}
       columns={columns}
       rows={rows}
       rowKey={(row) =>

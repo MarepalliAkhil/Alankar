@@ -183,7 +183,7 @@ cd backend
 python manage.py reset_demo --yes
 ```
 
-This **deletes everything in the configured database** and rebuilds it: the catalogue, six staff, six
+This **deletes everything in the configured database** and rebuilds it: the catalogue, seven staff, ten
 customers, about 150 billed visits over seven weeks with ratings, a stock delivery and a low-stock alert,
 cancellations and no-shows, last month's payroll (approved and paid), and some bookings waiting for today.
 Everyone and everything in it is made up; all email addresses end in `demo.example.com`, a domain that
@@ -197,9 +197,10 @@ To make accidents hard, the command refuses unless you pass `--yes` **and** the 
 |---|---|---|
 | Admin | `owner@demo.example.com` | |
 | Receptionist | `reception@demo.example.com`, `reception2@demo.example.com` | |
-| Stylist | `rahul@demo.example.com`, `kiran@demo.example.com`, `priya@demo.example.com` | Different rating levels, so pay differs |
+| Stylist | `rahul@`, `arun@`, `kiran@`, `priya@demo.example.com` | Different rating levels, so pay differs; each has a weekly day off |
 | Customer | `meera@`, `vikram@`, `anita@`, `sameer@demo.example.com` | Have history; may be asked to rate a recent visit before booking online |
 | Customer | `divya@`, `karthik@demo.example.com` | New: use them to try online booking (karthik has a pending request, divya a held slot) |
+| Customer | `nisha@`, `arjun@`, `rohan@`, `lakshmi@demo.example.com` | Show every request state: Any stylist, accepted by AIR and paid, declined by desk or stylist, expired, payment expired |
 
 Password for every demo login: `Demo-Pass-2026!` (fictional accounts only; never use it anywhere real).
 Run the command again any time to go back to the start.

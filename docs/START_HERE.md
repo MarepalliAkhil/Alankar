@@ -1,5 +1,51 @@
 # START HERE: Hand-off to the coding assistant
 
+## Demo in one command (read this first if you are presenting)
+
+```bat
+cd /d "C:\Users\akhim\Downloads\salon-app-starter-kit (1)\salon-app\salon-app\backend"
+.venv\Scripts\activate
+set SALON_DB_NAME=salon_demo
+python manage.py reset_demo --yes
+python manage.py runserver
+```
+
+Create the `salon_demo` database once first (Docker: `docker compose exec db psql -U salon -d salon -c "CREATE DATABASE salon_demo OWNER salon;"`
+from the project folder; local PostgreSQL: the same `CREATE DATABASE` line in psql). Keep
+`set SALON_DB_NAME=salon_demo` in the window that runs the server, so the app uses the demo data.
+
+This DELETES everything in that database (it refuses unless the name contains `demo`) and builds a
+fictional salon: the catalogue and products, every role below with a login, seven weeks of billed
+visits with ratings, stock, payroll, and live work for today. The full walkthrough is
+`docs/FINAL_TEST_PLAN.md` (section C).
+
+**Password for every demo login: `Demo-Pass-2026!`** (fictional accounts at `demo.example.com`, a
+domain that cannot reach a real person; never use this password anywhere real).
+
+| Role | Email | What it shows |
+|---|---|---|
+| Admin | `owner@demo.example.com` | Shop statistics, AIR Activity and AIR settings, team, catalogue, inventory, payroll, audit log, content (For Zenotians editor) |
+| Receptionist | `reception@demo.example.com` | Requests, schedule, checkout, the AIR popup on sign-in and the AIR Activity graphs |
+| Receptionist | `reception2@demo.example.com` | A second desk (two-desk race demo) |
+| Stylist | `rahul@demo.example.com` (salon) | Requests inbox; off on Tuesdays |
+| Stylist | `arun@demo.example.com` (salon) | Usually the one AIR picks for "Any stylist" salon requests (fewest bookings); off on Thursdays |
+| Stylist | `kiran@demo.example.com` (spa) | Off on Wednesdays |
+| Stylist | `priya@demo.example.com` (beauty parlor) | Off on Mondays |
+| Customer | `meera@`, `vikram@`, `anita@`, `sameer@demo.example.com` | Long history; may be asked to rate a recent visit before booking |
+| Customer | `divya@demo.example.com` | A booking waiting for payment |
+| Customer | `karthik@demo.example.com` | A request waiting for the front desk |
+| Customer | `nisha@demo.example.com` | An "Any stylist" request; an AIR-accepted spa booking that is paid |
+| Customer | `arjun@demo.example.com` | "Any stylist", accepted by AIR, waiting for the stylist |
+| Customer | `rohan@demo.example.com` | Declined by the front desk; an expired request |
+| Customer | `lakshmi@demo.example.com` | Declined by the stylist; a payment link that expired |
+
+Also built: one booking moved by the desk (its customer has a sorry note), and, when the demo is
+built during opening hours, a guest checked in and one in progress today. AIR desk cover is ON in the
+demo and the receptionists have no fixed shifts, so AIR covers the desk whenever no receptionist is
+signed in (signing a receptionist in hands the desk back). The optional AI service stays OFF.
+
+---
+
 the coding assistant and Cowork run as **separate sessions**. They cannot see this chat. So we give them the plan as files in your project folder; they read the files, and you do not need to re-discuss anything.
 
 ## Step 1: Create the project folder

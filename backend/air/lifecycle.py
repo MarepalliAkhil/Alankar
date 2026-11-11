@@ -13,13 +13,13 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
-from notifications.models import Notification
 
 from air import actionlog
 from air.models import AirRequestState, SlotHold
 from billing.models import PaymentLink
 from notifications import service as notify_service
 from notifications import sorry
+from notifications.models import Notification
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus
 

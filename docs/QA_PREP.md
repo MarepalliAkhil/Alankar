@@ -40,13 +40,13 @@ One shop, one team, one database. Splitting would add network failure modes and 
 Creating or moving a booking runs in one transaction that locks the stylist and room rows with `select_for_update` and checks for overlap. A clash returns HTTP 409 with the three nearest free times. A pending request already holds its slot, so nobody else can take it while the shop decides.
 *Where:* `backend/scheduling/booking.py`; test `test_two_desks_cannot_confirm_overlapping_visits_for_one_stylist`.
 
-**7. Why not a database exclusion constraint?**
-It needs the `btree_gist` extension, which an ordinary database user cannot install, and I did not want the project to require a privileged database role. So row locks do the job, and a read-only integrity command reports any overlap that slipped through. That is a deliberate trade-off, and I say so on the Engineering decisions page.
-*Where:* `backend/core/integrity.py`.
-*Follow-up: "So there is no database-level guarantee?" Correct. The guarantee is in the application's locked transaction plus the integrity check. A direct SQL write that bypassed the application could create an overlap.*
+**7. Why not a database exclusion constraint on bookings?**
+Bookings themselves are protected by the application: a locked transaction plus a read-only integrity command that reports any overlap that slipped through. AIR's slot holds (`SlotHold`) do have PostgreSQL exclusion constraints (one stylist, and one customer, cannot have two live holds that overlap); they need the `btree_gist` extension, which AIR's first migration creates (on PostgreSQL 13 and later the database owner can create it; on older versions it needs a privileged role). I did not move the same constraint onto the booking table because every booking path already takes the stylist's row lock and is tested for races, and changing the main table late was a bigger risk than it was worth.
+*Where:* `backend/core/integrity.py`, `backend/air/migrations/0001_initial.py` (constraints `air_hold_no_stylist_overlap`, `air_hold_no_customer_overlap`).
+*Follow-up: "So there is no database-level guarantee for bookings?" Correct for the booking table: the guarantee there is the application's locked transaction plus the integrity check, so a direct SQL write that bypassed the application could create an overlap. AIR's holds are guaranteed by the database.*
 
 **8. Explain the two-yes approval.**
-A booking request carries two answers, one for the front desk and one for the stylist. Each can accept or decline. Only when both have accepted does it move to awaiting payment and a payment link goes out. The receptionist can pick the stylist for an "any stylist" request and can hand a request to another stylist, but can never accept on the stylist's behalf.
+A booking request carries two answers, one for the front desk and one for the stylist. Each can accept or decline. Only when both have accepted does it move to awaiting payment and a payment link goes out. For an "Any stylist" request the rules pick a free stylist at once (fewest bookings that day, then rating) and hold that time; if the stylist declines or does not answer in 15 minutes the next free one is asked, up to two more times. The receptionist (or the admin) can hand a request to another stylist, but can never accept on the stylist's behalf.
 *Where:* `backend/scheduling/approvals.py`, `backend/scheduling/tests/test_dual_approval.py`.
 
 **9. What if the stylist never answers?**
@@ -137,7 +137,7 @@ They sit on the page next to a test that measures them again and fails if they d
 *Follow-up: "Isn't tuning on 143 questions and testing on 91 more still small?" Yes. Both sets are small and written by one person.*
 
 **27. Is there an admin assistant?**
-No. The admin side has shop statistics and a list of questions the bot could not answer. I do not describe any assistant feature as planned.
+No. The admin side has shop statistics, the AIR Activity page (what AIR did, with graphs) and a list of questions the bot could not answer. I do not describe any assistant feature as planned.
 *Where:* Limitations → The chatbot and the admin side.
 
 **28. Can the chatbot leak another customer's data?**

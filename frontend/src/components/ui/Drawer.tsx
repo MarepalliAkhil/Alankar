@@ -48,7 +48,7 @@ export function Drawer({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          'glass-dense relative flex h-full w-full max-w-md flex-col shadow-raised focus:outline-none',
+          'glass-dense relative flex h-full w-full max-w-md flex-col pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-raised focus:outline-none',
           side === 'right' ? 'sheet-in rounded-l-modal' : 'sheet-in-left max-w-xs rounded-r-modal',
         )}
       >

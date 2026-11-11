@@ -10,7 +10,7 @@ Where: `shared/policy.json`, `backend/core/policy.py`, `frontend/src/policy/poli
 
 ## 2. Two yeses, and no double booking
 
-A request holds the stylist's slot while the front desk and the stylist each answer; each accept re-checks the slot under a database row lock, and the booking is confirmed only when both have said yes. Creating or moving a booking is one transaction with an overlap check; a clash returns 409 with the three nearest free times. I did not add a database exclusion rule (it needs an extension an ordinary database user cannot install), so row locks and a read-only integrity check do the job; two desks acting at once are tested.
+A request holds the stylist's slot while the front desk and the stylist each answer; each accept re-checks the slot under a database row lock, and the booking is confirmed only when both have said yes. Creating or moving a booking is one transaction with an overlap check; a clash returns 409 with the three nearest free times. The booking table has no database exclusion rule, so row locks and a read-only integrity check do the job there; two desks acting at once are tested. AIR's slot holds are the exception: they carry PostgreSQL exclusion constraints (stylist and customer overlap), which need the `btree_gist` extension created by AIR's first migration.
 
 Where: `backend/scheduling/approvals.py`, `backend/scheduling/booking.py`, `backend/billing/tests/test_concurrency_8b.py`, `backend/core/integrity.py`
 

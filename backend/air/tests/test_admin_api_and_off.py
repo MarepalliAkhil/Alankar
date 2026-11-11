@@ -3,13 +3,13 @@
 import json
 
 import pytest
-from conftest import login
 from django.core.management import call_command
 from django.test import Client
 
 from accounts.models import AuditLog
 from air import config, cover
 from air.models import AIActionLog, AirRequestState, CoverPeriod, SlotHold
+from conftest import login
 from core import jobs
 from scheduling.models import Appointment
 from scheduling.tests.test_booking import (  # noqa: F401

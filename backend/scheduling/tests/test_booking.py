@@ -4,13 +4,13 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 import pytest
-from conftest import PASSWORD, login
 from django.core.management import call_command
 from django.db import connection
 from django.test import Client
 from django.utils import timezone
 
 from billing.models import Payment, PaymentLink, Refund
+from conftest import PASSWORD, login
 from core.models import MailOutbox
 from people.models import CustomerProfile, StylistProfile
 from scheduling.models import (

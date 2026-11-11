@@ -32,7 +32,7 @@ export function FilterChips<T extends string>({
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              'inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors duration-base ease-brand',
+              'touch-target inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors duration-base ease-brand',
               'focus-visible:shadow-focus focus-visible:outline-none',
               selected
                 ? 'border-primary bg-primary-soft text-primary-hover'

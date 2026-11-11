@@ -37,6 +37,16 @@ SEED = 20260101
 # for them: a customer with an unrated visit must rate it before booking online).
 REGULARS = ["meera", "vikram", "anita", "sameer"]
 NEWCOMERS = ["divya", "karthik"]
+# New customers with no history (no rating waiting), used only by `_states` and `_air`.
+STATE_CUSTOMERS = ["nisha", "arjun", "rohan", "lakshmi"]
+# Each linked stylist's own working week (shop hours are 10:00-20:00, Sunday to 18:00); None is
+# a day off. Unlisted days follow the shop's hours.
+SHIFTS = {
+    "Rahul": {"tue": None, "mon": ["10:00", "19:00"], "sat": ["10:00", "20:00"]},
+    "Kiran": {"wed": None, "thu": ["11:00", "20:00"], "fri": ["11:00", "20:00"]},
+    "Priya": {"mon": None, "sun": ["10:00", "16:00"]},
+    "Arun": {"thu": None, "fri": ["12:00", "20:00"], "sat": ["12:00", "20:00"]},
+}
 
 COMMENTS = {
     5: [
@@ -56,6 +66,7 @@ STAR_ODDS = {
     "Priya": [0, 0.03, 0.10, 0.37, 0.50],
 }
 TIPS = [0, 0, 0, 0, 20, 30, 50, 100]
+DIVISION_STYLIST = {"salon": "Rahul", "spa": "Kiran", "beauty-parlor": "Priya"}
 METHODS = ["cash", "cash", "upi", "upi", "card"]
 
 
@@ -83,7 +94,7 @@ class Story:
         ]
         self.customers = {
             short: User.objects.get(email=f"{short}@demo.example.com")
-            for short in REGULARS + NEWCOMERS
+            for short in REGULARS + NEWCOMERS + STATE_CUSTOMERS
         }
         self.stylists = list(StylistProfile.objects.filter(display_name__in=STAR_ODDS))
         self.services = [
@@ -324,6 +335,170 @@ class Story:
                 break
         self.write("  live today: " + ", ".join(made))
 
+    # ------------------------------------------------------------------ every request state
+
+    def _linked(self, division: str) -> StylistProfile:
+        return StylistProfile.objects.get(
+            user__isnull=False, display_name=DIVISION_STYLIST[division]
+        )
+
+    def _cheap_service(self, stylist: StylistProfile) -> Service:
+        offered = [s for s in self.services if stylist.services.filter(pk=s.pk).exists()]
+        return min(offered, key=lambda s: (s.price, s.name))
+
+    def _request(self, who: str, *, stylist, service, offsets, any_stylist=False):
+        """One online request from customer `who`, at the first free time on the first day in
+        `offsets` (days from today) that has one. `any_stylist` sends no stylist ("Any stylist"):
+        the system's rules pick one. Returns the appointment or None."""
+        customer = self.customers[who]
+        variant_id = self._variant_id(service)
+        minutes = booking.quote(service, variant_id, []).duration_minutes
+        ids = (
+            list(booking.qualified_stylists(service, public_only=True).values_list("id", flat=True))
+            if any_stylist
+            else [stylist.id]
+        )
+        now = timezone.now()
+        for offset in offsets:
+            day = timezone.localdate() + timedelta(days=offset)
+            if booking.opening_hours(day) is None:
+                continue
+            starts = [s for s, _ in booking.free_starts(day, minutes, ids) if s > now]
+            if not starts:
+                continue
+            return booking.create_request(
+                customer=customer,
+                service=service,
+                variant_id=variant_id,
+                addon_ids=[],
+                start=starts[len(starts) // 3],
+                stylist=None if any_stylist else stylist,
+                contact=self._contact(customer),
+                notes="",
+                allergies="",
+            )
+        return None
+
+    def _states(self, today):
+        """One example of each way a request can end, made through the real code paths, so every
+        status label, sorry note and timeline can be shown without setting anything up."""
+        from scheduling import approvals
+        from scheduling import stylist as stylist_visits
+
+        made = []
+        rahul, priya = self._linked("salon"), self._linked("beauty-parlor")
+        cut, parlor = self._cheap_service(rahul), self._cheap_service(priya)
+        two_days_ago = timezone.now() - timedelta(days=2)
+
+        # Declined by the front desk, and declined by the stylist (private reason stays private).
+        appt = self._request("rohan", stylist=rahul, service=cut, offsets=(8, 9, 10, 11))
+        if appt:
+            approvals.reception_decline(appt.id, actor=self.desk[0], reason="Fully booked.")
+            made.append("declined by the front desk")
+        appt = self._request("lakshmi", stylist=priya, service=parlor, offsets=(8, 9, 10, 11))
+        if appt:
+            approvals.reception_accept(appt.id, actor=self.desk[1])
+            approvals.stylist_decline(appt.id, profile=priya, actor=priya.user, reason="busy")
+            made.append("declined by the stylist")
+
+        # A request nobody finished answering in time (made two days ago, so its deadline passed).
+        with clock(two_days_ago):
+            appt = self._request("rohan", stylist=priya, service=parlor, offsets=(5, 6, 7, 8))
+        if appt:
+            approvals.expire_requests()
+            made.append("expired request")
+
+        # Both sides said yes two days ago, the customer never paid: the payment link expired.
+        with clock(two_days_ago):
+            appt = self._request("lakshmi", stylist=rahul, service=cut, offsets=(5, 6, 7, 8))
+            if appt:
+                approvals.reception_accept(appt.id, actor=self.desk[0])
+                approvals.stylist_accept(appt.id, profile=rahul, actor=rahul.user)
+        if appt:
+            booking.expire_due()
+            made.append("payment link expired")
+
+        # "Any stylist" from the booking form: the rules chose a free stylist, desk still to answer.
+        appt = self._request(
+            "nisha", stylist=None, service=parlor, offsets=(3, 4, 5, 6), any_stylist=True
+        )
+        if appt:
+            made.append("Any stylist request")
+
+        # A staff move: the customer gets the sorry note (in the bell, by email and by text).
+        moved = (
+            Appointment.objects.filter(status="scheduled", start__gt=timezone.now())
+            .select_related("service", "stylist")
+            .order_by("start")
+            .first()
+        )
+        if moved is not None:
+            minutes = int((moved.end - moved.start).total_seconds() // 60)
+            day = timezone.localdate(moved.start)
+            later = [
+                s
+                for s, _ in booking.free_starts(day, minutes, [moved.stylist_id], staff=True)
+                if s > moved.start
+            ]
+            if later:
+                booking.reschedule(
+                    moved.id,
+                    actor=self.desk[0],
+                    stylist=moved.stylist,
+                    start=later[0],
+                    room=moved.room,
+                    reason="schedule_change",
+                )
+                made.append("moved by the desk with a sorry note")
+
+        # Today: one guest checked in and one whose service has started (when the day allows).
+        for start_service in (False, True):
+            appt = self._book(today, check_in=False)
+            if appt is None:
+                continue
+            booking.check_in(appt.id, actor=self.desk[0])
+            if start_service and appt.stylist.user_id:
+                stylist_visits.start(appt.id, profile=appt.stylist, actor=appt.stylist.user)
+                made.append("in progress today")
+            else:
+                made.append("checked in today")
+        self.write("  request states: " + ", ".join(made))
+
+    # ------------------------------------------------------------------ AIR at the desk
+
+    def _air(self):
+        """AIR covering the front desk (switched on for the demo): it accepts the desk side of two
+        requests; one is then accepted by the stylist and paid through the simulated link."""
+        from air import desk, lifecycle
+        from scheduling import approvals
+
+        demo.ensure_air_cover()
+        made = []
+        kiran = self._linked("spa")
+        spa = self._cheap_service(kiran)
+        appt = self._request("nisha", stylist=kiran, service=spa, offsets=(2, 3, 4, 5, 6))
+        if appt:
+            desk.process(appt.id, trigger="sweep")
+            approvals.stylist_accept(appt.id, profile=kiran, actor=kiran.user)
+            lifecycle.sync_request(appt.id)
+            appt.refresh_from_db()
+            if appt.status == "awaiting_payment":
+                booking.pay(appt.id, customer=appt.customer, token=None, succeed=True)
+                lifecycle.sync_request(appt.id)
+                made.append("accepted by AIR, stylist said yes, paid")
+        rahul = self._linked("salon")
+        appt = self._request(
+            "arjun",
+            stylist=None,
+            service=self._cheap_service(rahul),
+            offsets=(2, 3, 4, 5),
+            any_stylist=True,
+        )
+        if appt:
+            desk.process(appt.id, trigger="sweep")
+            made.append("Any stylist, accepted by AIR, waiting for the stylist")
+        self.write("  AIR: " + ", ".join(made))
+
     # ------------------------------------------------------------------ run
 
     def run(self):
@@ -336,6 +511,8 @@ class Story:
             self._stock_story(today)
             self._payroll(today)
             self._live(today)
+            self._states(today)
+            self._air()
         c = self.counts
         self.write(
             f"  {c['visits']} visits: {c['invoices']} billed, {c['ratings']} rated, "
@@ -343,9 +520,17 @@ class Story:
         )
 
 
+def _shifts() -> None:
+    """The linked stylists' own working weeks (the receptionists have no fixed shifts in the
+    demo, so AIR covers the desk whenever no receptionist is signed in)."""
+    for name, week in SHIFTS.items():
+        StylistProfile.objects.filter(display_name=name).update(weekly_hours=week)
+
+
 def build(write=print) -> Story:
     demo.ensure_staff(demo.DEMO_STAFF)
     demo.ensure_customers(demo.DEMO_CUSTOMERS)
+    _shifts()
     story = Story(write)
     story.run()
     return story

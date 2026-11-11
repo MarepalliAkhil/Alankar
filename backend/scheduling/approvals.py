@@ -21,12 +21,12 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from notifications.models import Notification
 
 from accounts.audit import audit
 from accounts.models import AuditLog
 from notifications import service as notify_service
 from notifications import sorry, templates
+from notifications.models import Notification
 from people.models import DayOffRequest, StylistProfile
 from scheduling import acceptance, anystylist, booking, products
 from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus, Room, StylistOffer

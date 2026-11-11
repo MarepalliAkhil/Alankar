@@ -4,18 +4,18 @@ who may call the customer endpoints."""
 from datetime import timedelta
 
 import pytest
-from conftest import login
 from django.test import Client
 from django.utils import timezone
-from shop.models import Order
-from shop.tests.test_shop import ADDRESS, make_product
 
 from air import consent
 from air.llm.providers import FAKE
 from air.models import AIActionLog, CallbackNote, SlotHold
 from air.tests.test_chat_flow import ask, date_text, reply_of, send, signed_in
+from conftest import login
 from scheduling.models import Appointment, AppointmentStatus
 from shop import orders as shop
+from shop.models import Order
+from shop.tests.test_shop import ADDRESS, make_product
 
 S = AppointmentStatus
 

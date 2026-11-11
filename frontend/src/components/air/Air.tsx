@@ -388,14 +388,14 @@ export function AirPopup() {
             </svg>
             {briefing.isPending ? (
               <p
-                className="flex-1 rounded-card bg-primary-soft p-sm text-sm text-text"
+                className="min-w-0 flex-1 rounded-card bg-primary-soft p-sm text-sm text-text"
                 role="status"
               >
                 AIR is counting what happened…
               </p>
             ) : briefing.isError ? (
               <p
-                className="flex-1 rounded-card bg-primary-soft p-sm text-sm text-text"
+                className="min-w-0 flex-1 rounded-card bg-primary-soft p-sm text-sm text-text"
                 role="alert"
               >
                 AIR could not load its summary. The AIR Activity page has the full list.

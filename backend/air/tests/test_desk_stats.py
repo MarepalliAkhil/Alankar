@@ -6,7 +6,6 @@ from datetime import timezone as dt_timezone
 from unittest import mock
 
 import pytest
-from conftest import login
 from django.test import Client
 from django.utils import timezone
 
@@ -16,6 +15,7 @@ from air.llm.providers import FAKE
 from air.models import AIActionLog, AirRequestState, NeedsYouState, SlotHold
 from air.tests.conftest import make_hold, new_customer, payment_token_for, stylist_says_yes, submit
 from billing.models import PaymentLink
+from conftest import login
 from scheduling import approvals, booking
 from scheduling.models import Appointment, AppointmentStatus
 

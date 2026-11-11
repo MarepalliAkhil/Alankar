@@ -16,7 +16,7 @@ export interface DropdownMenuProps {
 }
 
 const itemClass =
-  'block w-full rounded-nested px-md py-sm text-left text-sm text-text hover:bg-primary-soft focus-visible:bg-primary-soft focus-visible:outline-none';
+  'touch-target block w-full rounded-nested px-md py-sm text-left text-sm text-text hover:bg-primary-soft focus-visible:bg-primary-soft focus-visible:outline-none';
 
 /** Small menu button (e.g. the customer avatar menu). Escape or an outside click closes it. */
 export function DropdownMenu({ label, trigger, items, className }: DropdownMenuProps) {

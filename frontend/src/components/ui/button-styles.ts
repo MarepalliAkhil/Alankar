@@ -23,7 +23,7 @@ export function buttonClasses(
   fullWidth = false,
 ): string {
   return cn(
-    'inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold',
+    'touch-target inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold',
     'transition-colors duration-base ease-brand',
     'focus-visible:shadow-focus focus-visible:outline-none',
     'disabled:cursor-not-allowed disabled:opacity-60',

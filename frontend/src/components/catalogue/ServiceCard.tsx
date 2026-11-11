@@ -45,7 +45,7 @@ export function ServiceCard({ service, onOpen }: { service: Service; onOpen: () 
             {audienceLabel[service.audience]}
           </Badge>
         </div>
-        <div className="flex flex-1 flex-col gap-sm p-md">
+        <div className="flex min-w-0 flex-1 flex-col gap-sm p-md">
           <h3 className="font-semibold text-text">{service.name}</h3>
           <span className="sr-only">See details and book</span>
           <p className="text-sm text-text-muted">{service.summary}</p>

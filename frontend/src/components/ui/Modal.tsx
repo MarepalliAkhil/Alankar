@@ -44,7 +44,7 @@ export function Modal({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-overlay flex items-end justify-center p-md sm:items-center">
+    <div className="fixed inset-0 z-overlay flex items-end justify-center p-md pb-[max(theme(spacing.md),env(safe-area-inset-bottom))] sm:items-center">
       <div aria-hidden="true" className="absolute inset-0 bg-overlay" onClick={onClose} />
       <div
         ref={panelRef}
@@ -55,7 +55,7 @@ export function Modal({
         aria-busy={busy || undefined}
         tabIndex={-1}
         className={cn(
-          'glass-dense sheet-up relative flex max-h-[90vh] w-full flex-col rounded-modal shadow-raised focus:outline-none',
+          'glass-dense sheet-up relative flex max-h-[90dvh] w-full min-w-0 flex-col rounded-modal shadow-raised focus:outline-none',
           widths[size],
         )}
       >

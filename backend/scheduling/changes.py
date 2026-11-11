@@ -17,12 +17,12 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
-from notifications.models import Notification
 
 from accounts.audit import audit
 from accounts.models import AuditLog
 from notifications import service as notify_service
 from notifications import templates
+from notifications.models import Notification
 from scheduling import booking
 from scheduling.models import Appointment, SlotChange
 

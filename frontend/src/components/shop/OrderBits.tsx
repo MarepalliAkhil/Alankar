@@ -26,7 +26,7 @@ export function OrderTimeline({ order }: { order: Order }) {
       {order.timeline.map((step, i) => (
         <li
           key={step.status}
-          className="flex flex-1 items-start gap-sm sm:flex-col sm:items-center"
+          className="flex min-w-0 flex-1 items-start gap-sm sm:flex-col sm:items-center"
         >
           <div className="flex items-center sm:w-full">
             <span

@@ -453,9 +453,8 @@ def expire_due(now: datetime | None = None) -> int:
             products.release(appt, note="Payment link expired")
             record(appt, "payment_expired", from_status=S.AWAITING_PAYMENT)
             if not hasattr(appt, "air_state"):  # AIR tells its own customers (air/lifecycle.py)
-                from notifications.models import Notification
-
                 from notifications import service as notify_service
+                from notifications.models import Notification
 
                 notify_service.tell_customer(
                     appt, Notification.Kind.BOOKING_OUTCOME, "customer_link_expired"

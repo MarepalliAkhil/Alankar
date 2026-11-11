@@ -107,6 +107,7 @@ export default function AuditLogPage() {
           />
           <Input
             label="By (email)"
+            inputMode="email"
             value={draft.actor}
             onChange={(e) => set('actor')(e.target.value)}
           />

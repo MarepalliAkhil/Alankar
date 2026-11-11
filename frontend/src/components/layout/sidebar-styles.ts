@@ -6,7 +6,7 @@ import { cn } from '../../lib/cn';
  */
 export const navItemClass = (active = false, extra = '') =>
   cn(
-    'group relative inline-flex h-10 items-center gap-sm whitespace-nowrap rounded-full text-base font-medium transition-colors duration-base ease-brand',
+    'touch-target group relative inline-flex h-10 items-center gap-sm whitespace-nowrap rounded-full text-base font-medium transition-colors duration-base ease-brand',
     'focus-visible:shadow-focus focus-visible:outline-none',
     active
       ? 'bg-primary-soft text-primary-hover ring-1 ring-primary-light'
