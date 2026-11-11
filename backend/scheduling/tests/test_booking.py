@@ -4,13 +4,13 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 import pytest
+from conftest import PASSWORD, login
 from django.core.management import call_command
 from django.db import connection
 from django.test import Client
 from django.utils import timezone
 
 from billing.models import Payment, PaymentLink, Refund
-from conftest import PASSWORD, login
 from core.models import MailOutbox
 from people.models import CustomerProfile, StylistProfile
 from scheduling.models import (
@@ -123,7 +123,25 @@ def send_request(client, cat, **overrides):
 
 
 def confirm(client, appt_id, stylist, start, room=None):
-    """Both sides say yes (Task 13A): the front desk through the API, then the stylist."""
+    """Both sides say yes (Task 13A): the front desk through the API, then the stylist.
+
+    An "Any stylist" request is already with whoever AIR's rules picked; when a test wants a
+    particular stylist, the desk first gives it to them (the Reassign button) as a person would."""
+    from scheduling import approvals as _approvals
+    from scheduling.booking import BookingError
+
+    held = Appointment.objects.filter(pk=appt_id).first()
+    if (
+        held is not None
+        and held.any_stylist
+        and held.hold_stylist_id not in (None, stylist.id)
+        and held.status == AppointmentStatus.REQUESTED
+        and held.stylist_status == "pending"
+    ):
+        try:
+            _approvals.reassign(appt_id, actor=None, stylist=stylist)
+        except BookingError:
+            pass  # not free or not qualified: the confirm below reports it as before
     body = {"stylist": str(stylist.id)}
     if room:
         body["room"] = str(room.id)
@@ -147,7 +165,11 @@ def requested(client, cat, **overrides) -> str:
 
 
 def awaiting(customer_client, desk_client, cat, hour=11, stylist="asha", days=3) -> str:
-    appt_id = requested(customer_client, cat, start=day_at(days, hour).isoformat())
+    # Asks the named stylist: an "Any stylist" request would already be with whoever AIR's rules
+    # picked (scheduling/anystylist.py), and these tests are about the desk's own steps.
+    appt_id = requested(
+        customer_client, cat, start=day_at(days, hour).isoformat(), stylist=str(cat[stylist].id)
+    )
     response = confirm(desk_client, appt_id, cat[stylist], day_at(days, hour))
     assert response.status_code == 200, response.content
     return appt_id
@@ -371,7 +393,9 @@ def test_desk_options_mark_who_is_free(catalogue, customer, desk):
 
 def test_confirm_moves_to_awaiting_payment_and_emails_link(catalogue, customer, desk):
     client, _ = customer
-    appt_id = requested(client, catalogue, start=day_at(3, 12).isoformat())
+    appt_id = requested(
+        client, catalogue, start=day_at(3, 12).isoformat(), stylist=str(catalogue["ravi"].id)
+    )
     response = confirm(desk[0], appt_id, catalogue["ravi"], day_at(3, 12), catalogue["chair"])
     assert response.status_code == 200, response.content
     body = response.json()
@@ -408,25 +432,26 @@ def test_hold_is_shorter_for_a_visit_soon(catalogue, customer, desk):
 def test_no_double_booking_for_a_stylist(catalogue, customer, desk):
     client, _ = customer
     awaiting(client, desk[0], catalogue, hour=11, stylist="asha")
-    second = requested(client, catalogue, start=day_at(3, 11, 15).isoformat())
-    response = confirm(desk[0], second, catalogue["asha"], day_at(3, 11, 15))
+    # Asking Asha herself for an overlapping time is refused, with the nearest free times.
+    response = send_request(
+        client, catalogue, start=day_at(3, 11, 15).isoformat(), stylist=str(catalogue["asha"].id)
+    )
     assert response.status_code == 409
-    body = response.json()
-    assert "already" in body["detail"]
-    assert 1 <= len(body["slots"]) <= 3
-    assert Appointment.objects.get(pk=second).status == S.REQUESTED
-    # The same time with another stylist is fine.
+    assert 1 <= len(response.json()["slots"]) <= 3
+    # "Any stylist" at that time goes to someone free (Ravi), never to busy Asha.
+    second = requested(client, catalogue, start=day_at(3, 11, 15).isoformat())
+    assert Appointment.objects.get(pk=second).hold_stylist == catalogue["ravi"]
     assert confirm(desk[0], second, catalogue["ravi"], day_at(3, 11, 15)).status_code == 200
 
 
 def test_no_double_booking_for_a_room(catalogue, customer, desk):
     client, _ = customer
-    first = requested(client, catalogue)
+    first = requested(client, catalogue, stylist=str(catalogue["asha"].id))
     assert (
         confirm(desk[0], first, catalogue["asha"], day_at(3, 11), catalogue["chair"]).status_code
         == 200
     )
-    second = requested(client, catalogue)
+    second = requested(client, catalogue, stylist=str(catalogue["ravi"].id))
     response = confirm(desk[0], second, catalogue["ravi"], day_at(3, 11), catalogue["chair"])
     assert response.status_code == 409
     assert "room" in response.json()["detail"]
@@ -434,7 +459,7 @@ def test_no_double_booking_for_a_room(catalogue, customer, desk):
 
 def test_confirm_rules(catalogue, customer, desk):
     client, _ = customer
-    appt_id = requested(client, catalogue)
+    appt_id = requested(client, catalogue, stylist=str(catalogue["asha"].id))
     # The time is the one the customer asked for; only a stylist who offers the service fits.
     assert confirm(desk[0], appt_id, catalogue["meena"], day_at(3, 11)).status_code == 400
     assert confirm(desk[0], appt_id, catalogue["asha"], day_at(3, 11)).status_code == 200
@@ -533,7 +558,7 @@ def test_expired_hold_releases_the_slot(catalogue, customer, desk):
     assert MailOutbox.objects.filter(subject__contains="expired").exists()
     assert pay(client, appt_id).status_code == 409
     # The time is free again for Asha.
-    other = requested(client, catalogue)
+    other = requested(client, catalogue, stylist=str(catalogue["asha"].id))
     assert confirm(desk[0], other, catalogue["asha"], day_at(3, 11)).status_code == 200
     # The desk sees it and may re-confirm the expired one at another time.
     listed = desk[0].get("/api/desk/appointments/?status=payment_expired").json()

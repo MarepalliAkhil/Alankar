@@ -212,7 +212,7 @@
     "memberships.end": "End a membership now, with a reason",
     "notifications.list": "Read my own in-app notifications",
     "notifications.mark_read": "Mark my own notifications as read",
-    "desk.appointments.reassign": "Give a request with no stylist, or a stylist-declined one, to another stylist (restarts the stylist's approval; the front desk can never accept for the stylist)",
+    "desk.appointments.reassign": "Give a request with no stylist, a stylist-declined one, or a waiting \"Any stylist\" request to another free stylist (restarts the stylist's approval; the front desk can never accept for the stylist). Receptionist and admin.",
     "stylist.requests.list": "List booking requests waiting for me (customer's first name only) and my recent answers",
     "stylist.requests.accept": "Accept a booking request addressed to me (re-checks that I am free)",
     "stylist.requests.decline": "Decline a booking request addressed to me with a private reason category",
@@ -880,7 +880,8 @@
         "air.desk.needs",
         "air.desk.undo",
         "air.desk.phone",
-        "air.desk.briefing"
+        "air.desk.briefing",
+        "desk.appointments.reassign"
       ],
       "routes": [
         "/customers/:id",

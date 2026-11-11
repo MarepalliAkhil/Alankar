@@ -151,6 +151,9 @@ export default function RequestsPage() {
                       {request.allergy_alert && (
                         <Badge tone="danger">Allergy alert: shown once the visit is booked</Badge>
                       )}
+                      {request.any_stylist && (
+                        <p className="text-xs text-text-muted">Customer chose any stylist</p>
+                      )}
                       <p className="text-xs text-text-muted">
                         Front desk:{' '}
                         {request.reception_by_air && request.reception_status === 'accepted'

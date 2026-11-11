@@ -338,6 +338,9 @@ function RequestCard({
               appt.preferred_stylist_name ??
               'Any available'}
           </dd>
+          {appt.any_stylist && (
+            <dd className="text-xs text-text-muted">Customer chose any stylist</dd>
+          )}
         </div>
         <div>
           <dt className="text-xs text-text-muted">Total (incl. GST)</dt>
@@ -351,6 +354,9 @@ function RequestCard({
         )}
       </dl>
       {isApproval && <ApprovalChips appt={appt} />}
+      {appt.any_stylist && (appt.stylist_offers?.length ?? 0) > 0 && (
+        <OfferHistory offers={appt.stylist_offers ?? []} />
+      )}
       {appt.allergies && (
         <p className="rounded-nested bg-warning-soft px-md py-sm text-sm text-text">
           <span className="font-semibold">Allergies:</span> {appt.allergies}
@@ -515,5 +521,22 @@ function RejectModal({
         error={problem}
       />
     </Modal>
+  );
+}
+
+/** Staff only: who an "Any stylist" request was offered to and what came of it. */
+function OfferHistory({ offers }: { offers: NonNullable<DeskAppointment['stylist_offers']> }) {
+  return (
+    <details className="rounded-nested bg-surface-muted px-md py-sm text-sm">
+      <summary className="cursor-pointer font-medium text-text">Stylist assignment history</summary>
+      <ol className="mt-xs flex flex-col gap-1" aria-label="Stylist assignment history">
+        {offers.map((o) => (
+          <li key={o.seq} className="text-text-muted">
+            <span className="font-medium text-text">{o.stylist_name}</span> (by {o.by_label}):{' '}
+            {o.outcome_label}
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }

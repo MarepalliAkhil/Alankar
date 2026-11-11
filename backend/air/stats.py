@@ -54,6 +54,8 @@ BOOKING_ACTIONS = (
     "submit_booking_request",
     "accept_reception",
     "cancel_booking",
+    "stylist_auto_assigned",
+    "stylist_reassigned",
 )
 PAYMENT_ACTIONS = (
     "create_payment_link",
@@ -98,6 +100,9 @@ ACTION_WORDS = {
     "request_refused": "Refused a money request and passed it on",
     "undo_refused": "Could not undo a paid booking",
     "llm_turn": "Used the optional AI service",
+    "stylist_auto_assigned": "Chose a free stylist (Any stylist)",
+    "stylist_reassigned": "Gave a request to the next free stylist",
+    "no_stylist_free": "Found no free stylist (Any stylist)",
 }
 RESULT_WORDS = {
     L.DONE: "Done",
@@ -257,6 +262,9 @@ def counts(w: Window) -> dict:
         "orders_updated": order_rows.exclude(action_type="create_product_order").count(),
         "handed_off": handed,
         "handover_rate": rate(handed, chat + voice),
+        # "Any stylist" (scheduling/anystylist.py): counts only.
+        "stylists_auto_assigned": logs.filter(action_type="stylist_auto_assigned").count(),
+        "reassignments": logs.filter(action_type="stylist_reassigned").count(),
     }
 
 
@@ -273,6 +281,8 @@ KPI_KEYS = (
     "orders",
     "handed_off",
     "handover_rate",
+    "stylists_auto_assigned",
+    "reassignments",
 )
 
 

@@ -637,3 +637,67 @@ rescheduled?", use the same labels and never reveal a private reason. Two small 
 (`who_accepted`, `why_declined`) route those questions to them; "do you accept cards" still goes to
 payments. Published accuracy is
 unchanged (130/143 and 67/91).
+
+## 17. "Any stylist": AIR assigns a free stylist
+
+`backend/scheduling/anystylist.py`. Rule-based and deterministic: it works with the language-model
+layer OFF and whether or not a receptionist is on duty.
+
+### 17.1 The option
+
+Every stylist list a customer sees starts with "Any available stylist (AIR picks one who is
+free)" (booking form; `frontend/src/config/anyStylist.ts`, backend `ANY_LABEL`). In the AIR chat
+the customer simply does not name a stylist (or says "any"); the chat then uses the same order.
+
+### 17.2 Assignment (when the request is created)
+
+- Candidates: stylists shown to customers whose account is active and who offer the service
+  (the existing service-stylist link), who work the whole visit (weekly hours), are not on
+  approved time off, and have no clashing booking, pending request hold or waitlist offer. This
+  is `approvals.check_stylist_free`. The salon has no buffer between visits, so none is added.
+- Order: fewest bookings that day (booked visits plus pending request holds), then the higher
+  average rating (submitted, counted ratings), then a stable order by id.
+- Atomic: the request is created, the stylist chosen and their time held in ONE transaction;
+  checking a stylist locks their row (`select_for_update`), so a second customer at the same
+  moment waits and then sees the first one's hold. AIR chat holds additionally have the
+  PostgreSQL exclusion constraint (section 4). If nobody is free, NO request is created and the
+  answer is 409 with the nearest free times (the existing `nearest_slots`), "Any stylist" kept.
+- The request then goes to that stylist exactly like a named-stylist request. The front-desk
+  side works as before (receptionist on duty, or AIR in cover mode), and everything after (both
+  accept, the 45-minute payment link, paid, scheduled) is unchanged.
+
+### 17.3 Reassignment
+
+- The assigned stylist declines, or does not answer within the stylist timeout (AIR setting
+  `stylist_timeout_minutes`, 15): AIR offers the request to the next free stylist by the same
+  rules, **at most 2 more times**, never to a stylist who already declined or did not answer.
+  The front desk's yes is kept. The timeout is checked by `approvals.expire_requests` (lazily
+  on reads and by the job runner), before the normal request expiry.
+- Only when nobody can take it does the request end as before (declined or expired) with the
+  shared sorry note and the nearest free times.
+- A receptionist or the admin can give any waiting "Any stylist" request to another free
+  stylist (Reassign, same checks, `desk.appointments.reassign` now also for the admin; API only
+  for the admin, the button is on the receptionist's Appointments page). It is logged
+  (history event, audit entry, the offer row with who did it).
+
+### 17.4 Who sees what
+
+- Customer (appointments page, emails): "Stylist: Asha, assigned by AIR" (first name, current
+  stylist only). Never who declined or why. Chat card: "Asha, assigned by AIR".
+- Staff: request cards say "Customer chose any stylist"; the receptionist's card has the
+  assignment history (`stylist_offers`: who was offered it, by AIR or staff, and the outcome:
+  waiting, accepted, declined, did not answer, moved by staff, request ended).
+- `StylistOffer` (migration `scheduling/0011`) stores the history; `SlotHold.any_stylist`
+  (migration `air/0005`) marks chat holds.
+- AIActionLog rows: `stylist_auto_assigned` (reason `any_stylist`), `stylist_reassigned`
+  (reason `declined` or `timed_out`), `no_stylist_free` (reason `no_stylist_free` or
+  `reassign_limit`). AIR statistics and the popup summary add "stylists auto-assigned" and
+  "reassignments" (counts only).
+
+### 17.5 Limits
+
+- Up to 3 stylists per request in total (the first one plus 2 reassignments).
+- Each offer waits up to the stylist timeout, but never past the request's own deadline
+  (10 minutes before the visit).
+- The id tie-break is stable for a salon but not meaningful (ids are random), so equal stylists
+  are effectively taken in a fixed order.

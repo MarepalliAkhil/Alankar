@@ -167,6 +167,7 @@ export interface StylistRequest {
   reception_status: ApprovalState;
   reception_status_label: string;
   reception_by_air?: boolean;
+  any_stylist?: boolean;
   booking_status: string;
   booking_status_label: string;
   answer_by: string | null;

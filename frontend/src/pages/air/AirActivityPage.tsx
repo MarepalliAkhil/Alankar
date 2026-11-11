@@ -17,7 +17,7 @@ import {
   type NeedsItem,
 } from '../../api/airDesk';
 import { errorDetail } from '../../api/client';
-import type { StatsTable } from '../../api/stats';
+import type { Kpi, StatsTable } from '../../api/stats';
 import { StatTile, type Good } from '../../components/admin/StatTile';
 import { StatsTableCard } from '../../components/admin/StatsTableCard';
 import { AirCharacter } from '../../components/air/Air';
@@ -182,10 +182,13 @@ function CoverBanner({ active }: { active: boolean }) {
 function Dashboard({ data, range }: { data: AirStats; range: AirRange }) {
   const toast = useToast();
   const t = data.tables;
-  const k = (key: AirKpiKey) => data.kpis[key];
-  const tile = (key: AirKpiKey, label: string, good: Good = 'up', format = count) => (
-    <StatTile key={key} label={label} kpi={k(key)} format={format} good={good} empty="None yet" />
-  );
+  const k = (key: AirKpiKey) => (data.kpis as Partial<Record<AirKpiKey, Kpi>>)[key];
+  const tile = (key: AirKpiKey, label: string, good: Good = 'up', format = count) => {
+    const kpi = k(key);
+    return kpi === undefined ? null : (
+      <StatTile key={key} label={label} kpi={kpi} format={format} good={good} empty="None yet" />
+    );
+  };
   const exportTable = (name: string, table: StatsTable) => {
     try {
       saveBlob(new Blob([tableCsv(table)], { type: 'text/csv' }), `air-${name}-${range}.csv`);
@@ -238,6 +241,8 @@ function Dashboard({ data, range }: { data: AirStats; range: AirRange }) {
           {tile('orders', 'Product orders created or changed', 'neutral')}
           {tile('handed_off', 'Handed to a person', 'down')}
           {tile('handover_rate', 'Handover rate', 'down', percent)}
+          {tile('stylists_auto_assigned', 'Stylists auto-assigned (Any stylist)', 'neutral')}
+          {tile('reassignments', 'Reassignments to the next stylist', 'neutral')}
         </div>
         <p className="text-xs text-text-muted">
           Waiting for a stylist right now: {data.counts.awaiting_stylist ?? 0}. Definitions are in

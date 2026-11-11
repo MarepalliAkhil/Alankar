@@ -60,6 +60,19 @@ export interface DeskAppointment {
   reception_status_label: string;
   /** AIR (covering the desk) gave the front-desk answer, not a person. */
   reception_by_air?: boolean;
+  /** The customer chose "Any stylist" (AIR's rules picked the stylist). */
+  any_stylist?: boolean;
+  /** Staff only: who the "Any stylist" request was offered to and what came of it. */
+  stylist_offers?: {
+    seq: number;
+    stylist_name: string;
+    by: 'air' | 'staff';
+    by_label: string;
+    outcome: string;
+    outcome_label: string;
+    offered_at: string;
+    answered_at: string | null;
+  }[];
   reception_accepted_at?: string | null;
   stylist_status: ApprovalStatus;
   stylist_status_label: string;

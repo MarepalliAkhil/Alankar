@@ -2653,3 +2653,21 @@ Details in docs/BRAND_LOGO.md.
   animation. SVG favicon in index.html; a 512 px PNG is still needed for phone home-screen icons.
 - Tests: `components/brand/brand.test.tsx` (23), one Air test, `e2e/splash.e2e.ts`; other e2e tests
   never see the splash (automated browsers skip it; `signIn` marks it seen).
+
+
+## "Any stylist": AIR assigns a free stylist: DONE in code (backend tests run on SQLite here; frontend tests written, not run here)
+
+Rules, reassignment and limits are in docs/AIR.md section 17.
+- `scheduling/anystylist.py`: candidates (qualified, on shift, not on leave, free), order (fewest
+  bookings that day, rating, id), atomic hold at creation, nothing created when nobody is free
+  (409 + nearest times), reassignment after a decline or the 15-minute timeout (2 more times,
+  desk yes kept), staff reassign (receptionist and admin), history for staff only.
+- Models: `Appointment.any_stylist`, `StylistOffer` (scheduling 0011), `SlotHold.any_stylist` (air 0005).
+- Customer sees "Stylist: <first name>, assigned by AIR"; staff see "Customer chose any stylist" and
+  the history. AIActionLog rows and two new AIR stats; popup summary counts.
+- Booking form first option "Any available stylist (AIR picks one who is free)"; chatbot entry
+  "What does Any stylist mean?" (accuracy unchanged 130/143, 67/91).
+- Behaviour change: an "Any stylist" request no longer waits for the receptionist to choose a
+  stylist. Existing tests that assumed that were updated (the test helper `confirm()` now moves an
+  "Any stylist" request to the stylist a test names, as the Reassign button would).
+- Tests: `air/tests/test_any_stylist.py` (19, two need PostgreSQL), frontend tests.

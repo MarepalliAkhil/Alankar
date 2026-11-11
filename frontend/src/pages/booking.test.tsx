@@ -993,3 +993,95 @@ describe('who accepted my request, the timeline and the sorry notes', () => {
     expect(screen.getByText('You can also contact our front desk.')).toBeInTheDocument();
   });
 });
+
+describe('"Any stylist": AIR assigns a free stylist', () => {
+  it('offers "Any available stylist (AIR picks one who is free)" first and sends no stylist', async () => {
+    vi.mocked(bookingApi.sendBookingRequest).mockResolvedValue(appointment);
+    const user = userEvent.setup();
+    renderAt('/customer/book?service=womens-haircut');
+    const select = (await screen.findByLabelText(/^Stylist/)) as HTMLSelectElement;
+    expect(select.options[0]!.textContent).toBe(
+      'Any available stylist (AIR picks one who is free)',
+    );
+    expect(select.value).toBe('');
+    await fillDetailsAndPickTime(user);
+    await user.click(screen.getByRole('button', { name: 'Send booking request' }));
+    await waitFor(() =>
+      expect(bookingApi.sendBookingRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ stylist: null }),
+      ),
+    );
+  });
+
+  it('shows the customer only the stylist AIR assigned, never who declined', async () => {
+    vi.mocked(bookingApi.listMyAppointments).mockResolvedValue([
+      {
+        ...appointment,
+        id: 'ap-any',
+        any_stylist: true,
+        stylist_note: 'Stylist: Asha, assigned by AIR',
+      },
+    ]);
+    renderAt('/customer/appointments');
+    expect(await screen.findByText('Asha, assigned by AIR')).toBeInTheDocument();
+    expect(screen.queryByText(/declined/i)).toBeNull();
+  });
+});
+
+describe('"Any stylist" on the front desk', () => {
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue(userFor('receptionist'));
+  });
+
+  it('says the customer chose any stylist and shows the assignment history', async () => {
+    vi.mocked(deskApi.listDeskAppointments).mockResolvedValue({
+      counts: {
+        requested: 1,
+        awaiting_payment: 0,
+        payment_expired: 0,
+        scheduled: 0,
+        flags: 0,
+        closed: 0,
+      },
+      results: [
+        {
+          ...deskRequest,
+          preferred_stylist_name: null,
+          asked_stylist_name: 'Ravi',
+          any_stylist: true,
+          stylist_offers: [
+            {
+              seq: 1,
+              stylist_name: 'Asha',
+              by: 'air',
+              by_label: 'AIR',
+              outcome: 'declined',
+              outcome_label: 'Declined',
+              offered_at: '2026-11-10T05:00:00Z',
+              answered_at: '2026-11-10T05:05:00Z',
+            },
+            {
+              seq: 2,
+              stylist_name: 'Ravi',
+              by: 'air',
+              by_label: 'AIR',
+              outcome: 'pending',
+              outcome_label: 'Waiting for the stylist',
+              offered_at: '2026-11-10T05:05:00Z',
+              answered_at: null,
+            },
+          ],
+        },
+      ],
+    });
+    renderAt('/appointments');
+    const card = await screen.findByRole('article');
+    expect(within(card).getByText('Customer chose any stylist')).toBeInTheDocument();
+    const history = within(card).getByRole('list', { name: 'Stylist assignment history' });
+    const rows = within(history).getAllByRole('listitem');
+    expect(rows.map((r) => r.textContent)).toEqual([
+      'Asha (by AIR): Declined',
+      'Ravi (by AIR): Waiting for the stylist',
+    ]);
+  });
+});

@@ -224,11 +224,15 @@ describe('useZenReveal', () => {
     const card = stage.querySelector('li')!;
     act(() => callback([{ target: card, isIntersecting: true }]));
     expect(card).toHaveAttribute('data-revealed');
+    const sidebar = stage.querySelector('[data-zen-sidebar]') as HTMLElement;
+    const sidebarDelay = sidebar.style.getPropertyValue('--zen-delay');
     view.rerender(<Harness route="/zenotians/project" />);
     expect(stage).toHaveAttribute('data-zen-speed', 'short');
     expect(stage).toHaveAttribute('data-reveal', 'playing');
     expect(card).not.toHaveAttribute('data-revealed'); // reset, so it slides in again
-    expect(stage.querySelector('[data-zen-sidebar]')).not.toHaveAttribute('data-zen-r');
+    // The short slide-in plans only the page, never the sidebar again.
+    expect(planReveal(stage, false).some((item) => item.el === sidebar)).toBe(false);
+    expect(sidebar.style.getPropertyValue('--zen-delay')).toBe(sidebarDelay);
     expect(delayOf(card)).toBe(0);
   });
 

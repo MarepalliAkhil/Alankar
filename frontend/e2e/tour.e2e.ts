@@ -32,7 +32,7 @@ test('desktop: starts by itself, walks the real sidebar items with Meera, ends w
   const card = page.locator('[data-tour-card]');
   await expect(card).toBeVisible();
   await expect(card).toContainText('Chapter 1 of 7');
-  await expect(card.locator('[data-meera="wave"]')).toBeVisible();
+  await expect(card.locator('[data-meera="namaste"]')).toBeVisible(); // chapter 1 pose
   await expect(card.locator('[data-dot]')).toHaveCount(7);
   await axe(page, 'chapter 1');
   // The card docks bottom-left of the content, never over the sidebar.
@@ -41,7 +41,7 @@ test('desktop: starts by itself, walks the real sidebar items with Meera, ends w
   expect(box && side && box.x >= side.x + side.width).toBe(true);
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(card.getByRole('heading', { name: 'Pick a service' })).toBeVisible();
-  await expect(card.locator('[data-meera="point"]')).toBeVisible();
+  await expect(card.locator('[data-meera="scissors"]')).toBeVisible(); // chapter 2 pose
   await expect(page.locator('.tour-spot')).toBeVisible();
   await axe(page, 'chapter 2');
   for (let i = 2; i < 7; i++) await page.getByRole('button', { name: 'Next' }).click();

@@ -118,38 +118,72 @@ for (const width of [320, 390, 768]) {
   });
 }
 
-test('the layout does not shift (CLS under 0.01)', async ({ page }) => {
+/** Records every layout shift, and how much of it touched the navbar (where the logo lands). */
+async function watchShifts(page: Page) {
   await page.addInitScript(() => {
-    const w = window as unknown as { __cls: number };
+    const w = window as unknown as { __cls: number; __clsNav: number };
     w.__cls = 0;
+    w.__clsNav = 0;
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries() as unknown as {
         value: number;
         hadRecentInput: boolean;
+        sources?: { node?: Node | null }[];
       }[]) {
-        if (!entry.hadRecentInput) w.__cls += entry.value;
+        if (entry.hadRecentInput) continue;
+        w.__cls += entry.value;
+        const inNav = (entry.sources ?? []).some(
+          (src) => src.node instanceof Element && !!src.node.closest('header'),
+        );
+        if (inNav) w.__clsNav += entry.value;
       }
     }).observe({ type: 'layout-shift', buffered: true });
   });
+}
+
+async function shifts(page: Page) {
+  return page.evaluate(() => {
+    const w = window as unknown as { __cls: number; __clsNav: number };
+    return { all: w.__cls, nav: w.__clsNav };
+  });
+}
+
+test('the splash adds no layout shift (CLS added under 0.01)', async ({ page, browser }) => {
+  // The same page without the splash (automated browsers do not get it unless forced): whatever
+  // the page itself shifts while its content loads is the baseline.
+  const plain = await browser.newContext();
+  const without = await plain.newPage();
+  await watchShifts(without);
+  await without.goto('/');
+  await without.waitForLoadState('load');
+  await without.waitForTimeout(4000);
+  const baseline = await shifts(without);
+  await plain.close();
+
+  await watchShifts(page);
   await page.goto('/');
   await waitForSplashEnd(page);
   await page.waitForTimeout(1000);
-  const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
-  expect(cls).toBeLessThan(0.01);
+  const withSplash = await shifts(page);
+  expect(withSplash.nav).toBeLessThan(0.01); // the logo lands without moving the navbar
+  expect(withSplash.all - baseline.all).toBeLessThan(0.01);
 });
 
 test('the splash overlay has no serious accessibility violations', async ({ page }) => {
-  // Hold the splash still while axe reads it.
-  await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  // "hold" keeps the splash up (automated browsers only) while axe reads it. Pausing the clock
+  // instead would also stop axe's own timers.
+  await page.addInitScript(() => window.localStorage.setItem('alankar-splash', 'hold'));
   await page.goto('/');
   await expect(splash(page)).toBeVisible();
+  await page.waitForTimeout(1500); // drawn and filled
   const result = await new AxeBuilder({ page })
     .include('[data-testid="splash"]')
     .withTags(TAGS)
     .analyze();
   const worst = result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(worst.map((v) => v.id)).toEqual([]);
+  await page.getByRole('button', { name: 'Skip' }).click();
+  await expect(splash(page)).toHaveCount(0);
 });
 
 test('the navbar logo has no accessibility violations for visitors', async ({ page }) => {

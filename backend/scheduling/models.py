@@ -261,6 +261,9 @@ class Appointment(models.Model):
     stylist_status = models.CharField(
         max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.NOT_ASKED
     )
+    # The customer chose "Any stylist": AIR's rules picked the stylist (scheduling/anystylist.py),
+    # and may offer the request to the next free stylist after a decline or a timeout.
+    any_stylist = models.BooleanField(default=False)
     # Who gave the FRONT DESK's yes, set by `scheduling.acceptance.record` (the one place both the
     # receptionist and AIR go through). `reception_actor` is "receptionist" or "air" and is the
     # only part customers ever see; `reception_user` is for staff views and is never sent to a
@@ -491,3 +494,45 @@ class SlotChange(models.Model):
 
     def __str__(self) -> str:
         return f"{self.kind} #{self.seq} of {self.appointment_id}"
+
+
+class StylistOffer(models.Model):
+    """One offer of an "Any stylist" request to one stylist, and what came of it (staff only).
+
+    The customer never sees this history: only the stylist who has the request now.
+    """
+
+    class Outcome(models.TextChoices):
+        PENDING = "pending", "Waiting for the stylist"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        TIMED_OUT = "timed_out", "Did not answer in time"
+        MOVED = "moved", "Moved to another stylist by staff"
+        ENDED = "ended", "Request ended"
+
+    class By(models.TextChoices):
+        AIR = "air", "AIR"
+        STAFF = "staff", "Staff"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="offers")
+    seq = models.PositiveSmallIntegerField()
+    stylist = models.ForeignKey("people.StylistProfile", on_delete=models.CASCADE, related_name="+")
+    by = models.CharField(max_length=8, choices=By.choices, default=By.AIR)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    outcome = models.CharField(max_length=10, choices=Outcome.choices, default=Outcome.PENDING)
+    offered_at = models.DateTimeField()
+    answer_by = models.DateTimeField(null=True, blank=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["appointment", "seq"]
+        constraints = [
+            models.UniqueConstraint(fields=["appointment", "seq"], name="stylist_offer_once"),
+        ]
+        indexes = [models.Index(fields=["outcome", "answer_by"])]
+
+    def __str__(self) -> str:
+        return f"offer #{self.seq} of {self.appointment_id}: {self.outcome}"

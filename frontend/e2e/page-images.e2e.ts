@@ -100,7 +100,8 @@ test('home: division sections show real services and booking buttons', async ({ 
   ] as const) {
     const section = page.locator(`#${id}`);
     await expect(section.getByRole('link', { name: label })).toBeVisible();
-    expect(await section.locator('ul li').count()).toBeGreaterThan(0);
+    // The services arrive after the page (a short loader may show first), so wait for them.
+    await expect(section.locator('ul li').first()).toBeVisible();
   }
   await expect(page.getByText('Independent portfolio project')).toBeVisible();
 });

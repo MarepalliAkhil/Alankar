@@ -231,6 +231,7 @@ def test_the_package_has_no_banned_imports_and_no_network():
         ("who accepted my booking?", "virtual receptionist (the front desk was closed)"),
         ("why was my request declined or rescheduled?", "private reason"),
         ("why was my booking request declined?", "We are sorry"),
+        ("what does any stylist mean?", "picks a stylist who offers your service and is free"),
     ],
 )
 def test_who_accepted_and_why_declined_use_the_shared_wording(engine, question, needle):

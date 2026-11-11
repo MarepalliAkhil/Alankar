@@ -20,7 +20,9 @@ export type AirKpiKey =
   | 'confirmed'
   | 'orders'
   | 'handed_off'
-  | 'handover_rate';
+  | 'handover_rate'
+  | 'stylists_auto_assigned'
+  | 'reassignments';
 
 export interface NeedsItem {
   kind: NeedsKind;
@@ -63,7 +65,9 @@ export interface AirStats {
   generated_at: string;
   counts: Record<string, number | null>;
   previous_counts: Record<string, number | null>;
-  kpis: Record<AirKpiKey, Kpi>;
+  /** The "Any stylist" counts are new, so an older server may not send them. */
+  kpis: Record<Exclude<AirKpiKey, 'stylists_auto_assigned' | 'reassignments'>, Kpi> &
+    Partial<Record<'stylists_auto_assigned' | 'reassignments', Kpi>>;
   needs_you: NeedsItem[];
   tables: Record<AirTableKey, StatsTable>;
   channels: { chat: number; voice: number };

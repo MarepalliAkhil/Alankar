@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { brand } from '../../config/brand';
-import { advanceIntro, markSplashSeen, useIntroPhase } from '../../intro/introPhase';
+import { advanceIntro, markSplashSeen, splashHeld, useIntroPhase } from '../../intro/introPhase';
 import { LogoFillPaths, LogoOutlinePaths } from './AlankarLogo';
 import { LOGO_VIEWBOX } from './alankar-logo-paths';
 import './brand.css';
@@ -97,8 +97,9 @@ function SplashOverlay() {
   useEffect(() => {
     let cancelled = false;
     const timers: number[] = [];
-    timers.push(window.setTimeout(finish, SPLASH.cap));
+    const held = splashHeld(); // automated accessibility scan: stay up until skipped
     timers.push(window.setTimeout(() => setStep('fill'), SPLASH.draw));
+    if (!held) timers.push(window.setTimeout(finish, SPLASH.cap));
 
     const glide = () => {
       if (cancelled || ended.current) return;
@@ -116,10 +117,12 @@ function SplashOverlay() {
     };
     // The glide starts once the logo has filled AND the page is ready, but never so late that
     // the whole splash would pass the cap.
-    void Promise.all([
-      wait(SPLASH.draw + SPLASH.fill),
-      Promise.race([pageReady(), wait(SPLASH.cap - SPLASH.glide - 100)]),
-    ]).then(glide);
+    if (!held) {
+      void Promise.all([
+        wait(SPLASH.draw + SPLASH.fill),
+        Promise.race([pageReady(), wait(SPLASH.cap - SPLASH.glide - 100)]),
+      ]).then(glide);
+    }
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') finish();

@@ -162,7 +162,17 @@ def _pick_stylist(slot: dict, wanted: str) -> dict | None:
     ids = {s["id"]: s for s in slot["stylists"]}
     if wanted and wanted != "any":
         return ids.get(wanted)
-    return slot["stylists"][0] if slot["stylists"] else None
+    if not slot["stylists"]:
+        return None
+    # "Any stylist": the same rules as the booking form (scheduling/anystylist.py).
+    from scheduling import anystylist
+
+    start = slot["start"]
+    when = start if isinstance(start, datetime) else datetime.fromisoformat(str(start))
+    by_key = {str(s["id"]): s for s in slot["stylists"]}
+    raw = {str(s["id"]): s["id"] for s in slot["stylists"]}
+    best = anystylist.chat_pick(list(raw.values()), when)
+    return by_key.get(str(best[0])) if best else slot["stylists"][0]
 
 
 # --------------------------------------------------------------------------- card builders
@@ -178,7 +188,12 @@ def booking_card(hold: SlotHold) -> dict:
         "price": _money(q.price_total),
         "gst_included": _money(q.gst_amount),
         "duration_minutes": q.duration_minutes,
-        "stylist": hold.stylist.display_name,
+        # "Any stylist": the same words as the appointments page and the emails.
+        "stylist": (
+            f"{hold.stylist.display_name.split(' ')[0]}, assigned by AIR"
+            if hold.any_stylist
+            else hold.stylist.display_name
+        ),
         "start": hold.starts_at.isoformat(),
         "when": pretty(hold.starts_at),
         "held_until": hold.expires_at.isoformat(),
@@ -612,6 +627,9 @@ def _hold_and_card(user, svc, state, session_id, now, start: datetime, stylist: 
     except booking.BookingError as exc:
         state["awaiting"] = "time"
         return Reply(text=exc.message, intent="book", chips=_alt_chips(svc, state, exc.slots))
+    if state.get("stylist", "") in ("", "any") and not hold.any_stylist:
+        hold.any_stylist = True  # AIR's rules chose the stylist (scheduling/anystylist.py)
+        hold.save(update_fields=["any_stylist"])
     state["hold_id"] = str(hold.pk)
     state["awaiting"] = "confirm"
     minutes = max(int((hold.expires_at - now).total_seconds() // 60), 1)

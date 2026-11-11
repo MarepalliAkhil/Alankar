@@ -151,6 +151,8 @@ class SlotHold(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     expires_at = models.DateTimeField()
     session_id = models.CharField(max_length=64, blank=True)
+    # The customer said "any stylist" in the chat: AIR's rules chose `stylist`.
+    any_stylist = models.BooleanField(default=False)
     idempotency_key = models.CharField(max_length=64, blank=True)
     release_reason = models.CharField(max_length=40, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

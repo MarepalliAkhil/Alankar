@@ -21,7 +21,8 @@ export const SPLASH_ENABLED = true;
 /** sessionStorage: the splash has been shown in this browser session. */
 export const SPLASH_SEEN_KEY = 'alankar-splash-seen';
 /** localStorage: "off" never shows it on this browser; "force" shows it even to automated
- * browsers (the dedicated Playwright test). */
+ * browsers (the dedicated Playwright test); "hold" (automated browsers only) also keeps it on
+ * screen until it is skipped, so an accessibility scan can read it. */
 export const SPLASH_SWITCH_KEY = 'alankar-splash';
 /** A hero entrance that never says it finished cannot hold the tour back longer than this. */
 export const HERO_MAX_MS = 2500;
@@ -69,11 +70,21 @@ export function shouldPlaySplash(path: string): boolean {
   const switched = readLocal(SPLASH_SWITCH_KEY);
   if (switched === 'off') return false;
   // Automated browsers (Playwright) skip it unless a test asks for it, so no other test waits.
-  if (typeof navigator !== 'undefined' && navigator.webdriver && switched !== 'force') return false;
+  const forced = switched === 'force' || switched === 'hold';
+  if (typeof navigator !== 'undefined' && navigator.webdriver && !forced) return false;
   if (isPortalPath(path)) return false;
   if (seenThisLoad || readSession(SPLASH_SEEN_KEY)) return false;
   if (prefersReducedMotion()) return false;
   return true;
+}
+
+/** Automated browsers only: the splash stays up until skipped (see SPLASH_SWITCH_KEY). */
+export function splashHeld(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    !!navigator.webdriver &&
+    readLocal(SPLASH_SWITCH_KEY) === 'hold'
+  );
 }
 
 /** Remember that the splash was shown (storage may fail: then only for this page load). */

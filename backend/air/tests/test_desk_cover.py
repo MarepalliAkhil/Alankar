@@ -358,10 +358,13 @@ def test_an_unrated_visit_goes_to_a_person(air_on, customer, catalogue, commits,
 
 
 @pytest.mark.django_db
-def test_an_any_stylist_request_goes_to_a_person_to_choose(air_on, customer, catalogue, commits):
+def test_an_any_stylist_request_is_sent_to_a_free_stylist_by_air(
+    air_on, customer, catalogue, commits
+):
+    # The full rules are in test_any_stylist.py: AIR picks the best-rated free stylist itself.
     appt = send_form(customer[0], catalogue, commits, stylist=None)
-    assert appt.reception_status == A.PENDING
-    one_row(appt, L.HANDED_OFF, "check_failed:stylist_chosen")
+    appt.refresh_from_db()
+    assert appt.reception_status == A.ACCEPTED and appt.hold_stylist_id is not None
 
 
 @pytest.mark.django_db

@@ -300,7 +300,9 @@ function AppointmentCard({
         <div>
           <dt className="text-xs text-text-muted">Stylist</dt>
           <dd className="font-medium text-text">
-            {appt.stylist_name ?? appt.preferred_stylist_name ?? 'To be assigned'}
+            {appt.stylist_note
+              ? appt.stylist_note.replace(/^Stylist: /, '')
+              : (appt.stylist_name ?? appt.preferred_stylist_name ?? 'To be assigned')}
           </dd>
         </div>
         <div>

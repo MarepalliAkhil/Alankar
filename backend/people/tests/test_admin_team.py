@@ -5,11 +5,11 @@ import json
 from datetime import date, datetime, time, timedelta
 
 import pytest
+from conftest import login
 from django.test import Client
 from django.utils import timezone
 
 from accounts.models import AuditLog, User
-from conftest import login
 from core.models import MailOutbox
 from people import dayoff
 from people.models import DayOffRequest, StylistProfile
@@ -19,6 +19,10 @@ from scheduling.models import Appointment, AppointmentStatus
 from scheduling.tests.test_booking import confirm, day_at, requested, send_request
 
 S = AppointmentStatus
+
+
+def post_json(client, url, body):
+    return client.post(url, body, content_type="application/json")
 
 
 def call(client, method, url, body=None):
@@ -233,7 +237,14 @@ def test_a_stylists_weekly_hours_limit_the_slots_and_confirmation(catalogue, cus
 
     days_ahead = (day - timezone.localdate()).days
     late = requested(customer[0], catalogue, start=day_at(days_ahead, 16).isoformat())
-    refused = confirm(desk[0], late, asha, day_at(days_ahead, 16))
+    # "Any stylist" never goes to someone off shift: AIR gave it to Ravi, and the desk cannot
+    # move it to Asha outside her hours.
+    assert Appointment.objects.get(pk=late).hold_stylist == catalogue["ravi"]
+    refused = post_json(
+        desk[0],
+        f"/api/desk/appointments/{late}/reassign/",
+        {"stylist": str(asha.id), "reason": "other"},
+    )
     assert refused.status_code == 400 and "working hours" in refused.json()["detail"]
     assert confirm(desk[0], late, catalogue["ravi"], day_at(days_ahead, 16)).status_code == 200
     ok = requested(customer[0], catalogue, start=day_at(days_ahead, 11).isoformat())
@@ -307,7 +318,13 @@ def test_approving_days_off_blocks_the_stylist_and_tells_them(
     assert booking.free_starts(day, 45, [catalogue["asha"].id]) == []
     assert booking.free_starts(day, 45, [catalogue["ravi"].id])  # others unaffected
     request_id = requested(customer[0], catalogue, start=day_at(10, 11).isoformat())
-    refused = confirm(desk[0], request_id, catalogue["asha"], day_at(10, 11))
+    # "Any stylist" skips a stylist on time off, and the desk cannot move it to her either.
+    assert Appointment.objects.get(pk=request_id).hold_stylist == catalogue["ravi"]
+    refused = post_json(
+        desk[0],
+        f"/api/desk/appointments/{request_id}/reassign/",
+        {"stylist": str(catalogue["asha"].id), "reason": "other"},
+    )
     assert refused.status_code == 400 and "time off" in refused.json()["detail"]
     mine = asha[0].get("/api/stylist/schedule/").json()["days_off"][0]
     assert mine["status"] == "approved" and mine["decision_note"] == "Enjoy"

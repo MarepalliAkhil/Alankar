@@ -99,12 +99,25 @@ def test_the_last_units_of_a_product_cannot_be_sold_twice(catalogue, customer, d
 def test_two_desks_cannot_confirm_overlapping_visits_for_one_stylist(
     catalogue, customer, desk, make_user
 ):
-    from scheduling.models import Appointment, AppointmentStatus
+    from scheduling.models import Appointment, AppointmentStatus, StylistOffer
     from scheduling.tests.test_booking import confirm, day_at, requested
 
     client, _ = customer
     first = requested(client, catalogue, start=day_at(3, 11).isoformat())
     second = requested(client, catalogue, start=day_at(3, 11, 15).isoformat())
+    # "Any stylist" requests now get a stylist when they are created (scheduling/anystylist.py),
+    # so two such requests can never be held by one stylist at overlapping times. This test is
+    # about the DESK choosing the stylist, so both requests go back to "no stylist asked yet",
+    # as requests made before that rule were.
+    pending = Appointment.objects.filter(pk__in=[first, second])
+    StylistOffer.objects.filter(appointment__in=pending).delete()
+    pending.update(
+        any_stylist=False,
+        hold_stylist=None,
+        hold_start=None,
+        hold_end=None,
+        stylist_status="not_asked",
+    )
     other = second_desk(make_user)
     asha = catalogue["asha"]
     results = run_together(

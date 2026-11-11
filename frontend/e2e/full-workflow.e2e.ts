@@ -62,8 +62,12 @@ test('customer asks for a haircut a few days ahead', async () => {
     stylist: 'Rahul · Senior Hair Stylist',
     time: '10:00 am',
   });
+  // The form now ends on its own "Request sent" screen, with a link to My appointments.
+  await expect(page.getByRole('heading', { name: 'Request sent' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole('link', { name: 'Go to My appointments' }).click();
   await expect(page).toHaveURL(/\/customer\/appointments$/);
-  await expect(page.getByText('Booking request sent')).toBeVisible();
   await expect(page.getByText('Waiting for approval').first()).toBeVisible();
 });
 

@@ -184,6 +184,10 @@ export interface CustomerAppointment extends AppointmentBase {
   /** Only the TYPE of who accepted and a ready-made label; never the receptionist. */
   reception_actor?: '' | 'receptionist' | 'air';
   reception_label?: string;
+  /** The customer chose "Any stylist". */
+  any_stylist?: boolean;
+  /** "Stylist: Asha, assigned by AIR" (only who has it now, never who declined). */
+  stylist_note?: string;
   timeline?: TimelineStep[];
   sorry_note?: SorryNote | null;
   approval?: ApprovalInfo | null;

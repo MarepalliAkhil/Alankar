@@ -537,9 +537,52 @@ def create_request(
         # completion and pay); only the amount to pay online grows.
         extra, _ = products.price_of(wanted)
         amount_payable += extra
-    from scheduling import approvals
+    from scheduling import anystylist, approvals
 
     approvals.release_closed_requests(customer)
+    try:
+        return _create_request_row(
+            customer=customer,
+            service=service,
+            q=q,
+            start=start,
+            stylist=stylist,
+            contact=contact,
+            notes=notes,
+            allergies=allergies,
+            price_total=price_total,
+            gst_amount=gst_amount,
+            amount_payable=amount_payable,
+            package_purchase=package_purchase,
+            credit=credit,
+            wanted=wanted,
+        )
+    except anystylist.NoStylistFree:
+        anystylist.log_no_one_free(customer, service, start)
+        raise
+
+
+def _create_request_row(
+    *,
+    customer,
+    service,
+    q,
+    start,
+    stylist,
+    contact,
+    notes,
+    allergies,
+    price_total,
+    gst_amount,
+    amount_payable,
+    package_purchase,
+    credit,
+    wanted,
+) -> Appointment:
+    """The request row itself, in one transaction. With no stylist ("Any stylist") AIR's rules
+    pick a free one inside the same transaction; if nobody is free nothing is created."""
+    from scheduling import anystylist, approvals
+
     with transaction.atomic():
         if stylist is not None:
             # Two customers asking for the same stylist at the same moment: the stylist row is
@@ -580,7 +623,10 @@ def create_request(
             raise BookingError(exc.message, code=exc.code, field="products") from exc
         if credit is not None:
             packagecodes.reserve(credit, appointment=appt, actor=customer)
-        approvals.open_request(appt, stylist=stylist)
+        if stylist is None:
+            anystylist.assign_new(appt)  # "Any stylist": AIR's rules pick a free stylist
+        else:
+            approvals.open_request(appt, stylist=stylist)
         record(appt, "requested", actor=customer)
         approvals.announce_new_request(appt)
     return appt
@@ -900,6 +946,12 @@ def desk_actions(appt: Appointment, now: datetime | None = None) -> list[str]:
     if open_for_answers and (
         status == S.DECLINED_BY_STYLIST
         or (status == S.REQUESTED and appt.stylist_status == ApprovalStatus.NOT_ASKED)
+        # "Any stylist" requests still waiting for their stylist can be moved by staff too.
+        or (
+            appt.any_stylist
+            and status == S.REQUESTED
+            and appt.stylist_status == ApprovalStatus.PENDING
+        )
     ):
         actions.append("reassign")
     if status == S.AWAITING_PAYMENT:

@@ -9,7 +9,7 @@ import { PASSWORD, USERS } from './helpers';
 const SHOTS = '../docs/ui-screenshots';
 const DELAY_MS = 2000;
 
-function slow(route: Route, then: () => Promise<void>) {
+function slow(_route: Route, then: () => Promise<void>) {
   return new Promise<void>((done) => {
     setTimeout(() => {
       void then().finally(done);

@@ -32,6 +32,8 @@ NUMBER_KEYS = (
     "links_expired",
     "orders",
     "handed_off",
+    "stylists_auto_assigned",
+    "reassignments",
     "needs_you",
 )
 _DIGITS = re.compile(r"\d+")
@@ -52,6 +54,8 @@ def numbers_from(counts: dict, needs: int) -> dict:
         "links_expired": counts["links_expired"],
         "orders": counts["orders_created"] + counts["orders_updated"],
         "handed_off": counts["handed_off"],
+        "stylists_auto_assigned": counts.get("stylists_auto_assigned", 0),
+        "reassignments": counts.get("reassignments", 0),
         "needs_you": needs,
     }
 
@@ -79,6 +83,13 @@ def template(n: dict) -> str:
         f" {_n(n['handed_off'], 'item', 'items')} to a person.",
         f"{_n(n['needs_you'], 'item needs', 'items need')} you now.",
     ]
+    if n.get("stylists_auto_assigned") or n.get("reassignments"):
+        parts.insert(
+            -1,
+            f'For "Any stylist" requests AIR chose'
+            f" {_n(n['stylists_auto_assigned'], 'stylist', 'stylists')} and moved"
+            f" {_n(n['reassignments'], 'request', 'requests')} to the next free stylist.",
+        )
     return " ".join(parts)
 
 

@@ -53,8 +53,12 @@ test('a paid, scheduled visit opens the conversation', async () => {
     stylist: 'Rahul · Senior Hair Stylist',
     time: '12:00 pm',
   });
-  await expect(page).toHaveURL(/\/customer\/appointments$/, { timeout: 30_000 });
-  await expect(page.getByText('Booking request sent')).toBeVisible();
+  // The form now ends on its own "Request sent" screen, with a link to My appointments.
+  await expect(page.getByRole('heading', { name: 'Request sent' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.getByRole('link', { name: 'Go to My appointments' }).click();
+  await expect(page).toHaveURL(/\/customer\/appointments$/);
 
   const dp = desk.page;
   await dp.goto('/appointments');

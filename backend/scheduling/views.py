@@ -25,7 +25,7 @@ from people import desk as customer_desk
 from people import ratings
 from people.models import CustomerProfile, DayOffRequest, StylistProfile
 from scheduling import approvals, booking, changes, products
-from scheduling.models import Appointment, AppointmentEvent, Room, Service
+from scheduling.models import Appointment, AppointmentEvent, Room, Service, StylistOffer
 from scheduling.serializers import (
     AcceptSerializer,
     BookingRequestSerializer,
@@ -482,7 +482,13 @@ def flagged(qs):
 
 
 def desk_queryset():
-    return appointment_queryset().select_related("air_state")
+    return (
+        appointment_queryset()
+        .select_related("air_state")
+        .prefetch_related(
+            Prefetch("offers", queryset=StylistOffer.objects.select_related("stylist"))
+        )
+    )
 
 
 def desk_appointment(pk) -> Appointment:

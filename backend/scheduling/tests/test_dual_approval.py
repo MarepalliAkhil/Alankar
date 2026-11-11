@@ -4,14 +4,14 @@ staff change a slot)."""
 from datetime import timedelta
 
 import pytest
+from conftest import login
 from django.test import Client
 from django.utils import timezone
+from notifications.models import Notification, SimulatedSms
 
 from accounts.models import AuditLog
-from conftest import login
 from core.jobs import booking_request_reminders
 from core.models import MailOutbox
-from notifications.models import Notification, SimulatedSms
 from scheduling import approvals
 from scheduling.models import Appointment, AppointmentStatus, SlotChange
 from scheduling.tests.test_booking import (  # noqa: F401  (shared fixtures and helpers)
@@ -105,16 +105,16 @@ def test_stylist_can_answer_first(customer, desk, asha, catalogue):
 
 
 @pytest.mark.django_db
-def test_an_any_request_needs_the_receptionist_to_pick_a_stylist_first(
-    customer, desk, asha, ravi, catalogue
-):
+def test_an_any_request_goes_straight_to_one_free_stylist(customer, desk, asha, ravi, catalogue):
+    # Before "Any stylist" (scheduling/anystylist.py) the receptionist had to pick a stylist;
+    # now AIR's rules pick one who is free and ask them, and the desk only gives its own yes.
     appt_id = asked(customer[0], catalogue, who=None)
-    # Nobody has been asked, so the stylists see nothing.
-    assert asha[0].get("/api/stylist/requests/").json()["pending"] == []
-    assert reception_accept(desk, appt_id).status_code in (400, 409)
-    assert reception_accept(desk, appt_id, catalogue["asha"]).status_code == 200
-    assert len(asha[0].get("/api/stylist/requests/").json()["pending"]) == 1
-    assert ravi[0].get("/api/stylist/requests/").json()["pending"] == []
+    pending = [
+        len(asha[0].get("/api/stylist/requests/").json()["pending"]),
+        len(ravi[0].get("/api/stylist/requests/").json()["pending"]),
+    ]
+    assert sorted(pending) == [0, 1]  # exactly one stylist was asked
+    assert reception_accept(desk, appt_id).status_code == 200  # no stylist to choose any more
 
 
 @pytest.mark.django_db
@@ -436,7 +436,9 @@ def test_admin_cannot_reach_appointments_or_schedule(logged_in, method, url):
 def test_admin_cannot_act_on_a_booking_at_all(customer, desk, catalogue, logged_in):
     admin, _ = logged_in("admin")
     appt_id = asked(customer[0], catalogue)
-    for action in ("confirm", "reject", "reassign", "move", "cancel", "check-in", "no-show"):
+    # Reassign is the one exception: the admin may give an "Any stylist" request to another
+    # free stylist (test_any_stylist.py).
+    for action in ("confirm", "reject", "move", "cancel", "check-in", "no-show"):
         assert post(admin, f"/api/desk/appointments/{appt_id}/{action}/").status_code in (403, 404)
     assert admin.get(f"/api/desk/appointments/{appt_id}/").status_code in (403, 404)
     assert appt_of(appt_id).status == S.REQUESTED

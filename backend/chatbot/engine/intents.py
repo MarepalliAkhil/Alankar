@@ -430,6 +430,14 @@ INTENTS.append(
 )
 INTENTS.append(
     Intent(
+        "any_stylist_info",
+        {"anystylist": 5, "mean": 2, "choose": 1},
+        requires=["anystylist"],
+        template="What does Any stylist mean?",
+    )
+)
+INTENTS.append(
+    Intent(
         "why_declined",
         {"declined": 3, "rescheduled": 2, "request": 1, "booking": 1, "moved": 1},
         requires=["why"],
@@ -484,5 +492,6 @@ INTENT_TO_KB = {
     "package_cancel": "package_cancel",
     "membership_manage": "membership_manage",
     "who_accepted": "who_accepted_booking",
+    "any_stylist_info": "any_stylist",
     "why_declined": "why_declined_or_rescheduled",
 }

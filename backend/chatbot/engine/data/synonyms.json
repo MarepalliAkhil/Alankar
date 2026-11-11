@@ -273,6 +273,12 @@
       "use coupon",
       "use a coupon",
       "apply code"
+    ],
+    "anystylist": [
+      "any stylist",
+      "any available stylist",
+      "any available",
+      "anyone available"
     ]
   },
   "surface": {

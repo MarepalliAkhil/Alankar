@@ -77,7 +77,7 @@ function Menu({ menu, onNavigate }: { menu: MenuEntry[]; onNavigate?: () => void
           {group.heading && (
             <p
               id={`zen-group-${group.id}`}
-              className="px-3.5 pb-1 text-[13px] font-medium leading-snug tracking-normal text-text-muted"
+              className="px-3.5 pb-1 text-sm font-medium leading-snug tracking-normal text-text-muted"
             >
               {group.heading}
             </p>

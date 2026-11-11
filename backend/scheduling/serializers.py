@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from core import crypto
 from notifications import templates
-from scheduling import acceptance, booking, timeline
+from scheduling import acceptance, anystylist, booking, timeline
 from scheduling.models import (
     Appointment,
     AppointmentEvent,
@@ -263,6 +263,7 @@ class CustomerAppointmentSerializer(_AppointmentBase):
     pending_change = serializers.SerializerMethodField()
     reception_actor = serializers.SerializerMethodField()
     reception_label = serializers.SerializerMethodField()
+    stylist_note = serializers.SerializerMethodField()
     timeline = serializers.SerializerMethodField()
     sorry_note = serializers.SerializerMethodField()
 
@@ -272,6 +273,8 @@ class CustomerAppointmentSerializer(_AppointmentBase):
             *COMMON_FIELDS,
             "reception_actor",
             "reception_label",
+            "any_stylist",
+            "stylist_note",
             "timeline",
             "sorry_note",
             "notes",
@@ -291,6 +294,10 @@ class CustomerAppointmentSerializer(_AppointmentBase):
 
     def get_reception_label(self, obj: Appointment) -> str:
         return acceptance.label(obj.reception_actor)
+
+    def get_stylist_note(self, obj: Appointment) -> str:
+        """ "Stylist: Asha, assigned by AIR" for "Any stylist" (only who has it now)."""
+        return anystylist.customer_line(obj)
 
     def get_timeline(self, obj: Appointment) -> list[dict]:
         return timeline.timeline(obj)
@@ -407,11 +414,16 @@ class DeskAppointmentSerializer(_AppointmentBase):
     asked_stylist_name = serializers.SerializerMethodField()
     reception_by_air = serializers.SerializerMethodField()
     reception_accepted_at = serializers.SerializerMethodField()
+    stylist_offers = serializers.SerializerMethodField()
     stylist_decline_reason_label = serializers.SerializerMethodField()
 
     def get_asked_stylist_id(self, obj: Appointment):
         asked = obj.hold_stylist_id or obj.stylist_id
         return str(asked) if asked else None
+
+    def get_stylist_offers(self, obj: Appointment) -> list[dict]:
+        """Staff only: who was offered an "Any stylist" request and what came of it."""
+        return anystylist.history(obj) if obj.any_stylist else []
 
     def get_reception_by_air(self, obj: Appointment) -> bool:
         """True when AIR (covering the desk) gave the front-desk answer, not a person."""
@@ -436,6 +448,8 @@ class DeskAppointmentSerializer(_AppointmentBase):
             "reception_status",
             "reception_status_label",
             "reception_by_air",
+            "any_stylist",
+            "stylist_offers",
             "reception_accepted_at",
             "stylist_status",
             "stylist_status_label",

@@ -145,13 +145,17 @@ describe('For Zenotians sidebar: rows', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(within(nav).queryByRole('link', { name: 'Summary' })).not.toBeInTheDocument();
     await user.click(toggle);
+    // The click opens the first About page, which may draw the sidebar again: look it up afresh.
+    const fresh = () => screen.getByRole('navigation', NAV);
     await waitFor(() =>
-      expect(within(nav).getByRole('button', { name: 'About me' })).toHaveAttribute(
+      expect(within(fresh()).getByRole('button', { name: 'About me' })).toHaveAttribute(
         'aria-expanded',
         'true',
       ),
     );
-    expect(within(nav).getByRole('link', { name: 'Summary', current: 'page' })).toBeInTheDocument();
+    expect(
+      within(fresh()).getByRole('link', { name: 'Summary', current: 'page' }),
+    ).toBeInTheDocument();
   });
 
   it('lists the sub-items in order with 15 px text, 38 px rows and a guide line', async () => {

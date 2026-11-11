@@ -28,8 +28,8 @@ from accounts.models import AuditLog
 from notifications import service as notify_service
 from notifications import sorry, templates
 from people.models import DayOffRequest, StylistProfile
-from scheduling import acceptance, booking, products
-from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus, Room
+from scheduling import acceptance, anystylist, booking, products
+from scheduling.models import Appointment, AppointmentStatus, ApprovalStatus, Room, StylistOffer
 from wallet import packagecodes
 from website.content import booking_settings
 
@@ -98,6 +98,32 @@ def open_request(appt: Appointment, *, stylist: StylistProfile | None) -> None:
     else:
         appt.stylist_status = A.NOT_ASKED
     appt.save()
+
+
+def tell_new_stylist(appt: Appointment) -> None:
+    """The stylist now holding the request is asked, exactly like a named-stylist request."""
+    if appt.hold_stylist_id and appt.hold_stylist.user_id:
+        notify_service.notify(
+            appt.hold_stylist.user,
+            K.REQUEST_NEW,
+            "stylist_new_request",
+            link="/requests",
+            appointment_id=appt.id,
+            **_vars(appt),
+        )
+
+
+def tell_stylist_gone(appt: Appointment, stylist: StylistProfile) -> None:
+    """A stylist who did not answer in time: the request no longer waits for them."""
+    if stylist.user_id:
+        notify_service.notify(
+            stylist.user,
+            K.REQUEST_UPDATE,
+            "stylist_expired",
+            link="/requests",
+            appointment_id=appt.id,
+            **_vars(appt, stylist=stylist.display_name),
+        )
 
 
 def announce_new_request(appt: Appointment) -> None:
@@ -326,6 +352,7 @@ def reception_decline(appt_id, *, actor, reason: str = "") -> Appointment:
         appt.reception_status = A.DECLINED
         appt.reject_reason = reason[:300]
         appt.save()
+        anystylist.close_offers(appt, StylistOffer.Outcome.ENDED)
         _release_resources(appt, "Booking request declined by the front desk", actor)
         booking.record(appt, "reception_declined", actor=actor, from_status=S.REQUESTED)
         notify_service.tell_customer(
@@ -355,12 +382,29 @@ def reassign(appt_id, *, actor, stylist: StylistProfile) -> Appointment:
         if appt.approval_expires_at is not None and appt.approval_expires_at <= timezone.now():
             raise booking.BookingError("This request has run out of time.", code="conflict")
         unassigned = appt.status == S.REQUESTED and appt.stylist_status == A.NOT_ASKED
-        if not (unassigned or appt.status == S.DECLINED_BY_STYLIST):
+        # An "Any stylist" request that is still waiting for its stylist can be moved as well.
+        moving = (
+            appt.any_stylist and appt.status == S.REQUESTED and appt.stylist_status == A.PENDING
+        )
+        if not (unassigned or moving or appt.status == S.DECLINED_BY_STYLIST):
             raise booking.BookingError("This request cannot be given to another stylist now.")
         if appt.hold_stylist_id == stylist.id:
             raise booking.BookingError("Choose a different stylist: this one already answered.")
+        if appt.any_stylist and stylist.id in set(
+            appt.offers.exclude(outcome=StylistOffer.Outcome.MOVED).values_list(
+                "stylist_id", flat=True
+            )
+        ):
+            raise booking.BookingError(
+                "Choose a different stylist: this one already declined or did not answer."
+            )
         was_declined = appt.status == S.DECLINED_BY_STYLIST
+        previous = appt.hold_stylist if moving else None
         _assign(appt, stylist)
+        if appt.any_stylist:
+            anystylist.staff_moved(appt, stylist, actor=actor)
+        if previous is not None:
+            tell_stylist_gone(appt, previous)
         appt.status = S.REQUESTED
         appt.stylist_decline_reason = ""
         appt.save()
@@ -413,6 +457,8 @@ def stylist_accept(appt_id, *, profile: StylistProfile, actor) -> Appointment:
         check_stylist_free(appt, profile)  # may block the accept with a clear message
         appt.stylist_status = A.ACCEPTED
         appt.save()
+        if appt.any_stylist:
+            anystylist.close_offers(appt, StylistOffer.Outcome.ACCEPTED)
         booking.record(appt, "stylist_accepted", actor=actor, from_status=S.REQUESTED)
         notify_service.notify_many(
             notify_service.staff_users("receptionist"),
@@ -440,6 +486,22 @@ def stylist_decline(appt_id, *, profile: StylistProfile, actor, reason: str) -> 
             raise booking.BookingError(
                 "This request is no longer waiting for your answer.", code="conflict"
             )
+        if appt.any_stylist and anystylist.try_next(
+            appt, StylistOffer.Outcome.DECLINED, actor=actor
+        ):
+            # "Any stylist": AIR offered it to the next free stylist. The customer is not told
+            # who declined; the front desk sees the history and the private reason.
+            notify_service.notify_many(
+                notify_service.staff_users("receptionist"),
+                K.REQUEST_UPDATE,
+                "reception_stylist_declined",
+                link="/appointments",
+                appointment_id=appt.id,
+                **_vars(
+                    appt, stylist=profile.display_name, reason=templates.DECLINE_REASONS[reason]
+                ),
+            )
+            return appt
         appt.status = S.DECLINED_BY_STYLIST
         appt.stylist_status = A.DECLINED
         appt.stylist_decline_reason = reason
@@ -483,6 +545,7 @@ def expire_requests(now: datetime | None = None) -> int:
     """Ends requests nobody finished answering, and frees what a declined request kept.
     Safe to run as often as you like."""
     now = now or timezone.now()
+    anystylist.handle_timeouts(now)  # "Any stylist": a silent stylist hands over to the next one
     count = 0
     due = Appointment.objects.filter(status=S.REQUESTED, approval_expires_at__lte=now).values_list(
         "pk", flat=True
@@ -499,6 +562,7 @@ def expire_requests(now: datetime | None = None) -> int:
                 continue
             appt.status = S.EXPIRED
             appt.save()
+            anystylist.close_offers(appt, StylistOffer.Outcome.ENDED, now)
             _release_resources(appt, "Booking request expired")
             booking.record(appt, "expired", from_status=S.REQUESTED)
             ctx = _vars(appt)

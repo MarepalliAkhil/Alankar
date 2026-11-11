@@ -281,4 +281,15 @@ BUILTIN_KB = [
         ],
         "answer": "We are sorry when that happens. A stylist or the front desk could not take that time, or it ran out of time, or the salon had to change it. We never share a stylist's private reason. My appointments shows the nearest free times and Book again, or ask the front desk for help.",
     },
+    {
+        "id": "any_stylist",
+        "question": "What does Any stylist mean?",
+        "tags": [
+            "any stylist",
+            "any available stylist",
+            "no preference stylist",
+            "air picks stylist",
+        ],
+        "answer": 'Choose "Any available stylist" and AIR, our virtual receptionist, picks a stylist who offers your service and is free for your whole visit, sharing the work fairly between stylists. Your request then goes to that stylist like any other request. If they cannot take it, AIR asks the next free stylist. My appointments shows the stylist assigned by AIR.',
+    },
 ]

@@ -297,9 +297,12 @@ def event_for_key(key: str) -> str | None:
 
 
 def email_footer(appt) -> str:
-    """The "who accepted" sentence added to every email about a request the front desk accepted."""
-    line = reception_line(appt)
-    return f"{line}." if line else ""
+    """Added to every email about a request: who accepted it (once the front desk has) and, for
+    "Any stylist", the stylist AIR assigned ("Stylist: Asha, assigned by AIR")."""
+    from scheduling import anystylist
+
+    lines = [reception_line(appt), anystylist.customer_line(appt)]
+    return "\n".join(f"{line}." for line in lines if line)
 
 
 def email_body(key: str, rendered_body: str, appt, context: dict) -> str:

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ANY_STYLIST_LABEL } from '../../config/anyStylist';
 import { CalendarX, Minus, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cn } from '../../lib/cn';
@@ -307,7 +308,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
 
   const dayOptions = useMemo(() => days.map((d) => ({ value: d, label: formatDay(d) })), [days]);
   const stylistOptions = [
-    { value: '', label: 'Any available stylist' },
+    { value: '', label: ANY_STYLIST_LABEL },
     ...stylists.map((s) => ({ value: s.id, label: `${s.display_name} · ${s.title}` })),
   ];
 

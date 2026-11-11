@@ -155,6 +155,10 @@ def submit_booking(
         # The stylist has the same window as the hold, so a stalled request ends with it.
         appt.approval_expires_at = min(appt.approval_expires_at or hold.expires_at, hold.expires_at)
         appt.save(update_fields=["approval_expires_at", "updated_at"])
+        if hold.any_stylist:
+            from scheduling import anystylist
+
+            anystylist.mark_chat_request(appt, hold.stylist, now=now)
         state = AirRequestState.objects.create(
             appointment=appt,
             session_id=session_id[:64],
