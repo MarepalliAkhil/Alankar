@@ -2,21 +2,21 @@ import type { Who } from './helpers';
 
 /** Every section of the For Zenotians page has its own URL. */
 export const ZENOTIANS_PAGES = [
-  '/zenotians',
-  '/zenotians/about/summary',
-  '/zenotians/about/education',
-  '/zenotians/about/projects',
-  '/zenotians/about/experience',
-  '/zenotians/about/skills',
-  '/zenotians/about/certifications',
-  '/zenotians/about-zenoti',
-  '/zenotians/day',
-  '/zenotians/project',
-  '/zenotians/mapping',
-  '/zenotians/quality',
-  '/zenotians/security',
-  '/zenotians/limitations',
-  '/zenotians/contact',
+  '/for-zenotians',
+  '/for-zenotians/about/summary',
+  '/for-zenotians/about/education',
+  '/for-zenotians/about/projects',
+  '/for-zenotians/about/experience',
+  '/for-zenotians/about/skills',
+  '/for-zenotians/about/certifications',
+  '/for-zenotians/about-zenoti',
+  '/for-zenotians/day',
+  '/for-zenotians/project',
+  '/for-zenotians/mapping',
+  '/for-zenotians/quality',
+  '/for-zenotians/security',
+  '/for-zenotians/limitations',
+  '/for-zenotians/contact',
 ];
 
 /** Public pages anyone can open. */

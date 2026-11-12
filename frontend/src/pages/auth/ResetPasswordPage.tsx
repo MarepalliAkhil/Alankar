@@ -4,13 +4,14 @@ import { useSearchParams } from 'react-router-dom';
 import { confirmPasswordReset } from '../../api/auth';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { serverFieldErrors } from '../../api/client';
+import { Breadcrumbs } from '../../components/layout/Breadcrumbs';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { ButtonLink, Card, EmptyState } from '../../components/ui';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 import { SetPasswordForm } from './SetPasswordForm';
 
 export default function ResetPasswordPage() {
-  useDocumentTitle('Choose a new password');
+  usePageHead('/reset-password');
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const [submitting, setSubmitting] = useState(false);
@@ -34,8 +35,11 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <PageContainer className="flex justify-center py-xl">
+    <PageContainer className="flex flex-col items-center gap-md py-xl">
+      <Breadcrumbs path="/reset-password" className="w-full max-w-md" />
       <Card variant="dense" padding="lg" className="w-full max-w-md">
+        {/* One H1 in every state (the form shows it visibly). */}
+        {(!token || done) && <h1 className="sr-only">Choose a new password</h1>}
         {!token ? (
           <EmptyState
             icon={<Link2Off className="h-6 w-6" />}

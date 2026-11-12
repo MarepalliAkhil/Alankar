@@ -3,6 +3,7 @@ import type { SiteData } from '../../api/public';
 import { brand } from '../../config/brand';
 import { AlankarIcon, ButtonLink } from '../ui';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { safeContact } from '../../config/contact';
 import { LoaderSlot } from '../brand/LogoLoader';
 import { PageContainer } from '../layout/PageContainer';
 
@@ -24,7 +25,7 @@ export interface HomeHeroProps {
 export function HomeHero({ site, loading, book, staffHome, tel }: HomeHeroProps) {
   const loaderShown = useDelayedLoading(loading && !site);
   const hours = (site?.hours ?? []).slice(0, 2);
-  const contact = site?.contact;
+  const { contact } = safeContact(site?.contact);
   return (
     <section
       id="home-alankar"

@@ -2,11 +2,11 @@
   "roles": 4,
   "pages": 72,
   "apiEndpoints": 278,
-  "automatedTests": 2143,
+  "automatedTests": 2197,
   "testBreakdown": {
     "backend": 1276,
-    "frontendUnit": 742,
-    "endToEnd": 125
+    "frontendUnit": 779,
+    "endToEnd": 142
   },
   "migrations": 108,
   "accessibilityScreens": 43,

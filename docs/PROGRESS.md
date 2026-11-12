@@ -2720,3 +2720,52 @@ here). Test plan and 15-minute demo walkthrough: `docs/FINAL_TEST_PLAN.md`.
 - `AirActivityPage.test.tsx`: two KPI fixtures had the same numbers, so "Up 150% from 2" matched twice.
 - `art.test.ts`: the AIR pose slots are photo slots too; the test now leaves out Meera's and AIR's poses.
 - `repo-stats.json` regenerated. `window.scrollTo` stubbed in the test setup (jsdom noise).
+
+
+## Production polish: SEO, metadata, performance, no placeholders (2026-11-12): DONE in code (unit tests run in a Linux copy; build, Playwright and the share images not run here)
+
+Details and host rules: `docs/SEO.md`.
+- One source of truth: `frontend/src/seo/seo-data.js` (pages, titles "Page | Alankar", 120 to 160
+  character descriptions, indexed or not, breadcrumbs, share images, JSON-LD builders). SITE_URL and
+  the business details come from `VITE_*` variables through `src/config/brand.ts` (`site`,
+  `SITE_URL`, `business`); empty or placeholder details mean no LocalBusiness data and honest
+  "Demo project" labels on the site.
+- Addresses: `/for-zenotians` (old `/zenotians/...` redirect, in the app and as 301 host rules),
+  `/book` (booking sheet or customer sign-in). `shared/policy.json` public routes updated.
+- Head: `src/seo/head.ts` (`usePageHead`, `applyPrivateHead`); `useDocumentTitle` now means a
+  noindex page; every signed-in page gets "Menu label | Alankar" and noindex, nofollow
+  (RolePage). Designed 404 (`NotFoundPage`), one H1 on every public page, breadcrumbs with
+  BreadcrumbList below the top level, an Explore list in the footer, "Also at Alankar" links between
+  the divisions, web manifest, no "Loading..." tab title.
+- Build: `scripts/seo-build.mjs` (static head per public route, app.html, 404.html, sitemap.xml,
+  robots.txt, llms.txt, _redirects), `scripts/check-sourcemaps.mjs` (in `npm run build`),
+  `scripts/check-build.mjs` (`npm run build:check`: sitemap, robots, llms, heads, no maps,
+  200 KB gzip first-load budget, no placeholders), `scripts/og-images.mjs` (`npm run og:images`,
+  sharp), `npm run build:analyze` (rollup-plugin-visualizer, added to devDependencies: run
+  `npm install`). `build.sourcemap: false`, `build.manifest: true`, manualChunks for react, router,
+  react-query, charts and dnd-kit; the signed-in AppShell is lazy. No dependency was unused.
+- Placeholders: the shop contact seeded by `backend/website/demo_data.py` ("Demo address,
+  Vijayawada", "+91 90000 00000", "hello@example.com") is shown as "Demo project, address not
+  real" / "no real phone number" / "no real email address" (footer, home, division call link,
+  sorry notes). The backend seed and the chatbot's contact answer were not changed (backend).
+- Tests: `src/seo/seo.test.ts`, `src/seo/seo-pages.test.tsx`, `src/seo/img-alt.test.ts`, App test
+  for honest labels; e2e `console-errors.e2e.ts`, `seo.e2e.ts`.
+
+## Navbar blends with the hero; For Zenotians as one page (2026-11-12): DONE in code (unit tests run in a Linux copy; browser not run)
+
+- Navbar: on Home, Salon, Spa and Beauty Parlor the main area moves up by `--nav-total`, so the hero
+  starts at the top of the window under the glass navbar (`.under-nav`, `components/layout/hero-pages.ts`).
+  The bar is light glass at the top and denser once scrolled (`.glass-bar[data-scrolled='true']`),
+  solid with reduced transparency; safe area at the top on phones. The splash target is unchanged.
+- For Zenotians: one continuous page (`pages/zenotians/ZenotiansLayout.tsx`): sections stacked in menu
+  order, `min-height: 100dvh`, `scroll-snap-type: y proximity` on this page only (none with reduced
+  motion), IntersectionObserver keeps the side menu (aria-current="location"), the desktop dot list
+  and the phone section bar ("3 of 10", Previous / Next, 44 px) in step, `history.replaceState`
+  keeps the address (no history entries), old section addresses open the page at that section,
+  "Next: <section>" at the end of each section, Page Down / Page Up between sections, focus moves to
+  the section heading. One H1 (the overview headline); section titles are H2 (About me items H3),
+  through `components/layout/heading-level.ts`. Content and the reveal animation are unchanged.
+- Tests: `pages/zenotians-onepage.test.tsx`, `components/layout/navbar-hero.test.tsx`, updated
+  `zenotians.test.tsx` and `zenotians-sidebar.test.tsx`; e2e `zenotians.e2e.ts` (rewritten for the
+  one page) and `hero-and-sections.e2e.ts` (desktop and the five mobile projects; screenshots in
+  `frontend/mobile-screens/hero/`).

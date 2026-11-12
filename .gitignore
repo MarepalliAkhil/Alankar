@@ -52,3 +52,6 @@ results/
 
 # Mobile matrix screenshots (frontend/e2e/mobile-matrix.e2e.ts): kept on disk, never committed
 mobile-screens/
+
+# Bundle map from npm run build:analyze
+dist-stats.html

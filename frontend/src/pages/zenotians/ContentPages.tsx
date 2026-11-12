@@ -5,7 +5,6 @@ import { PageHeader } from '../../components/layout/PageContainer';
 import { Card } from '../../components/ui';
 import { ButtonLink } from '../../components/ui/ButtonLink';
 import { buttonClasses } from '../../components/ui/button-styles';
-import { useSeo } from '../../hooks/useSeo';
 import { cn } from '../../lib/cn';
 import stats from '../../generated/repo-stats.json';
 import { LazyLifecycleDiagram, LazyRolesDiagram } from './LazyDiagram';
@@ -22,7 +21,6 @@ const crumbs = (label: string) => [{ label: 'For Zenotians', to: ROOT }, { label
 function AboutZenoti() {
   const { content } = useZenotians();
   const z = content.zenoti ?? {};
-  useSeo('About Zenoti · For Zenotians', 'Public information from Zenoti’s website, with sources.');
   const checked = z.last_checked;
   const fact = (title: string, body: React.ReactNode) => (
     <Card variant="dense" className="flex h-full flex-col gap-2">
@@ -120,10 +118,6 @@ export function AboutZenotiPage() {
 function ProjectSection() {
   const { content } = useZenotians();
   const p = content.project ?? {};
-  useSeo(
-    'The project · For Zenotians',
-    p.intro?.slice(0, 200) || 'What the project is and how it works.',
-  );
   return (
     <div className="flex flex-col gap-lg">
       <PageHeader
@@ -202,10 +196,6 @@ function Mapping() {
   const { content } = useZenotians();
   const rows = (content.mapping ?? []).filter((r) => r.workflow);
   const limits = new Map((content.limitations?.items ?? []).map((item) => [item.id, item]));
-  useSeo(
-    'How it maps to Zenoti · For Zenotians',
-    'Common salon-software workflows, what Alankar built, and what it left out or simplified.',
-  );
   return (
     <div className="flex flex-col gap-md">
       <PageHeader
@@ -302,10 +292,6 @@ function Quality() {
   const q = content.quality ?? {};
   const accuracy = (q.accuracy ?? []).filter((m) => m.total > 0);
   const checks = (q.checks ?? []).filter((c) => c.title);
-  useSeo(
-    'Quality evidence · For Zenotians',
-    'Test counts, measured chatbot accuracy and the checks behind the project.',
-  );
   const counts = [
     {
       label: 'Automated tests',
@@ -419,10 +405,6 @@ function SecuritySection() {
   const { content } = useZenotians();
   const s = content.security ?? {};
   const items = (s.items ?? []).filter((i) => i.title);
-  useSeo(
-    'Security and privacy · For Zenotians',
-    'Role isolation, sign-in, encryption, the audit log and data retention, with the files they live in.',
-  );
   return (
     <div className="flex flex-col gap-md">
       <PageHeader
@@ -467,10 +449,6 @@ function LimitationsSection() {
   const l = content.limitations ?? {};
   const items = (l.items ?? []).filter((i) => i.area);
   const { hash } = useLocation();
-  useSeo(
-    'Limitations · For Zenotians',
-    'What the project does today and what is out of scope, each checked against the code.',
-  );
   useEffect(() => {
     if (!hash) return;
     document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
@@ -523,7 +501,6 @@ export function LimitationsPage() {
 function Demo() {
   const { content } = useZenotians();
   const d = content.demo ?? {};
-  useSeo('Try the demo · For Zenotians', 'Demo sign-ins for each role, with a short guide.');
   return (
     <div className="flex flex-col gap-md">
       <PageHeader
@@ -580,7 +557,6 @@ function Contact() {
   const { content } = useZenotians();
   const contacts = publicContacts(content);
   const email = contacts.find((c) => c.key === 'email');
-  useSeo('Contact · For Zenotians', 'How to reach me.');
   return (
     <div className="flex flex-col gap-md">
       <PageHeader

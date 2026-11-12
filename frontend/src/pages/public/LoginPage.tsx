@@ -19,7 +19,7 @@ import {
 } from '../../components/ui';
 import { brand } from '../../config/brand';
 import { isLoginRole, loginRoles, type LoginRole } from '../../config/roles';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 import { fieldErrors } from '../../lib/validation';
 import { roleLabel } from '../../policy/policy';
 import { destinationAfterLogin } from '../../routes/destination';
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   const [twoFactor, setTwoFactor] = useState<{ challenge: string; detail: string } | null>(null);
 
-  useDocumentTitle('Login');
+  usePageHead('/login');
 
   const changeRole = (next: LoginRole) => {
     setParams(

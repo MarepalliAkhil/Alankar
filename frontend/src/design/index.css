@@ -1433,3 +1433,81 @@ html[data-switching] *::after {
     min-width: 44px;
   }
 }
+
+/* ---------------------------------------------------------------- navbar over the hero
+   The public navbar floats (sticky) over the page. On a page with a hero (home, salon, spa,
+   beauty parlor) the main area moves up by the navbar's height, so the hero photo starts at the
+   very top of the viewport and runs under the glass navbar: one scene, no band between them.
+   --nav-total is the navbar's whole height: 4rem bar + its top gap (or the phone's safe area). */
+:root {
+  --nav-total: calc(4rem + max(0.5rem, env(safe-area-inset-top)));
+}
+.under-nav {
+  margin-top: calc(-1 * var(--nav-total));
+}
+/* Phones: the division photo grows by the navbar height so the visible part stays the same. */
+.under-nav .division-hero__photo {
+  min-height: calc(38dvh + var(--nav-total));
+  max-height: calc(42dvh + var(--nav-total));
+}
+.under-nav [data-hero='home'] > div {
+  padding-top: calc(var(--nav-total) + 2rem);
+}
+@media (min-width: 641px) {
+  .under-nav .division-hero {
+    padding-top: var(--nav-total);
+    min-height: calc(clamp(520px, 78dvh, 760px) + var(--nav-total));
+  }
+  .under-nav .division-hero__photo {
+    min-height: 0;
+    max-height: none;
+  }
+}
+/* At the top of the page the bar is light glass, so the photo shows through; once the page has
+   scrolled it gets a denser fill so text stays easy to read over any part of a photo. Reduced
+   transparency (system or the visitor's toggle) keeps it solid at all times (rules above). */
+.glass-bar[data-scrolled='true'] {
+  background-color: color-mix(in srgb, var(--glass-fill-solid) 78%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-bar[data-scrolled='true'] {
+    background-color: var(--glass-fill-solid);
+  }
+}
+[data-transparency='reduced'] .glass-bar[data-scrolled='true'] {
+  background-color: var(--glass-fill-solid);
+}
+
+/* ---------------------------------------------------------------- For Zenotians: one long page
+   Each section starts at a full-screen boundary. Snap is "proximity" (never mandatory), so a long
+   section scrolls freely and nothing is trapped; with reduced motion there is no snap at all and
+   jumps are instant (src/pages/zenotians/ZenotiansLayout.tsx). html already reserves the navbar
+   (scroll-padding-top); on phones and tablets the sticky section bar needs a little more. */
+html.zen-snap {
+  scroll-snap-type: y proximity;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.zen-snap {
+    scroll-snap-type: none;
+  }
+}
+.zen-section {
+  min-height: 100dvh;
+  padding-block: 1rem 2rem;
+  scroll-snap-align: start;
+  scroll-margin-top: 4.25rem;
+}
+[data-zen-about] {
+  scroll-margin-top: 4.25rem;
+}
+@media (min-width: 1024px) {
+  .zen-section,
+  [data-zen-about] {
+    scroll-margin-top: 0.5rem;
+  }
+}
+@media print {
+  .zen-section {
+    min-height: 0;
+  }
+}

@@ -1,56 +1,18 @@
+import { Route } from 'react-router-dom';
+import LegacyZenotians from './LegacyZenotians';
+import { ROOT } from './model';
 import { lazy } from 'react';
-import { Navigate, Route } from 'react-router-dom';
-import type { AboutId } from './model';
 
 const Layout = lazy(() => import('./ZenotiansLayout'));
-const Overview = lazy(() => import('./OverviewPage'));
-const About = lazy(() => import('./AboutPage'));
-const named = <K extends string>(key: K) =>
-  lazy(() =>
-    import('./ContentPages').then((m) => ({ default: m[key as never] as () => JSX.Element })),
-  );
-const AboutZenoti = named('AboutZenotiPage');
-const Project = named('ProjectPage');
-const Mapping = named('MappingPage');
-const Day = lazy(() => import('./StoryPage'));
-const Quality = named('QualityPage');
-const Security = named('SecurityPage');
-const Limitations = named('LimitationsPage');
-const Demo = named('DemoPage');
-const Contact = named('ContactPage');
 
-const ABOUT: AboutId[] = [
-  'summary',
-  'education',
-  'projects',
-  'experience',
-  'skills',
-  'certifications',
-  'achievements',
+export const legacyZenotiansRoutes = [
+  <Route key="zen-old" path="/zenotians" element={<LegacyZenotians />} />,
+  <Route key="zen-old-any" path="/zenotians/*" element={<LegacyZenotians />} />,
 ];
 
-/** Every section of the For Zenotians page has its own shareable URL. */
-export const zenotiansRoutes = (
-  <Route path="/zenotians" element={<Layout />}>
-    <Route index element={<Overview />} />
-    <Route path="about" element={<Navigate to="/zenotians/about/summary" replace />} />
-    {ABOUT.map((id) => (
-      <Route key={id} path={`about/${id}`} element={<About id={id} />} />
-    ))}
-    <Route path="about-zenoti" element={<AboutZenoti />} />
-    <Route path="project" element={<Project />} />
-    <Route path="mapping" element={<Mapping />} />
-    <Route path="day" element={<Day />} />
-    <Route path="quality" element={<Quality />} />
-    <Route path="security" element={<Security />} />
-    <Route path="limitations" element={<Limitations />} />
-    {/* Removed sections: the old addresses go to the overview so no link is left dead. */}
-    <Route path="decisions" element={<Navigate to="/zenotians" replace />} />
-    <Route path="questions" element={<Navigate to="/zenotians" replace />} />
-    {/* The old "Future vision" address: sent to the overview so no link is left dead. */}
-    <Route path="vision" element={<Navigate to="/zenotians" replace />} />
-    <Route path="demo" element={<Demo />} />
-    <Route path="contact" element={<Contact />} />
-    <Route path="*" element={<Navigate to="/zenotians" replace />} />
-  </Route>
-);
+/**
+ * For Zenotians is one page. Every section keeps a shareable address (/for-zenotians/contact,
+ * /for-zenotians/about/skills, ...): opening one shows the same page at that section. Addresses of
+ * removed sections (decisions, questions, vision) open the page at the top.
+ */
+export const zenotiansRoutes = <Route path={`${ROOT}/*`} element={<Layout />} />;

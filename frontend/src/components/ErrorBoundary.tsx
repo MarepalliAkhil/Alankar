@@ -1,4 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { applyPrivateHead } from '../seo/head';
+import { SPECIAL_PAGES } from '../seo/seo-data.js';
 import { Card } from './ui/Card';
 import { ErrorState } from './ui/ErrorState';
 
@@ -23,6 +25,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Real error reporting can be plugged in here later.
     console.error('Unhandled UI error', error, info.componentStack);
+    // The tab keeps a real title (never a blank or a framework default).
+    applyPrivateHead(SPECIAL_PAGES.error.title);
   }
 
   componentDidUpdate(previous: ErrorBoundaryProps): void {

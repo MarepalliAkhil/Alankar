@@ -2,7 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { getPolicyPage, type PolicyKey } from '../../api/public';
 import { PageContainer, PageHeader } from '../../components/layout/PageContainer';
 import { Card, EmptyState, ErrorState, LoadingState } from '../../components/ui';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
+import { breadcrumbTrail } from '../../seo/seo-data.js';
+
+const paths: Record<PolicyKey, string> = {
+  privacy: '/privacy',
+  terms: '/terms',
+  cancellation: '/cancellation-policy',
+};
 
 const titles: Record<PolicyKey, string> = {
   privacy: 'Privacy notice',
@@ -12,11 +19,18 @@ const titles: Record<PolicyKey, string> = {
 
 /** Policy text from the database (edited by the admin). */
 export default function PolicyPage({ policy }: { policy: PolicyKey }) {
-  useDocumentTitle(titles[policy]);
+  usePageHead(paths[policy]);
   const page = useQuery({ queryKey: ['policy', policy], queryFn: () => getPolicyPage(policy) });
   return (
     <PageContainer className="pb-xl">
-      <PageHeader eyebrow="Policies" title={titles[policy]} />
+      <PageHeader
+        eyebrow="Policies"
+        title={titles[policy]}
+        breadcrumb={breadcrumbTrail(paths[policy]).map((crumb, index, all) => ({
+          label: crumb.label,
+          to: index < all.length - 1 ? crumb.path : undefined,
+        }))}
+      />
       <Card variant="dense" padding="lg" className="max-w-3xl">
         {page.isPending ? (
           <LoadingState />

@@ -99,7 +99,7 @@ export function Navbar() {
   return (
     <header
       data-hero-follow
-      className="sticky top-0 z-nav px-md pt-sm sm:px-lg pl-[max(theme(spacing.md),env(safe-area-inset-left))] pr-[max(theme(spacing.md),env(safe-area-inset-right))] sm:pl-[max(theme(spacing.lg),env(safe-area-inset-left))] sm:pr-[max(theme(spacing.lg),env(safe-area-inset-right))]"
+      className="sticky top-0 z-nav px-md pt-[max(theme(spacing.sm),env(safe-area-inset-top))] sm:px-lg pl-[max(theme(spacing.md),env(safe-area-inset-left))] pr-[max(theme(spacing.md),env(safe-area-inset-right))] sm:pl-[max(theme(spacing.lg),env(safe-area-inset-left))] sm:pr-[max(theme(spacing.lg),env(safe-area-inset-right))]"
     >
       <nav
         ref={bar}
@@ -125,7 +125,7 @@ export function Navbar() {
             </ButtonLink>
           )}
           {authArea}
-          <NavLink to="/zenotians" className={navButton('ghost')}>
+          <NavLink to="/for-zenotians" className={navButton('ghost')}>
             For Zenotians
           </NavLink>
           <DisplaySettings />
@@ -164,7 +164,7 @@ export function Navbar() {
               </NavLink>
             </>
           )}
-          <NavLink to="/zenotians" className={drawerClass('ghost')}>
+          <NavLink to="/for-zenotians" className={drawerClass('ghost')}>
             For Zenotians
           </NavLink>
           {user && (

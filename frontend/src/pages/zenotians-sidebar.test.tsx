@@ -97,7 +97,7 @@ describe('For Zenotians sidebar: groups', () => {
 
 describe('For Zenotians sidebar: rows', () => {
   it('shows the headings in sentence case and a decorative icon on every top-level item', async () => {
-    renderAt('/zenotians/day');
+    renderAt('/for-zenotians/day');
     const nav = await screen.findByRole('navigation', NAV);
     expect(within(nav).getByText('About')).toBeInTheDocument();
     expect(within(nav).getByText('The project', { selector: 'p' })).toBeInTheDocument();
@@ -117,9 +117,9 @@ describe('For Zenotians sidebar: rows', () => {
   });
 
   it('marks the active item with an accent fill and a bar, and weight 600', async () => {
-    renderAt('/zenotians/project');
+    renderAt('/for-zenotians/project');
     const nav = await screen.findByRole('navigation', NAV);
-    const active = within(nav).getByRole('link', { current: 'page' });
+    const active = await within(nav).findByRole('link', { current: 'location' });
     expect(active).toHaveTextContent('The project');
     expect(active.className).toContain('bg-primary-soft');
     expect(active.className).toContain('before:bg-primary');
@@ -129,7 +129,7 @@ describe('For Zenotians sidebar: rows', () => {
   });
 
   it('keeps keyboard focus visible and a hover state on every row', async () => {
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     const nav = await screen.findByRole('navigation', NAV);
     for (const row of within(nav).getAllByRole('link')) {
       expect(row.className).toContain('focus-visible:shadow-focus');
@@ -139,7 +139,7 @@ describe('For Zenotians sidebar: rows', () => {
 
   it('opens About me only while one of its sub-routes is active', async () => {
     const user = userEvent.setup();
-    renderAt('/zenotians/day');
+    renderAt('/for-zenotians/day');
     const nav = await screen.findByRole('navigation', NAV);
     const toggle = within(nav).getByRole('button', { name: 'About me' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -154,13 +154,14 @@ describe('For Zenotians sidebar: rows', () => {
       ),
     );
     expect(
-      within(fresh()).getByRole('link', { name: 'Summary', current: 'page' }),
+      await within(fresh()).findByRole('link', { name: 'Summary', current: 'location' }),
     ).toBeInTheDocument();
   });
 
   it('lists the sub-items in order with 15 px text, 38 px rows and a guide line', async () => {
-    renderAt('/zenotians/about/education');
+    renderAt('/for-zenotians/about/education');
     const nav = await screen.findByRole('navigation', NAV);
+    await waitFor(() => expect(nav.querySelector('#zen-about-menu')).not.toBeNull());
     const list = nav.querySelector('#zen-about-menu') as HTMLElement;
     expect(list.className).toContain('border-l');
     const links = within(list).getAllByRole('link');
@@ -178,7 +179,7 @@ describe('For Zenotians sidebar: rows', () => {
     }
     expect(within(list).getByRole('link', { name: 'Education' })).toHaveAttribute(
       'aria-current',
-      'page',
+      'location',
     );
     expect(within(list).getByRole('link', { name: 'Education' }).className).toContain(
       'bg-primary-soft',
@@ -186,7 +187,7 @@ describe('For Zenotians sidebar: rows', () => {
   });
 
   it('is sticky and scrolls inside itself with a limited height', async () => {
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     await screen.findByRole('navigation', NAV);
     const bar = document.querySelector('[data-zen-sidebar]') as HTMLElement;
     expect(bar.className).toContain('overflow-y-auto');
@@ -200,22 +201,27 @@ describe('For Zenotians sidebar: rows', () => {
 
   it('uses the same menu inside the phone drawer', async () => {
     const user = userEvent.setup();
-    renderAt('/zenotians/about/skills');
+    renderAt('/for-zenotians/about/skills');
     await screen.findByRole('navigation', NAV);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Sections: About me/ })).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole('button', { name: /Sections/ }));
     const dialog = await screen.findByRole('dialog');
     const nav = within(dialog).getByRole('navigation', NAV);
     expect(within(nav).getByText('The project', { selector: 'p' })).toBeInTheDocument();
-    expect(within(nav).getByRole('link', { name: 'Skills', current: 'page' })).toBeInTheDocument();
+    expect(
+      within(nav).getByRole('link', { name: 'Skills', current: 'location' }),
+    ).toBeInTheDocument();
     expect(dialog.querySelector('.zen-type')).not.toBeNull();
   });
 });
 
 describe('For Zenotians content: no Aviatrix', () => {
   it('shows exactly three certifications and no Aviatrix on the Certifications page', async () => {
-    renderAt('/zenotians/about/certifications');
-    await screen.findByRole('heading', { level: 1, name: 'Certifications' });
-    const items = document.querySelectorAll('#zen-content ul.card-grid > li');
+    renderAt('/for-zenotians/about/certifications');
+    await screen.findByRole('heading', { level: 3, name: 'Certifications' });
+    const items = document.querySelectorAll('#zen-about-certifications ul.card-grid > li');
     expect(items).toHaveLength(3);
     const text = document.body.textContent ?? '';
     expect(text).not.toMatch(/aviatrix/i);
@@ -225,14 +231,14 @@ describe('For Zenotians content: no Aviatrix', () => {
   });
 
   it('has no Aviatrix on the Summary page and keeps the Projects page unchanged', async () => {
-    const summary = renderAt('/zenotians/about/summary');
-    await screen.findByRole('heading', { level: 1, name: 'Summary' });
+    const summary = renderAt('/for-zenotians/about/summary');
+    await screen.findByRole('heading', { level: 3, name: 'Summary' });
     expect(document.body.textContent).not.toMatch(/aviatrix/i);
     expect(document.body.textContent).toContain('Red Hat RH134, Cisco)');
     summary.unmount();
-    renderAt('/zenotians/about/projects');
-    await screen.findByRole('heading', { level: 1, name: 'Projects' });
-    const items = document.querySelectorAll('#zen-content ul.card-grid > li');
+    renderAt('/for-zenotians/about/projects');
+    await screen.findByRole('heading', { level: 3, name: 'Projects' });
+    const items = document.querySelectorAll('#zen-about-projects ul.card-grid > li');
     expect(items).toHaveLength(3);
     expect(document.body.textContent).toContain('W.A.N.D.');
   });
@@ -288,7 +294,7 @@ describe('the development note about reduced motion', () => {
 
   it('puts the state on the page root: reduced when the system asks for it', async () => {
     reduce(true);
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     await screen.findByRole('navigation', NAV);
     await act(async () => undefined);
     expect(document.querySelector('.zen-stage')).toHaveAttribute('data-reveal', 'reduced');

@@ -1,5 +1,6 @@
 import type { CustomerAppointment } from '../../api/booking';
 import { rebookLink } from '../../api/booking';
+import { realPhone } from '../../config/contact';
 import { formatDateTime } from '../../lib/format';
 import { ButtonLink } from '../ui/ButtonLink';
 
@@ -9,6 +10,8 @@ import { ButtonLink } from '../ui/ButtonLink';
 export function SorryNote({ appt }: { appt: CustomerAppointment }) {
   const note = appt.sorry_note;
   if (!note) return null;
+  // A placeholder number (demo data) is never offered as a real one.
+  const phone = realPhone(note.phone);
   const base = appt.rebook ?? {
     service: appt.service_slug,
     variant: null,
@@ -52,12 +55,12 @@ export function SorryNote({ appt }: { appt: CustomerAppointment }) {
         <ButtonLink to={rebookLink(base)} size="sm" className="w-fit">
           Book again
         </ButtonLink>
-        {note.phone ? (
+        {phone ? (
           <a
             className="text-sm font-medium text-primary-hover underline"
-            href={`tel:${note.phone.replace(/[^+\d]/g, '')}`}
+            href={`tel:${phone.replace(/[^+\d]/g, '')}`}
           >
-            Call us on {note.phone}
+            Call us on {phone}
           </a>
         ) : (
           <span className="text-text-muted">You can also contact our front desk.</span>

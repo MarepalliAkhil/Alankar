@@ -22,8 +22,9 @@ import {
   Modal,
 } from '../../components/ui';
 import { brand } from '../../config/brand';
+import { safeContact } from '../../config/contact';
 import { BOOK_NOW_PATH } from '../../config/paths';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 import { useHomeChapter } from '../../hooks/useHomeChapter';
 import { useSite } from '../../hooks/useSite';
 import { bookingTarget } from '../../routes/booking';
@@ -41,7 +42,7 @@ const h2 = 'text-4xl';
  * team, a visit block with real hours, and a closing band.
  */
 export default function HomePage() {
-  useDocumentTitle();
+  usePageHead('/');
   const site = useSite();
   const team = useQuery({ queryKey: ['team', 'all'], queryFn: () => getTeam() });
   const servicesQuery = useQuery({
@@ -62,8 +63,8 @@ export default function HomePage() {
   const isCustomerView = !user || user.role === 'customer';
   const data = site.data;
   const stats = data?.stats;
-  const contact = data?.contact;
-  const tel = contact?.phone?.replace(/[^\d+]/g, '');
+  // Placeholder details (demo data) are never shown as if they were real.
+  const { contact, tel, notes: contactNotes } = safeContact(data?.contact);
   const chapter = useHomeChapter();
 
   const numbers = [
@@ -243,6 +244,11 @@ export default function HomePage() {
                 </a>
               </p>
             )}
+            {contactNotes.map((note) => (
+              <p key={note} className="text-base text-text-muted">
+                {note}
+              </p>
+            ))}
             {contact?.map_url && (
               <a
                 href={contact.map_url}

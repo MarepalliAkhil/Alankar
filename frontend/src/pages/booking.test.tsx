@@ -881,7 +881,7 @@ describe('who accepted my request, the timeline and the sorry notes', () => {
       { start: SLOT_A, label: 'Wed 28 Oct, 10:00 AM' },
       { start: SLOT_B, label: 'Wed 28 Oct, 10:15 AM' },
     ],
-    phone: '+91 90000 00000',
+    phone: '+91 98480 12345',
   };
 
   it('shows every step as a list with a text status, and Waiting for the pending ones', async () => {
@@ -973,8 +973,8 @@ describe('who accepted my request, the timeline and the sorry notes', () => {
     expect(slot.getAttribute('href')).toContain(encodeURIComponent(SLOT_B));
     expect(within(region).getByRole('link', { name: 'Book again' })).toBeInTheDocument();
     expect(
-      within(region).getByRole('link', { name: /Call us on \+91 90000 00000/ }),
-    ).toHaveAttribute('href', 'tel:+919000000000');
+      within(region).getByRole('link', { name: /Call us on \+91 98480 12345/ }),
+    ).toHaveAttribute('href', 'tel:+919848012345');
     expect(screen.queryByText(/Old wording/)).toBeNull();
     expect(screen.queryByRole('link', { name: 'Choose another time or stylist' })).toBeNull();
   });

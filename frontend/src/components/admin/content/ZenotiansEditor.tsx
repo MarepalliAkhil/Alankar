@@ -112,7 +112,7 @@ export function ZenotiansEditor({ block }: { block: ContentBlock<'zenotians'> })
     <BlockShell
       block={block}
       title="For Zenotians page"
-      description="Every section of the /zenotians page. A section with nothing in it is hidden from the menu."
+      description="Every section of the /for-zenotians page. A section with nothing in it is hidden from the menu."
       dirty={JSON.stringify(c) !== JSON.stringify(saved)}
       busy={actions.busy}
       problem={actions.problem}

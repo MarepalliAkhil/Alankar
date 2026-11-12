@@ -2,7 +2,6 @@ import { brand } from '../../config/brand';
 import { Download, Github, PlayCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { CountUp } from '../../components/ui/CountUp';
-import { useSeo } from '../../hooks/useSeo';
 import stats from '../../generated/repo-stats.json';
 import { Hero } from './Hero';
 import { useZenotians } from './context';
@@ -28,7 +27,6 @@ const NUMBERS: { label: string; value: number; note: string }[] = [
 function Overview() {
   const { content } = useZenotians();
   const o = content.overview ?? {};
-  useSeo('For Zenotians', o.intro?.slice(0, 200) || o.headline || 'For Zenotians');
   const external = (href: string, children: React.ReactNode, primary = false) => (
     <Ext
       href={href}

@@ -39,8 +39,8 @@ const PUBLIC = [
   { path: '/salon', label: 'salon' },
   { path: '/spa', label: 'spa' },
   { path: '/beauty-parlor', label: 'parlor' },
-  { path: '/zenotians', label: 'zenotians' },
-  { path: '/zenotians/about-zenoti', label: 'zenotians-leaders' },
+  { path: '/for-zenotians', label: 'zenotians' },
+  { path: '/for-zenotians/about-zenoti', label: 'zenotians-leaders' },
 ];
 
 interface Probe {

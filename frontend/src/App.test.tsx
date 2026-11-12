@@ -169,11 +169,15 @@ describe('public site shell', () => {
 
 describe('website content from the database', () => {
   it('shows hero, hours, team, FAQ and a phone link from the API', async () => {
+    vi.mocked(publicApi.getSite).mockResolvedValue({
+      ...site,
+      contact: { ...site.contact, address: 'MG Road, Vijayawada', phone: '+91 98480 12345' },
+    });
     renderAt('/');
     expect(await screen.findByText(/Hair, skin and a quiet hour/)).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '+91 90000 00000' })[0]).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: '+91 98480 12345' })[0]).toHaveAttribute(
       'href',
-      'tel:+919000000000',
+      'tel:+919848012345',
     );
     expect(
       await screen.findByRole('heading', { name: 'Who will look after you' }),
@@ -182,11 +186,22 @@ describe('website content from the database', () => {
     expect(screen.getByText('When do I pay?')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'Opening hours' }).length).toBeGreaterThan(0);
     const footer = screen.getByRole('contentinfo');
-    expect(within(footer).getByText('Demo address, Vijayawada')).toBeInTheDocument();
+    expect(within(footer).getByText('MG Road, Vijayawada')).toBeInTheDocument();
     expect(within(footer).getByRole('link', { name: 'Cancellation policy' })).toHaveAttribute(
       'href',
       '/cancellation-policy',
     );
+  });
+
+  it('never shows placeholder contact details as real: honest demo labels instead', async () => {
+    renderAt('/');
+    expect(await screen.findByText(/Hair, skin and a quiet hour/)).toBeInTheDocument();
+    const footer = screen.getByRole('contentinfo');
+    expect(await within(footer).findByText('Demo project, address not real')).toBeInTheDocument();
+    expect(within(footer).getByText('Demo project, no real phone number')).toBeInTheDocument();
+    expect(within(footer).getByText('Demo project, no real email address')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Demo address|90000 00000|example\.com/);
+    expect(document.querySelector('a[href^="tel:"]')).toBeNull();
   });
 
   it('has a section per division with a link to its page and a booking button', async () => {

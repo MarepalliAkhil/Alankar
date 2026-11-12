@@ -18,7 +18,7 @@ import {
   PasswordInput,
 } from '../../components/ui';
 import { brand } from '../../config/brand';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 import { destinationAfterLogin } from '../../routes/destination';
 import { useSession } from '../../session/session-context';
 import { fieldErrors, normalisePhone } from '../../lib/validation';
@@ -66,7 +66,7 @@ export default function RegisterPage() {
   const next = params.get('next');
   const loginPath = `/login?role=customer${next ? `&next=${encodeURIComponent(next)}` : ''}`;
 
-  useDocumentTitle('Create account');
+  usePageHead('/register');
 
   const update = (field: keyof typeof values) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [field]: event.target.value }));

@@ -5,7 +5,6 @@ import { PageHeader } from '../../components/layout/PageContainer';
 import { Badge, Card } from '../../components/ui';
 import { buttonClasses } from '../../components/ui/button-styles';
 import { DropdownMenu } from '../../components/ui/DropdownMenu';
-import { useSeo } from '../../hooks/useSeo';
 import { cn } from '../../lib/cn';
 import { useZenotians } from './context';
 import { SectionGate } from './SectionGate';
@@ -235,7 +234,6 @@ function About({ id }: { id: AboutId }) {
   const { content } = useZenotians();
   const items = aboutItems(content) ?? [];
   const { title, description } = TITLES[id];
-  useSeo(`${title} · About me · For Zenotians`, description);
   if (!items.some((i) => i.id === id)) return <GateRedirect />;
   const current = items.find((i) => i.id === id)!;
   return (

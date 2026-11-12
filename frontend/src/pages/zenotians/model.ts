@@ -30,7 +30,7 @@ export interface MenuEntry {
   children?: { id: AboutId; label: string; path: string }[];
 }
 
-export const ROOT = '/zenotians';
+export const ROOT = '/for-zenotians';
 
 const filled = (value: string | undefined | null) => !!value?.trim();
 const some = <T>(list: readonly T[] | undefined, keep: (item: T) => boolean = () => true) =>
@@ -240,3 +240,26 @@ export const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' } as cons
 export function formatChecked(iso: string | null | undefined): string {
   return iso ?? '';
 }
+
+/** Where an address points inside the one For Zenotians page: a section and, for About me, an
+ * item. Unknown or hidden sections give null (the page then starts at the top). */
+export function targetForPath(
+  menu: MenuEntry[],
+  pathname: string,
+): { section: SectionId; item?: AboutId } | null {
+  const rest = pathname.replace(/\/+$/, '').slice(ROOT.length).replace(/^\//, '');
+  if (!rest) return menu.some((e) => e.id === 'overview') ? { section: 'overview' } : null;
+  const [first, second] = rest.split('/');
+  if (first === 'about') {
+    const about = menu.find((e) => e.id === 'about');
+    if (!about) return null;
+    const item = about.children?.find((c) => c.id === second) ?? about.children?.[0];
+    return item ? { section: 'about', item: item.id } : { section: 'about' };
+  }
+  const entry = menu.find((e) => e.id === first);
+  return entry ? { section: entry.id } : null;
+}
+
+/** DOM ids of the sections and of the About me items (scroll targets). */
+export const sectionDomId = (id: SectionId) => `zen-sec-${id}`;
+export const aboutDomId = (id: AboutId) => `zen-about-${id}`;

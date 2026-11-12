@@ -1,0 +1,15 @@
+{
+  "name": "Alankar: Salon, Spa and Beauty Parlor",
+  "short_name": "Alankar",
+  "description": "A demo salon, spa and beauty parlor website with online booking (portfolio project).",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#086B65",
+  "icons": [
+    { "src": "/brand/alankar-logo-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/brand/alankar-logo-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/alankar-logo.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

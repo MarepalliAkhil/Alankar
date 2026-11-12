@@ -4,16 +4,17 @@ import { useSearchParams } from 'react-router-dom';
 import { acceptInvite, checkInvite } from '../../api/auth';
 import { genericErrorMessage } from '../../api/auth-messages';
 import { serverFieldErrors } from '../../api/client';
+import { Breadcrumbs } from '../../components/layout/Breadcrumbs';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { ButtonLink, Card, EmptyState, LoadingState } from '../../components/ui';
 import { brand } from '../../config/brand';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 import { roleLabel } from '../../policy/policy';
 import { SetPasswordForm } from './SetPasswordForm';
 
 /** Staff invite link: set a password to activate the account (dev-only while email is simulated). */
 export default function AcceptInvitePage() {
-  useDocumentTitle('Join the team');
+  usePageHead('/accept-invite');
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const invite = useQuery({
@@ -72,7 +73,8 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <PageContainer className="flex justify-center py-xl">
+    <PageContainer className="flex flex-col items-center gap-md py-xl">
+      <Breadcrumbs path="/accept-invite" className="w-full max-w-md" />
       <Card variant="dense" padding="lg" className="w-full max-w-md">
         {content}
       </Card>

@@ -200,7 +200,7 @@ test('staff, login, register and For Zenotians also wear the Alankar photo (staf
   await admin.context.close();
   const guest = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await guest.newPage();
-  for (const path of ['/login', '/register', '/zenotians']) {
+  for (const path of ['/login', '/register', '/for-zenotians']) {
     await page.goto(path);
     await expect(backdrop(page), path).toHaveAttribute('data-page-backdrop', 'shopBackground');
   }

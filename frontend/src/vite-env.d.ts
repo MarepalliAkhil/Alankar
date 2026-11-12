@@ -2,6 +2,19 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
+  /** Public address of the site, no trailing slash (docs/SEO.md). */
+  readonly VITE_SITE_URL?: string;
+  readonly VITE_BUSINESS_NAME?: string;
+  readonly VITE_BUSINESS_PHONE?: string;
+  readonly VITE_BUSINESS_EMAIL?: string;
+  readonly VITE_BUSINESS_STREET?: string;
+  readonly VITE_BUSINESS_CITY?: string;
+  readonly VITE_BUSINESS_REGION?: string;
+  readonly VITE_BUSINESS_POSTAL_CODE?: string;
+  readonly VITE_BUSINESS_COUNTRY?: string;
+  readonly VITE_BUSINESS_HOURS?: string;
+  readonly VITE_BUSINESS_LATITUDE?: string;
+  readonly VITE_BUSINESS_LONGITUDE?: string;
 }
 
 interface ImportMeta {

@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { requestPasswordReset } from '../../api/auth';
 import { genericErrorMessage } from '../../api/auth-messages';
+import { Breadcrumbs } from '../../components/layout/Breadcrumbs';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Button, ButtonLink, Card, EmptyState, Input } from '../../components/ui';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 
 const schema = z.object({
   email: z.string().trim().min(1, 'Enter your email.').email('Enter a valid email address.'),
@@ -14,7 +15,7 @@ const schema = z.object({
 
 /** Customers reset their own password. Staff ask the admin. */
 export default function ForgotPasswordPage() {
-  useDocumentTitle('Forgot password');
+  usePageHead('/forgot-password');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
@@ -43,7 +44,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <PageContainer className="flex justify-center py-xl">
+    <PageContainer className="flex flex-col items-center gap-md py-xl">
+      <Breadcrumbs path="/forgot-password" className="w-full max-w-md" />
       <Card variant="dense" padding="lg" className="w-full max-w-md">
         {sent ? (
           <EmptyState

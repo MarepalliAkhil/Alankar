@@ -39,29 +39,34 @@ beforeEach(() => {
 });
 
 const ROUTES = [
-  '/zenotians',
-  '/zenotians/about/summary',
-  '/zenotians/about/education',
-  '/zenotians/about/projects',
-  '/zenotians/about/experience',
-  '/zenotians/about/skills',
-  '/zenotians/about/certifications',
-  '/zenotians/about-zenoti',
-  '/zenotians/day',
-  '/zenotians/project',
-  '/zenotians/mapping',
-  '/zenotians/quality',
-  '/zenotians/security',
-  '/zenotians/limitations',
+  '/for-zenotians',
+  '/for-zenotians/about/summary',
+  '/for-zenotians/about/education',
+  '/for-zenotians/about/projects',
+  '/for-zenotians/about/experience',
+  '/for-zenotians/about/skills',
+  '/for-zenotians/about/certifications',
+  '/for-zenotians/about-zenoti',
+  '/for-zenotians/day',
+  '/for-zenotians/project',
+  '/for-zenotians/mapping',
+  '/for-zenotians/quality',
+  '/for-zenotians/security',
+  '/for-zenotians/limitations',
 ] as const;
 
 describe('For Zenotians: structure', () => {
   it.each(ROUTES)('renders %s with a heading and some content', async (path) => {
     renderAt(path);
-    const heading = await screen.findByRole('heading', { level: 1 });
-    expect(heading.textContent?.trim().length).toBeGreaterThan(0);
-    const main = document.getElementById('zen-content')!;
-    expect(main.textContent!.trim().length).toBeGreaterThan(40);
+    // One page: every section address shows the same page with its one H1 (the overview headline).
+    await screen.findByRole('heading', { level: 1, name: /Built for Zenotians/ });
+    expect(document.querySelectorAll('h1')).toHaveLength(1);
+    const main = await waitFor(() => {
+      const found = document.getElementById('zen-content');
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    await waitFor(() => expect(main.textContent!.trim().length).toBeGreaterThan(40));
   });
 
   it('keeps the About me sub-menu in the resume order', () => {
@@ -75,12 +80,12 @@ describe('For Zenotians: structure', () => {
       'Certifications',
     ]);
     expect(about?.children?.map((c) => c.path)).toEqual([
-      '/zenotians/about/summary',
-      '/zenotians/about/education',
-      '/zenotians/about/projects',
-      '/zenotians/about/experience',
-      '/zenotians/about/skills',
-      '/zenotians/about/certifications',
+      '/for-zenotians/about/summary',
+      '/for-zenotians/about/education',
+      '/for-zenotians/about/projects',
+      '/for-zenotians/about/experience',
+      '/for-zenotians/about/skills',
+      '/for-zenotians/about/certifications',
     ]);
   });
 
@@ -103,7 +108,7 @@ describe('For Zenotians: structure', () => {
     const ids = buildMenu(fullContent).map((e) => e.id as string);
     expect(ids).not.toContain('decisions');
     expect(ids).not.toContain('questions');
-    for (const path of ['/zenotians/decisions', '/zenotians/questions']) {
+    for (const path of ['/for-zenotians/decisions', '/for-zenotians/questions']) {
       const { unmount } = renderAt(path);
       expect(
         await screen.findByRole('heading', { level: 1, name: /Built for Zenotians/ }),
@@ -146,7 +151,7 @@ describe('For Zenotians: structure', () => {
   });
 
   it('shows the sidebar menu and the footer line', async () => {
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     const nav = await screen.findByRole('navigation', { name: 'For Zenotians sections' });
     expect(within(nav).getByRole('link', { name: 'Overview' })).toBeInTheDocument();
     expect(within(nav).queryByRole('link', { name: 'Try the demo' })).not.toBeInTheDocument();
@@ -157,13 +162,15 @@ describe('For Zenotians: structure', () => {
 
   it('expands About me in the sidebar and highlights the active item', async () => {
     const user = userEvent.setup();
-    renderAt('/zenotians/about/skills');
+    renderAt('/for-zenotians/about/skills');
     const nav = await screen.findByRole('navigation', { name: 'For Zenotians sections' });
     const toggle = within(nav).getByRole('button', { name: 'About me' });
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav).getByRole('link', { name: 'Skills' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    await waitFor(() =>
+      expect(within(nav).getByRole('link', { name: 'Skills' })).toHaveAttribute(
+        'aria-current',
+        'location',
+      ),
     );
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -171,11 +178,11 @@ describe('For Zenotians: structure', () => {
   });
 
   it('sends a visitor from a hidden section to the overview', async () => {
-    renderAt('/zenotians/demo');
+    renderAt('/for-zenotians/demo');
     expect(
       await screen.findByRole('heading', { level: 1, name: /Built for Zenotians/ }),
     ).toBeInTheDocument();
-    renderAt('/zenotians/about/achievements');
+    renderAt('/for-zenotians/about/achievements');
     await waitFor(() =>
       expect(screen.getAllByRole('heading', { level: 1, name: /Built for Zenotians/ }).length).toBe(
         2,
@@ -185,17 +192,17 @@ describe('For Zenotians: structure', () => {
 
   it('shows a not-published state when nothing has content', async () => {
     vi.mocked(zenApi.getZenotians).mockResolvedValue({});
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     expect(await screen.findByText('This page is not published')).toBeInTheDocument();
   });
 });
 
 describe('For Zenotians: content rules', () => {
   it('never shows the phone number while its switch is off', async () => {
-    renderAt('/zenotians/about/summary');
+    renderAt('/for-zenotians/about/summary');
     await screen.findByText('AKHIL MAREPALLI');
     expect(document.body.textContent).not.toContain('9000000000');
-    expect(screen.getByRole('link', { name: /Email/ })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: /Email/ })[0]).toHaveAttribute(
       'href',
       'mailto:akhil@example.com',
     );
@@ -205,28 +212,28 @@ describe('For Zenotians: content rules', () => {
     const on = clone(fullContent);
     on.resume!.contacts!.find((c) => c.key === 'phone')!.public = true;
     vi.mocked(zenApi.getZenotians).mockResolvedValue(on);
-    renderAt('/zenotians/contact');
+    renderAt('/for-zenotians/contact');
     expect(await screen.findByText('+91-9000000000')).toBeInTheDocument();
   });
 
   it('opens every outside link with rel noopener', async () => {
-    renderAt('/zenotians/about-zenoti');
-    await screen.findByRole('heading', { level: 1, name: 'About Zenoti' });
+    renderAt('/for-zenotians/about-zenoti');
+    await screen.findByRole('heading', { level: 2, name: 'About Zenoti' });
     const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[target="_blank"]'));
     expect(links.length).toBeGreaterThan(3);
     for (const link of links) expect(link.getAttribute('rel')).toContain('noopener');
   });
 
   it('opens project and certificate links with rel noopener too', async () => {
-    renderAt('/zenotians/about/projects');
+    renderAt('/for-zenotians/about/projects');
     await screen.findByText('W.A.N.D.');
     for (const link of document.querySelectorAll<HTMLAnchorElement>('a[target="_blank"]'))
       expect(link.getAttribute('rel')).toContain('noopener');
   });
 
   it('gives each Zenoti fact a source link and the last-checked date', async () => {
-    renderAt('/zenotians/about-zenoti');
-    await screen.findByRole('heading', { level: 1, name: 'About Zenoti' });
+    renderAt('/for-zenotians/about-zenoti');
+    await screen.findByRole('heading', { level: 2, name: 'About Zenoti' });
     // The company facts carry the page date; each leader card carries its own source and date.
     expect(screen.getAllByText(/last checked: 2026-10-30/).length).toBeGreaterThanOrEqual(4);
     expect(screen.getAllByText(/last checked: 2026-11-07/).length).toBe(5);
@@ -235,7 +242,7 @@ describe('For Zenotians: content rules', () => {
   });
 
   it('hides the overview buttons until their links are set', async () => {
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     await screen.findByRole('heading', { level: 1 });
     expect(screen.queryByText('Watch demo')).not.toBeInTheDocument();
     expect(screen.queryByText('View code on GitHub')).not.toBeInTheDocument();
@@ -246,7 +253,7 @@ describe('For Zenotians: content rules', () => {
     const set = clone(fullContent);
     set.overview!.github_url = 'https://github.com/x/repo';
     vi.mocked(zenApi.getZenotians).mockResolvedValue(set);
-    renderAt('/zenotians');
+    renderAt('/for-zenotians');
     expect(await screen.findByText('View code on GitHub')).toBeInTheDocument();
   });
 
@@ -256,7 +263,7 @@ describe('For Zenotians: content rules', () => {
   });
 
   it('sends the old Future vision address to the overview', async () => {
-    renderAt('/zenotians/vision');
+    renderAt('/for-zenotians/vision');
     expect(
       await screen.findByRole('heading', {
         level: 1,
@@ -271,16 +278,21 @@ describe('For Zenotians: content rules', () => {
     bare.limitations = {};
     bare.mapping = [];
     vi.mocked(zenApi.getZenotians).mockResolvedValue(bare);
-    renderAt('/zenotians/limitations');
+    renderAt('/for-zenotians/limitations');
     await screen.findByRole('navigation', { name: 'For Zenotians sections' });
     expect(
-      screen.queryByRole('heading', { level: 1, name: 'Limitations' }),
+      screen.queryByRole('heading', { level: 2, name: 'Limitations' }),
     ).not.toBeInTheDocument();
   });
 
   it('builds the third mapping column from the limitations and links to them', async () => {
-    renderAt('/zenotians/mapping');
-    expect(await screen.findByText('Many shops.')).toBeInTheDocument();
+    renderAt('/for-zenotians/mapping');
+    const mapping = await waitFor(() => {
+      const found = document.getElementById('zen-sec-mapping');
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    expect(await within(mapping).findByText('Many shops.')).toBeInTheDocument();
     const link = screen
       .getAllByRole('link')
       .find((a) => a.getAttribute('href')?.endsWith('#single-shop'));
@@ -288,16 +300,21 @@ describe('For Zenotians: content rules', () => {
   });
 
   it('shows each limitation with what it does today and what is out of scope', async () => {
-    renderAt('/zenotians/limitations');
-    expect(await screen.findByText('One shop only.')).toBeInTheDocument();
-    expect(screen.getByText('Many shops.')).toBeInTheDocument();
+    renderAt('/for-zenotians/limitations');
+    const limits = await waitFor(() => {
+      const found = document.getElementById('zen-sec-limitations');
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    expect(await within(limits).findByText('One shop only.')).toBeInTheDocument();
+    expect(within(limits).getByText('Many shops.')).toBeInTheDocument();
   });
 
   it('tells the story in chapters and lets the visitor move between them', async () => {
     const user = userEvent.setup();
-    renderAt('/zenotians/day');
+    renderAt('/for-zenotians/day');
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'A day at Alankar' }),
+      await screen.findByRole('heading', { level: 2, name: 'A day at Alankar' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Chapter 1 of 2')).toBeInTheDocument();
     expect(screen.getAllByText('What’s behind this').length).toBe(2);
@@ -315,7 +332,7 @@ describe('For Zenotians: content rules', () => {
       guide: ['Step.'],
     };
     vi.mocked(zenApi.getZenotians).mockResolvedValue(demo);
-    renderAt('/zenotians/demo');
+    renderAt('/for-zenotians/demo');
     expect(await screen.findByText('o@demo.example.com')).toBeInTheDocument();
     expect(screen.getByText(/Payments and messages are simulated/)).toBeInTheDocument();
   });

@@ -1,7 +1,10 @@
 import { Clock, MapPin, Phone } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { brand, poweredBy } from '../../config/brand';
+import { DEMO_LABELS, safeContact } from '../../config/contact';
+import { divisions } from '../../config/divisions';
 import { useSite } from '../../hooks/useSite';
+import { ZEN_ROOT } from '../../seo/seo-data.js';
 
 const policyPaths = {
   privacy: '/privacy',
@@ -13,13 +16,36 @@ const policyPaths = {
 export function Footer() {
   const year = new Date().getFullYear();
   const { data } = useSite();
-  const onZenotians = useLocation().pathname.startsWith('/zenotians');
-  const contact = data?.contact;
-  const telephone = contact?.phone?.replace(/[^\d+]/g, '');
+  const onZenotians = useLocation().pathname.startsWith(ZEN_ROOT);
+  // Placeholder details (demo data) are replaced by an honest label, never shown as real.
+  const { contact, tel: telephone, notes } = safeContact(data?.contact);
+  const explore = [
+    { to: '/', label: 'Home' },
+    ...divisions.map((d) => ({ to: d.path, label: d.label })),
+    { to: '/book', label: 'Book an appointment' },
+    { to: ZEN_ROOT, label: 'For Zenotians' },
+    { to: '/login', label: 'Sign in to your account' },
+    { to: '/register', label: 'Register as a customer' },
+  ];
 
   return (
     <footer className="mt-2xl border-t border-border bg-surface-muted px-md pb-lg pt-xl sm:px-lg">
       <div className="mx-auto flex max-w-7xl flex-col gap-lg">
+        <nav aria-label="Explore Alankar">
+          <h2 className="font-display text-lg text-text">Explore</h2>
+          <ul className="mt-sm flex flex-wrap gap-x-md gap-y-1 text-sm">
+            {explore.map((item) => (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  className="touch-target inline-flex items-center text-text-muted underline-offset-4 hover:text-text hover:underline"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         {data && (
           <div className="grid gap-lg text-sm sm:grid-cols-3">
             <div className="flex flex-col gap-sm">
@@ -30,6 +56,13 @@ export function Footer() {
                   {contact.address}
                 </p>
               )}
+              {notes
+                .filter((note) => note === DEMO_LABELS.address)
+                .map((note) => (
+                  <p key={note} className="text-text-muted">
+                    {note}
+                  </p>
+                ))}
               {contact?.map_url && (
                 <a
                   href={contact.map_url}
@@ -71,6 +104,13 @@ export function Footer() {
                   {contact.email}
                 </a>
               )}
+              {notes
+                .filter((note) => note !== DEMO_LABELS.address)
+                .map((note) => (
+                  <p key={note} className="text-text-muted">
+                    {note}
+                  </p>
+                ))}
               {(data.social ?? []).map((link) => (
                 <a
                   key={link.url}

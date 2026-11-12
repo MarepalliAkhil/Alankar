@@ -61,7 +61,7 @@ export default defineConfig({
     },
     ...MOBILE_PROJECTS.map((project) => ({
       name: project.name,
-      testMatch: '**/mobile-matrix.e2e.ts',
+      testMatch: ['**/mobile-matrix.e2e.ts', '**/hero-and-sections.e2e.ts'],
       use: { ...project.use, browserName: 'chromium' as const },
     })),
   ],

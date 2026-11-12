@@ -1,6 +1,7 @@
-import { lazy } from 'react';
+import { lazy, useLayoutEffect } from 'react';
+import { applyPrivateHead } from '../../seo/head';
 import { Navigate } from 'react-router-dom';
-import { homeFor, menuItemFor, notificationsPathFor } from '../../policy/policy';
+import { homeFor, menuItemFor, notificationsPathFor, type Role } from '../../policy/policy';
 import { useSession } from '../../session/session-context';
 import PlannedPage from './PlannedPage';
 
@@ -58,8 +59,32 @@ const AdminDashboardPage = lazy(() => import('../admin/AdminDashboardPage'));
 const AirActivityPage = lazy(() => import('../air/AirActivityPage'));
 
 /** Picks the page for a policy path. Built pages are listed here; the rest are planned. */
+/** Titles for the signed-in pages that are not menu items. */
+const EXTRA_TITLES: Record<string, string> = {
+  '/customers/:id': 'Customer details',
+  '/orders/:id': 'Order details',
+  '/customer/orders/:id': 'My order',
+  '/my-appointments/:id': 'Appointment details',
+  '/chat/:id': 'Zen Chat conversation',
+  '/customer/chat/:id': 'Zen Chat conversation',
+  '/profile': 'Profile',
+};
+
+/** "Menu label | Alankar" and noindex for every signed-in page. A page that sets its own title
+ * (in an ordinary effect) still wins, because this runs first, as a layout effect. */
+function useRoleTitle(path: string, role: Role | undefined) {
+  const label =
+    (role ? menuItemFor(role, path)?.label : undefined) ??
+    EXTRA_TITLES[path] ??
+    (role && path === notificationsPathFor(role) ? 'Notifications' : undefined);
+  useLayoutEffect(() => {
+    applyPrivateHead(label);
+  }, [label]);
+}
+
 export default function RolePage({ path }: { path: string }) {
   const { user } = useSession();
+  useRoleTitle(path, user?.role);
   if (!user) return null;
   const isDesk = user.role === 'receptionist' || user.role === 'admin';
   if (path === '/customers/:id' && isDesk) return <CustomerProfilePage />;

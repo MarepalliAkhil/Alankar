@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { PageHeader } from '../../components/layout/PageContainer';
 import { Card } from '../../components/ui';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useSeo } from '../../hooks/useSeo';
 import { cn } from '../../lib/cn';
 import { useZenotians } from './context';
 import { SectionGate } from './SectionGate';
@@ -23,10 +22,6 @@ function StoryBody() {
   const chapters = story.chapters ?? [];
   const characters = story.characters ?? [];
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)');
-  useSeo(
-    'A day at Alankar · For Zenotians',
-    'One fictional day at the shop, told in seven short chapters, with a note on the code behind each.',
-  );
 
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(false);

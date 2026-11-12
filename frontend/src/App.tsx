@@ -2,17 +2,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { AppShell } from './components/layout/AppShell';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { DelayedLoader, ToastProvider } from './components/ui';
 import { divisions } from './config/divisions';
 import { ThemeProvider } from './design/ThemeProvider';
 import { routerFuture } from './config/router';
-import { zenotiansRoutes } from './pages/zenotians/routes';
+import { legacyZenotiansRoutes, zenotiansRoutes } from './pages/zenotians/routes';
 import { rolePaths } from './policy/policy';
 import { RequireRole } from './routes/RequireRole';
 import { SessionProvider } from './session/SessionProvider';
 
+// The signed-in area (sidebar, AIR popup, tour, charts) stays out of the public first load.
+const AppShell = lazy(() =>
+  import('./components/layout/AppShell').then((m) => ({ default: m.AppShell })),
+);
+const BookRedirect = lazy(() => import('./routes/BookRedirect'));
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const DivisionPage = lazy(() => import('./pages/public/DivisionPage'));
 const LoginPage = lazy(() => import('./pages/public/LoginPage'));
@@ -49,7 +53,9 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
+        <Route path="/book" element={<BookRedirect />} />
         {zenotiansRoutes}
+        {legacyZenotiansRoutes}
         <Route path="/privacy" element={<PolicyPage policy="privacy" />} />
         <Route path="/terms" element={<PolicyPage policy="terms" />} />
         <Route path="/cancellation-policy" element={<PolicyPage policy="cancellation" />} />
@@ -65,7 +71,9 @@ export function AppRoutes() {
       <Route
         element={
           <RequireRole>
-            <AppShell />
+            <Suspense fallback={<DelayedLoader />}>
+              <AppShell />
+            </Suspense>
           </RequireRole>
         }
       >

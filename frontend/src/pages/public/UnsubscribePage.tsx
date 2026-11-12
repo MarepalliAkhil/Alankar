@@ -2,18 +2,20 @@ import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { errorDetail } from '../../api/client';
 import { unsubscribe } from '../../api/marketing';
+import { Breadcrumbs } from '../../components/layout/Breadcrumbs';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Button, ButtonLink, Card } from '../../components/ui';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { usePageHead } from '../../seo/head';
 
 /** The link at the bottom of every marketing email. No sign-in needed. */
 export default function UnsubscribePage() {
-  useDocumentTitle('Unsubscribe');
+  usePageHead('/unsubscribe');
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const stop = useMutation({ mutationFn: () => unsubscribe(token) });
   return (
-    <PageContainer className="flex justify-center py-xl">
+    <PageContainer className="flex flex-col items-center gap-md py-xl">
+      <Breadcrumbs path="/unsubscribe" className="w-full max-w-md" />
       <Card variant="dense" padding="lg" className="w-full max-w-md">
         <h1 className="text-2xl font-semibold text-text">Stop offers by email</h1>
         {!token ? (

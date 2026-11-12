@@ -19,6 +19,7 @@ import { cn } from '../../lib/cn';
 import { useSession } from '../../session/session-context';
 import { Spinner } from '../ui/Spinner';
 import { AIR_SUBTITLE, CONSENT_TEXT, COVER_NOTE, QUICK_CUSTOMER, QUICK_GUEST } from './air-text';
+import { OPEN_CHAT_EVENT } from './chat-events';
 
 export const CHATBOT_NAME = 'AI Alankar Intelligence';
 const MAX_LENGTH = 500;
@@ -205,6 +206,11 @@ function CardView({
 export function ChatWidget() {
   const { status, user } = useSession();
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(OPEN_CHAT_EVENT, show);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, show);
+  }, []);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [draft, setDraft] = useState('');
   const [typing, setTyping] = useState(false);

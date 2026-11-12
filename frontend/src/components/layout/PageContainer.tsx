@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/cn';
+import { HeadingLevel } from './heading-level';
 
 export function PageContainer({
   children,
@@ -24,13 +25,16 @@ export interface PageHeaderProps {
 
 /** The one page header: optional breadcrumb, title, one-line description, action on the right. */
 export function PageHeader({ eyebrow, title, description, actions, breadcrumb }: PageHeaderProps) {
+  const place = useContext(HeadingLevel);
+  const Title = `h${place.level}` as 'h1' | 'h2' | 'h3';
+  const trail = place.breadcrumbs ? breadcrumb : undefined;
   return (
     <header className="mb-lg mt-md flex flex-col gap-md border-b border-border pb-md sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {breadcrumb && breadcrumb.length > 0 && (
+        {trail && trail.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-1">
             <ol className="flex flex-wrap items-center gap-1 text-sm text-text-muted">
-              {breadcrumb.map((crumb, index) => (
+              {trail.map((crumb, index) => (
                 <li key={crumb.label} className="flex items-center gap-1">
                   {index > 0 && <span aria-hidden="true">/</span>}
                   {crumb.to ? (
@@ -53,7 +57,9 @@ export function PageHeader({ eyebrow, title, description, actions, breadcrumb }:
             {eyebrow}
           </p>
         )}
-        <h1 className="mt-1 text-3xl text-text">{title}</h1>
+        <Title className={cn('mt-1 text-text', place.level === 3 ? 'text-2xl' : 'text-3xl')}>
+          {title}
+        </Title>
         {description && (
           <p className="mt-1 max-w-[65ch] text-base text-text-muted">{description}</p>
         )}

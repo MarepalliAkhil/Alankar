@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { hasHero } from './hero-pages';
 import { Splash } from '../brand/Splash';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
@@ -13,6 +14,7 @@ import { Navbar } from './Navbar';
 
 export function PublicLayout() {
   const { pathname } = useLocation();
+  const hero = hasHero(pathname);
   return (
     <div className="flex min-h-screen min-h-dvh flex-col">
       <PageBackground />
@@ -24,7 +26,11 @@ export function PublicLayout() {
       </a>
       <AnnouncementBar />
       <Navbar />
-      <main id="main" className="min-w-0 flex-1">
+      <main
+        id="main"
+        data-under-nav={hero || undefined}
+        className={hero ? 'under-nav min-w-0 flex-1' : 'min-w-0 flex-1'}
+      >
         <ErrorBoundary resetKey={pathname}>
           <Suspense fallback={<DelayedLoader label="Loading page…" />}>
             <PageTransition>

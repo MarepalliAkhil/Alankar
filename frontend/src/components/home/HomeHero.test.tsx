@@ -32,11 +32,34 @@ describe('HomeHero', () => {
   });
 
   it('shows the real address, phone and hours from the shop settings', () => {
+    const real = {
+      ...site,
+      contact: { ...site.contact, address: 'MG Road, Vijayawada', phone: '+91 98480 12345' },
+    };
+    render(
+      <ThemeProvider>
+        <MemoryRouter future={routerFuture}>
+          <HomeHero
+            site={real}
+            loading={false}
+            book="/login?role=customer"
+            staffHome={null}
+            tel="+919848012345"
+          />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const details = screen.getByRole('list', { name: 'Visit details' });
+    expect(details.textContent).toContain('MG Road, Vijayawada');
+    expect(screen.getByRole('link', { name: '+91 98480 12345' })).toBeTruthy();
+    expect(details.textContent).toContain(site.hours![0]!.days);
+  });
+
+  it('never shows placeholder demo details (address or phone) as if they were real', () => {
     renderHero();
     const details = screen.getByRole('list', { name: 'Visit details' });
-    expect(details.textContent).toContain(site.contact!.address);
-    expect(screen.getByRole('link', { name: site.contact!.phone })).toBeTruthy();
-    expect(details.textContent).toContain(site.hours![0]!.days);
+    expect(details.textContent).not.toContain('Demo address');
+    expect(screen.queryByRole('link', { name: site.contact!.phone })).toBeNull();
   });
 
   it('sends signed-in staff to their dashboard instead of the booking flow', () => {

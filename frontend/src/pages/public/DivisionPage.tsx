@@ -19,12 +19,15 @@ import {
   SkeletonCards,
   type ChipOption,
 } from '../../components/ui';
+import { safeContact } from '../../config/contact';
 import { BOOK_NOW_PATH } from '../../config/paths';
 import { useSite } from '../../hooks/useSite';
 import { bookingTarget } from '../../routes/booking';
 import { useSession } from '../../session/session-context';
-import { getDivision, type DivisionId } from '../../config/divisions';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { brand } from '../../config/brand';
+import { divisions, getDivision, type DivisionId } from '../../config/divisions';
+import { Link } from 'react-router-dom';
+import { usePageHead } from '../../seo/head';
 
 type AudienceFilter = Audience | 'all';
 
@@ -49,7 +52,7 @@ function useDebounced<T>(value: T, delay = 250): T {
 export default function DivisionPage({ divisionId }: { divisionId: DivisionId }) {
   useRouteTheme(divisionTheme[divisionId]);
   const division = getDivision(divisionId);
-  useDocumentTitle(division.label);
+  usePageHead(division.path);
   const [audience, setAudience] = useState<AudienceFilter>('all');
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
@@ -75,7 +78,7 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
   const site = useSite();
   const { user } = useSession();
   const book = bookingTarget(user) ?? (user ? null : BOOK_NOW_PATH);
-  const tel = site.data?.contact?.phone?.replace(/[^\d+]/g, '');
+  const { tel } = safeContact(site.data?.contact);
   const total = site.data?.stats?.divisions[divisionId];
 
   const filtered = audience !== 'all' || category !== 'all' || q !== '';
@@ -228,6 +231,27 @@ export default function DivisionPage({ divisionId }: { divisionId: DivisionId })
               <TeamGrid team={team.data} />
             </section>
           )}
+
+          <nav aria-labelledby="division-related" className="mt-xl">
+            <h2 id="division-related" className="mb-md text-2xl font-semibold text-text">
+              Also at {brand.shopName}
+            </h2>
+            <ul className="grid gap-md sm:grid-cols-2">
+              {divisions
+                .filter((d) => d.id !== division.id)
+                .map((d) => (
+                  <li key={d.id}>
+                    <Link
+                      to={d.path}
+                      className="glass-dense flex min-h-11 flex-col gap-1 rounded-card p-md hover:bg-primary-soft focus-visible:shadow-focus focus-visible:outline-none"
+                    >
+                      <span className="text-lg font-semibold text-text">{d.label}</span>
+                      <span className="text-sm text-text-muted">{d.summary}</span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </nav>
 
           <ServiceSheet service={open} onClose={() => setOpen(null)} />
         </PageContainer>
