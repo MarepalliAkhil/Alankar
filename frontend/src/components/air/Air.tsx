@@ -300,6 +300,11 @@ export function AirPopup() {
 
   if (!user || user.role !== 'receptionist') return null;
 
+  // Items that need the receptionist are the one thing AIR must never hide: once the text is
+  // shown, the attention pose wins over "reading aloud" (docs/AIR.md). Before, a briefing that
+  // was being read showed "explain" for as long as the voice played, so the warning pose only
+  // appeared after the speech ended (and never, if it was paused).
+  const needsYou = data?.mood === 'attention' || (data?.numbers?.needs_you ?? 0) > 0;
   const pose: AirPose = briefing.isPending
     ? poseFor('loading')
     : briefing.isError
@@ -308,11 +313,13 @@ export function AirPopup() {
         ? poseFor('handover')
         : pointing
           ? poseFor('pointing')
-          : speech.state === 'playing'
-            ? poseFor('speaking')
-            : !typed
-              ? poseFor('greeting')
-              : poseFor('mood', data?.mood, data?.numbers);
+          : !typed
+            ? poseFor('greeting')
+            : needsYou
+              ? 'attention'
+              : speech.state === 'playing'
+                ? poseFor('speaking')
+                : poseFor('mood', data?.mood, data?.numbers);
   const toggleMute = () => {
     const next = !muted;
     setMuted(next);

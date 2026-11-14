@@ -94,7 +94,7 @@ export function Tour({
     closeRef.current = { onFinish, onNotNow };
   });
   const openMenuRef = useRef(openMenu);
-  useEffect(() => {
+  useLayoutEffect(() => {
     openMenuRef.current = openMenu;
   });
 
@@ -122,13 +122,18 @@ export function Tour({
     [done, index, steps.length, finishOrFinale],
   );
 
-  // Find the real controls for this chapter (opening the phone menu first), or skip the chapter.
+  // On phones the menu drawer follows the chapter: open for menu chapters, closed for the welcome
+  // and the finale. This runs in the same commit as the chapter (a layout effect), so the drawer
+  // never shows the wrong state for a frame and does not depend on when passive effects flush.
+  useLayoutEffect(() => {
+    if (isPhone) openMenuRef.current(Boolean(step?.menu));
+    // The chapter index identifies the step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, isPhone, done]);
+
+  // Find the real controls for this chapter (after the phone menu was set above), or skip it.
   useEffect(() => {
-    if (!step) {
-      if (isPhone) openMenuRef.current(false);
-      return;
-    }
-    if (isPhone) openMenuRef.current(Boolean(step.menu));
+    if (!step) return;
     let tries = 0;
     let timer = 0;
     let elements: HTMLElement[] = [];
