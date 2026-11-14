@@ -1,5 +1,5 @@
 # Local test of the production stack on Windows with Docker Desktop (docs/DEPLOY.md, "Local test").
-# Plain HTTP on http://localhost:8080, no Let's Encrypt, the local PostgreSQL container instead of
+# Plain HTTP on http://localhost:8088, no Let's Encrypt, the local PostgreSQL container instead of
 # Azure. Use together with docker-compose.prod.yml and the localdb profile:
 #   docker compose --env-file .env.production.local -f docker-compose.prod.yml -f docker-compose.local.yml --profile localdb up -d --build
 
@@ -8,10 +8,10 @@ services:
     environment:
       SITE_ADDRESS: ":80"
       HSTS: "max-age=0"
-      CSP_CONNECT: "'self' ws://localhost:8080"
+      CSP_CONNECT: "'self' ws://localhost:8088"
       CSP_LAST: "manifest-src 'self'"
     ports: !override
-      - "8080:80"
+      - "8088:80"
 
   backend:
     depends_on:

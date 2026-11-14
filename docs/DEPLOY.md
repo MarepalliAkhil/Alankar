@@ -41,7 +41,7 @@ Files: `docker-compose.prod.yml`, `docker-compose.local.yml`, `backend/Dockerfil
 
 ## 2. Local test (Windows, Docker Desktop)
 
-The whole production stack on your PC over plain HTTP on http://localhost:8080, with a local
+The whole production stack on your PC over plain HTTP on http://localhost:8088, with a local
 PostgreSQL container (profile `localdb`) instead of Azure.
 
 ```bat
@@ -59,8 +59,8 @@ docker compose --env-file .env.production.local -f docker-compose.prod.yml -f do
 docker compose --env-file .env.production.local -f docker-compose.prod.yml -f docker-compose.local.yml --profile localdb up -d --build
 docker compose --env-file .env.production.local -f docker-compose.prod.yml -f docker-compose.local.yml --profile localdb ps
 docker compose --env-file .env.production.local -f docker-compose.prod.yml -f docker-compose.local.yml --profile localdb exec backend /app/deploy/first_run.sh
-curl http://localhost:8080/api/health/
-start http://localhost:8080
+curl http://localhost:8088/api/health/
+start http://localhost:8088
 ```
 
 The first build takes several minutes. Logs:
