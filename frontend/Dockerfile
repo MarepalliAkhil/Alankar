@@ -4,7 +4,7 @@
 # The build needs the backend and shared folders too (the build counts tests for the For
 # Zenotians page and reads shared/policy.json), so the context is the whole repository.
 
-FROM node:22.11.0-bookworm-slim AS build
+FROM node:22.14.0-bookworm-slim AS build
 WORKDIR /repo
 ARG SITE_URL
 # Business details for the structured data in the built pages (empty = the demo labels).
