@@ -19,6 +19,10 @@ def _no_real_smtp(settings):
     # The emailed sign-in code has its own tests (accounts/tests/test_otp.py); everywhere else
     # customers sign in with a password only.
     settings.SALON_CUSTOMER_OTP = False
+    # Marketing quiet hours and the one-email-a-week limit have their own tests
+    # (marketing/tests/test_emails.py); elsewhere a send happens at once, whatever the clock says.
+    settings.SALON_MARKETING_QUIET_HOURS = None
+    settings.SALON_MARKETING_MIN_DAYS = 0
 
 
 @pytest.fixture(autouse=True)

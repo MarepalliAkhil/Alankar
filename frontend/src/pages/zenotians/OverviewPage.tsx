@@ -1,5 +1,5 @@
 import { brand } from '../../config/brand';
-import { Download, Github, PlayCircle } from 'lucide-react';
+import { Download, Github, Headset, PlayCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { CountUp } from '../../components/ui/CountUp';
 import stats from '../../generated/repo-stats.json';
@@ -7,6 +7,7 @@ import { Hero } from './Hero';
 import { useZenotians } from './context';
 import { ZenAccent, ZenHeadline } from './ZenHeadline';
 import { SectionGate } from './SectionGate';
+import { ROOT } from './model';
 import { Bullets, Ext } from './parts';
 import { buttonClasses } from '../../components/ui/button-styles';
 import { cn } from '../../lib/cn';
@@ -25,7 +26,7 @@ const NUMBERS: { label: string; value: number; note: string }[] = [
 ];
 
 function Overview() {
-  const { content } = useZenotians();
+  const { content, goTo } = useZenotians();
   const o = content.overview ?? {};
   const external = (href: string, children: React.ReactNode, primary = false) => (
     <Ext
@@ -46,6 +47,23 @@ function Overview() {
           className="max-w-[26ch] text-3xl font-semibold text-text"
         />
         <ZenAccent />
+        <div className="flex flex-wrap items-center gap-sm">
+          <p className="max-w-[60ch] text-lg font-semibold text-text">
+            Standout feature: AIR, an AI receptionist that covers the front desk when nobody is
+            there.
+          </p>
+          <a
+            href={`${ROOT}/air`}
+            onClick={(event) => {
+              if (!goTo || event.metaKey || event.ctrlKey || event.shiftKey) return;
+              event.preventDefault();
+              goTo('air');
+            }}
+            className={cn(buttonClasses('secondary', 'md'), 'no-underline')}
+          >
+            <Headset className="h-4 w-4" aria-hidden="true" /> Meet AIR
+          </a>
+        </div>
         {o.intro && <p className="max-w-[65ch] text-lg text-text-muted">{o.intro}</p>}
         <div className="flex flex-wrap gap-sm">
           {o.demo_url &&
@@ -77,15 +95,16 @@ function Overview() {
         <h2 id="zen-numbers" className="mb-md text-xl font-semibold text-text">
           The project in numbers
         </h2>
-        <ul className="grid grid-cols-2 gap-md md:grid-cols-3 xl:grid-cols-6">
+        {/* As many 180 px columns as fit; a label never breaks inside a word. */}
+        <ul className="zen-numbers grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-md">
           {NUMBERS.map((n) => (
             <li key={n.label}>
               <Card variant="dense" className="flex h-full flex-col gap-1">
                 <p className="text-3xl font-semibold text-primary-hover">
                   <CountUp value={n.value} startDelay={600} />
                 </p>
-                <p className="font-semibold text-text">{n.label}</p>
-                <p className="text-sm text-text-muted">{n.note}</p>
+                <p className="zen-number-label font-semibold text-text">{n.label}</p>
+                <p className="zen-number-label text-sm text-text-muted">{n.note}</p>
               </Card>
             </li>
           ))}

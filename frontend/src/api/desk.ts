@@ -38,6 +38,9 @@ export interface DeskAppointment {
   addon_labels: string[];
   duration_minutes: number;
   price_total: string;
+  /** The coupon used on the online payment (read-only). */
+  coupon_code?: string;
+  coupon_discount?: string;
   amount_payable: string;
   preferred_start: string;
   preferred_stylist_name: string | null;

@@ -8,7 +8,12 @@ from core import brand, views
 def test_health_ok(client):
     response = client.get("/api/health/")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "database": "ok", "service": brand.PLATFORM_NAME}
+    assert response.json() == {
+        "status": "ok",
+        "database": "ok",
+        "cache": "ok",
+        "service": brand.PLATFORM_NAME,
+    }
 
 
 @pytest.mark.django_db
@@ -17,6 +22,26 @@ def test_health_reports_database_outage(client, monkeypatch):
     response = client.get("/api/health/")
     assert response.status_code == 503
     assert response.json()["status"] == "degraded"
+
+
+@pytest.mark.django_db
+def test_health_reports_cache_outage(client, monkeypatch):
+    monkeypatch.setattr(views, "cache_ok", lambda: False)
+    response = client.get("/api/health/")
+    assert response.status_code == 503
+    assert response.json()["cache"] == "unavailable"
+
+
+@pytest.mark.django_db
+def test_health_leaks_no_secrets_or_details(client):
+    text = client.get("/api/health/").content.decode()
+    for secret in (settings.SECRET_KEY, settings.SALON_FIELD_KEY):
+        assert secret not in text
+    db = settings.DATABASES["default"]
+    for detail in (db.get("PASSWORD"), db.get("HOST"), db.get("USER")):
+        if detail:
+            assert detail not in text
+    assert set(client.get("/api/health/").json()) == {"status", "database", "cache", "service"}
 
 
 @pytest.mark.django_db

@@ -60,3 +60,21 @@ class RedactFilter(logging.Filter):
         if record.exc_text:
             record.exc_text = redact(record.exc_text)
         return True
+
+
+class JsonFormatter(logging.Formatter):
+    """One JSON object per line (production logs on stdout). The message is already redacted by
+    RedactFilter; exceptions are included as text."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        import json
+
+        data = {
+            "time": self.formatTime(record, "%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            data["exception"] = redact(self.formatException(record.exc_info))
+        return json.dumps(data, ensure_ascii=False)

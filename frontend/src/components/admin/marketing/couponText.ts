@@ -7,6 +7,13 @@ export function describe(c: CouponRow): string {
   const parts = [off];
   if (c.max_discount) parts.push(`up to ${formatINR(c.max_discount)}`);
   if (Number(c.min_bill) > 0) parts.push(`bills of ${formatINR(c.min_bill)} or more`);
-  parts.push(c.applies_to === 'all' ? 'whole bill' : `${c.applies_to} only`);
+  parts.push(
+    c.applies_to === 'all'
+      ? 'whole bill'
+      : c.applies_to === 'chosen'
+        ? 'chosen items only'
+        : `${c.applies_to} only`,
+  );
+  if (c.first_visit_only) parts.push('first visit only');
   return parts.join(' · ');
 }

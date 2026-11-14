@@ -20,6 +20,7 @@ class Notification(models.Model):
         REQUEST_UPDATE = "request_update", "Request update"
         BOOKING_OUTCOME = "booking_outcome", "Booking outcome"
         SLOT_CHANGE = "slot_change", "Change to your booking"
+        REBOOK = "rebook", "Time to rebook"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

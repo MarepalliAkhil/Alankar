@@ -241,8 +241,11 @@ def test_no_planned_or_future_wording_and_ai_only_as_optional():
 
     banned = re.compile(r"\b(planned|future|roadmap|coming soon|to be built|will be added)\b", re.I)
     no_ai = re.compile(r"\b(no AI|no language model|without AI|no LLM)\b", re.I)
+    # The one allowed statement (owner's decision, 2026-11-12): the admin assistant is named as
+    # planned future work AND as not built, in the chatbot limitation only.
+    allowed = 'The admin assistant, "Alankar Intelligence", is planned future work and is not built'
     for where, text in _strings(SEED):
-        assert not banned.search(text), (where, text)
+        assert not banned.search(text.replace(allowed, "")), (where, text)
         assert not no_ai.search(text), (where, text)
         for _hit in re.finditer(r"\bAI\b", text):
             assert re.search(r"optional|off by default", text, re.I), (where, text)
@@ -443,3 +446,43 @@ def test_the_air_migration_updates_stored_content_once_and_keeps_admin_edits():
     edited["project"]["intro"] = "My own words."
     kept, _ = migration._upgrade(edited)
     assert kept["project"]["intro"] == "My own words."
+
+
+def test_the_admin_assistant_is_called_planned_future_work_and_the_migration_says_so():
+    import importlib
+
+    chat = next(i for i in SEED["limitations"]["items"] if i["id"] == "chatbot")
+    assert "planned future work and is not built" in chat["out_of_scope"]
+    assert "There is no admin assistant" not in json.dumps(SEED)
+
+    migration = importlib.import_module("website.migrations.0009_zenotians_ai_sections")
+    old = copy.deepcopy(SEED)
+    old_chat = next(i for i in old["limitations"]["items"] if i["id"] == "chatbot")
+    old_chat["out_of_scope"] = old_chat["out_of_scope"].replace(migration.NEW, migration.OLD)
+    value, changed = migration._upgrade(old)
+    assert changed
+    new_chat = next(i for i in value["limitations"]["items"] if i["id"] == "chatbot")
+    assert new_chat["out_of_scope"] == chat["out_of_scope"]
+    again, changed_again = migration._upgrade(value)
+    assert not changed_again and again == value
+    edited = copy.deepcopy(old)
+    mine = next(i for i in edited["limitations"]["items"] if i["id"] == "chatbot")
+    mine["out_of_scope"] = "Mine."
+    _kept, kept_changed = migration._upgrade(edited)
+    assert not kept_changed
+
+
+def test_recommendations_and_emails_rows_are_added_once_by_the_migration():
+    import importlib
+
+    names = [r["workflow"] for r in SEED["mapping"]]
+    assert "Personal recommendations" in names and "Personal emails" in names
+    rec = next(r for r in SEED["mapping"] if r["workflow"] == "Personal recommendations")
+    assert "never gender, age, caste or religion" in rec["built"]
+    migration = importlib.import_module("website.migrations.0010_zenotians_recommendations")
+    old = copy.deepcopy(SEED)
+    old["mapping"] = [r for r in old["mapping"] if r["workflow"] not in migration.NEW_ROWS]
+    value, changed = migration._upgrade(old)
+    assert changed and [r["workflow"] for r in value["mapping"]][-2:] == list(migration.NEW_ROWS)
+    again, changed_again = migration._upgrade(value)
+    assert not changed_again and again == value

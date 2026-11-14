@@ -25,6 +25,7 @@ from air import callback, holds, orders, service, understand
 from air import catalogue as cat_builder
 from air.actor import AirDenied
 from air.models import SlotHold
+from recommendations.engine import prefer_stylists
 from scheduling import booking
 from scheduling.models import Appointment, AppointmentStatus, Service
 from shop import orders as shop
@@ -540,7 +541,7 @@ def _offer_slots(user, svc, state, session_id, now, day) -> Reply:
         label = _window_phrase(state)
         text = f"Free times on {pretty_day(found[0][0])}{label}. Tap one to hold it for you:"
         return Reply(text=text, intent="book", chips=chips)
-    return _no_slots(svc, state, day, closed)
+    return _no_slots(svc, state, day, closed, user=user)
 
 
 def _window_phrase(state: dict) -> str:
@@ -561,7 +562,7 @@ def _clock(hhmm: str) -> str:
     return f"{hour % 12 or 12}:{minute:02d} {'AM' if hour < 12 else 'PM'}"
 
 
-def _no_slots(svc, state, day, closed: bool) -> Reply:
+def _no_slots(svc, state, day, closed: bool, user=None) -> Reply:
     ids = list(booking.qualified_stylists(svc, public_only=True).values_list("id", flat=True))
     q = booking.quote(svc, state.get("variant_id"), [])
     around = datetime.combine(day, time(12, 0), tzinfo=timezone.get_current_timezone())
@@ -575,7 +576,8 @@ def _no_slots(svc, state, day, closed: bool) -> Reply:
     chips = []
     for start in near:
         free = dict(booking.free_starts(booking.local(start).date(), q.duration_minutes, ids))
-        free_ids = free.get(start, [])
+        # Personal recommendations: the customer's usual stylist first, when they are free.
+        free_ids = prefer_stylists(user, free.get(start, []))
         if free_ids:
             names = {
                 s.id: s.display_name for s in booking.qualified_stylists(svc, public_only=True)
@@ -626,7 +628,7 @@ def _hold_and_card(user, svc, state, session_id, now, start: datetime, stylist: 
         )
     except booking.BookingError as exc:
         state["awaiting"] = "time"
-        return Reply(text=exc.message, intent="book", chips=_alt_chips(svc, state, exc.slots))
+        return Reply(text=exc.message, intent="book", chips=_alt_chips(svc, state, exc.slots, user))
     if state.get("stylist", "") in ("", "any") and not hold.any_stylist:
         hold.any_stylist = True  # AIR's rules chose the stylist (scheduling/anystylist.py)
         hold.save(update_fields=["any_stylist"])
@@ -642,7 +644,7 @@ def _hold_and_card(user, svc, state, session_id, now, start: datetime, stylist: 
     )
 
 
-def _alt_chips(svc, state, starts) -> list[dict]:
+def _alt_chips(svc, state, starts, user=None) -> list[dict]:
     ids = list(booking.qualified_stylists(svc, public_only=True))
     q = booking.quote(svc, state.get("variant_id"), [])
     chips = []
@@ -653,7 +655,7 @@ def _alt_chips(svc, state, starts) -> list[dict]:
             )
         )
         names = {s.id: s.display_name for s in ids}
-        free_ids = free.get(start, [])
+        free_ids = prefer_stylists(user, free.get(start, []))
         if free_ids:
             chips.append(
                 _slot_chip(

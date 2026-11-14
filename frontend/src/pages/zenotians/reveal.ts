@@ -132,7 +132,10 @@ export function planReveal(root: HTMLElement, intro: boolean): Plan[] {
       push(el, staggerDelay(i, REVEAL.menuStart, REVEAL.menuStep, REVEAL.menuCap)),
     );
   }
-  const page = root.querySelector('#zen-content')?.firstElementChild;
+  // For Zenotians is one long page: the first section's own content plays the intro (the other
+  // sections reveal their blocks as they scroll in).
+  const first = root.querySelector('#zen-content')?.firstElementChild;
+  const page = first?.hasAttribute('data-zen-section') ? first.firstElementChild : first;
   if (!page) return plan;
   let blocks = 0;
   let cards = 0;
@@ -153,6 +156,11 @@ export function planReveal(root: HTMLElement, intro: boolean): Plan[] {
       push(li, at(cards++, REVEAL.blockStart + 40, REVEAL.cardStep, REVEAL.maxDelay));
     });
   });
+  // The headline and its accent line are hidden by CSS until revealed, so they must always be in
+  // the plan, wherever they sit (otherwise the H1 stays invisible and leaves an empty gap).
+  root
+    .querySelectorAll("[data-zen-r='words'], [data-zen-r='line']")
+    .forEach((el) => push(el, intro ? REVEAL.heroStart : 0));
   return plan;
 }
 
@@ -238,7 +246,8 @@ export function useZenReveal(el: HTMLElement | null, routeKey = ''): void {
     const stopWaiting = whenIntro('hero', () => {
       run();
       mutations = content ? new MutationObserver(run) : null;
-      if (content) mutations?.observe(content, { childList: true });
+      // subtree: a lazy section arriving inside its <section> also counts.
+      if (content) mutations?.observe(content, { childList: true, subtree: true });
     });
     el.addEventListener('focusin', onFocusIn);
     return () => {

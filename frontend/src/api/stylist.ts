@@ -20,6 +20,9 @@ export interface StylistCard {
 
 export interface StylistDetail extends StylistCard {
   allergies: string;
+  /** Read-only: the coupon on the online payment (your pay is not affected). */
+  coupon_code?: string;
+  coupon_discount?: string;
   preferences: string;
   booked_services: { key: string; label: string }[];
   history: { date: string | null; service_name: string; variant_label: string }[];

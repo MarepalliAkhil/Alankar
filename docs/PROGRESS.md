@@ -2769,3 +2769,163 @@ Details and host rules: `docs/SEO.md`.
   `zenotians.test.tsx` and `zenotians-sidebar.test.tsx`; e2e `zenotians.e2e.ts` (rewritten for the
   one page) and `hero-and-sections.e2e.ts` (desktop and the five mobile projects; screenshots in
   `frontend/mobile-screens/hero/`).
+
+
+## For Zenotians: AIR and AI Alankar Intelligence sections, plus layout fixes (2026-11-12): DONE in code (unit tests run in a Linux copy; Playwright and the build not run here)
+
+- Images found: the 13 AIR poses in `frontend/public/photos/air/` (`air-01-welcome` to `air-13-sleep`,
+  1024 px WebP plus 512 px copies). Not found: `air/air.webp` (the fallback) and ANY AI Alankar
+  Intelligence image. (The AI image names changed in the next entry.)
+- Menu: "AIR, the AI receptionist" and "AI Alankar Intelligence" directly below "The project"
+  (`model.ts`), with their own icons, scroll, highlight and URL like the other sections. Overview:
+  "Standout feature: AIR ..." with a Meet AIR button under the headline.
+- Sections: `pages/zenotians/AiSections.tsx` and `ai-content.ts` (rows: H3, a 2 to 4 sentence passage,
+  the picture; two columns from 768 px, stacked heading / picture / words below; rows slide in, words
+  from the left, picture from the right; reduced motion: no movement). Every AIR row was checked
+  against the code and docs/AIR.md. AIR test count from `repo-stats.json` (`airTests`, new in
+  `scripts/repo-stats.mjs`); accuracy figures read from the page's tested content.
+- Gap in the Overview card: the H1 was there but invisible. Since the page became one long page,
+  the entrance plan (`reveal.ts planReveal`) looked at the first section instead of its content, so
+  the headline was never revealed and its words stayed at opacity 0 (CSS hides them until revealed).
+  The plan now reads the first section's content, always includes the headline and accent line,
+  and waits for a lazy section to load (`aria-busy` fallback, subtree observer).
+- Headings: one scale (`zenotians-type.css`): section H2 bold 1.85 to 2.25 rem; in-section headings
+  bold 1.4 to 1.6 rem with a 14 px gap. Numbers grid: `repeat(auto-fit, minmax(180px, 1fr))`, labels
+  never break inside a word.
+- Consistency: the chatbot limitation now says the admin assistant "Alankar Intelligence" is planned
+  future work and is not built (seed + data migration `website/0009_zenotians_ai_sections`; the
+  backend test that bans "planned" wording allows this one sentence). Meta description mentions AIR.
+  New section addresses in `seo-data.js`, `shared/policy.json`, `e2e/pages.ts`.
+- Tests: `pages/zenotians-ai.test.tsx` (12), updated Zenotians tests, backend
+  `test_the_admin_assistant_is_called_planned_future_work_and_the_migration_says_so`,
+  e2e `zenotians-ai.e2e.ts` (screenshots in `frontend/mobile-screens/zenotians/`).
+
+
+## For Zenotians: AI Alankar Intelligence section, AI content only (2026-11-12): DONE in code (unit tests and the Zenotians Playwright file run in a Linux copy)
+
+- The section is now only about the AI in the customer assistant. Six rows, each an H3, a passage
+  and a picture: Understanding natural language; Finding the intent; Answering from knowledge;
+  Measured, not guessed; Optional language model, safely; Privacy by design. No AIR, receptionist or
+  booking-desk content. Kept: "The admin assistant, "Alankar Intelligence", is planned future work
+  and is not built."
+- Facts come from the code: `chatbot/engine/text.py` (normalising, contractions, spelling against the
+  shop vocabulary, stemming, Telugu/Hindi words in English letters), `engine.py` (intent scoring,
+  confidence threshold, follow-ups), `knowledge.py` (BM25), `air/llm/` (consent, redaction, schema
+  validation, prompt-injection refusal, number checker, request limits, monthly spending cap,
+  rules fallback; only the redacted current message is sent).
+- Numbers: the "Measured, not guessed" row is built from the page's own `quality.accuracy`
+  (130 of 143 (90.9%) tuning, 67 of 91 (73.6%) holdout, measured 5 November 2026, checked by the
+  backend accuracy test). It says the language-model mode has not been measured.
+- Pictures: `frontend/public/photos/ai-intelligence/` `ai-01-language`, `ai-02-intent`,
+  `ai-03-answers`, `ai-04-accuracy`, `ai-05-language-model`, `ai-06-privacy` (`.webp`, `.png` or
+  `.jpg`). A row without its own file borrows another AI image from that folder in turn
+  (`assignAiPictures` in `ai-content.ts`), keeping that image's alt text. No AI image exists yet, so
+  the rows currently show no picture (never a broken image).
+- Tests: `zenotians-ai.test.tsx` (14: six AI rows in order, no AIR/receptionist/desk words, key
+  facts present, numbers equal `quality.accuracy`, picture sharing), e2e `zenotians-ai.e2e.ts`
+  (new test: six rows, no AIR content, alt text).
+
+## Personal recommendations (2026-11-13): DONE in code (tested in a Linux copy)
+
+- New backend app `recommendations` (no language model, no ML library): co-occurrence with lift
+  and minimum support, content similarity (category, division, tags; never the "audience" field),
+  popularity, top rated, the customer's own rebook gaps, usual stylist and times. Weighted score,
+  filters (already had, upcoming, not interested, admin-excluded), at most 2 per category, plain
+  reasons. `build_recommendations` command; `reset_demo` adds fictional archive guests and runs it.
+- Placements: dashboard "For you" (after "Rate your last visit"), "Time to rebook" with real free
+  times, rebook notification and simulated email once per cycle (`run_jobs` step), "Add after" in
+  the booking sheet only when the same stylist is free, aftercare products, quieter times, chat
+  "what do you recommend?", AIR offers the usual stylist first.
+- Controls: on by default with a one-time notice; switch and interests on the dashboard/profile;
+  undo "not interested". Admin page Recommendations: impressions, clicks, bookings, conversion,
+  offline evaluation (time split, hit rate@5 and precision@5 against a popularity baseline),
+  exclude services, pin an offer, rebuild. Never uses gender, age, caste, religion or other
+  sensitive attributes (test reads the code). Policy entries are deny-by-default; the sweep tests
+  every new endpoint for every role. Docs: `docs/RECOMMENDATIONS.md`. Zenotians mapping row
+  "Personal recommendations" (migration `website 0010`).
+
+## Marketing emails from the application (2026-11-13): DONE in code (tested in a Linux copy)
+
+- Built on the recommendations above. Consent: unticked box at registration and a profile switch,
+  each change stored with time, wording version and source (`ConsentRecord`); signed one-click
+  unsubscribe (page link and `List-Unsubscribe` headers).
+- Kinds: own message, For you, Products for you, Time to rebook, Most booked, Highest rated (5 or
+  more ratings), Current offers (real website offers only). Admin Marketing > Campaigns: audience,
+  preview, test send, schedule, Approve and send. Limits: one marketing email per customer in 7
+  days, quiet hours 21:00 to 09:00 shop time, rebook once per cycle. `send_campaigns` sends in
+  idempotent batches. Results without pixels: clicks through a redirect, bookings within 7 days.
+  HTML and text templates. Docs: `docs/MARKETING.md`. Zenotians mapping row "Personal emails".
+- Tests (Linux copy): backend 2070 passed (all), ruff clean, no missing migrations; frontend unit
+  1070 passed (the known AIR popup pose test and repo-stats only fail in the sandbox); Playwright
+  `recommendations.e2e.ts` 4/4, axe and basic a11y 57/57 (axe through a stand-in there).
+  On the PC: tsc, tsc e2e, eslint and prettier clean. Policy menu task label "Task REC-1".
+
+
+## Coupons at payment (2026-11-13): DONE in code (tested in a Linux copy)
+
+- Before: prices include GST; `billing/online.py` already priced online payments on the server
+  (items, coupon, membership, package, delivery, gift card) and took GST out of each line after its
+  discounts; the coupon was typed and sent again with the payment; its use was written only on a
+  successful payment, with the coupon row locked.
+- Added: coupon description, first-visit-only, "chosen" divisions/services/products; the coupon is
+  applied on the payment page and kept on the payment link (`apply_coupon` / `remove_coupon`,
+  `POST/DELETE /api/my/appointments/<id>/payment/coupon/`, action `my.payment.coupon`, customer
+  only); available coupons with short terms; breakdown (lines, Subtotal, Coupon, GST, Total) with a
+  live region; re-check under `select_for_update` at payment (409 `coupon_changed`, no money taken);
+  link expiry drops the coupon; Rs 0 payments marked "covered by coupon"; apply rate limit
+  (`SALON_COUPON_ATTEMPTS`, `SALON_COUPON_WINDOW_SECONDS`) with audit; AIR never touches coupons;
+  coupon shown to the customer, desk and stylist (read-only); admin coupon report; refunds skip
+  Rs 0 payments. Demo coupons WELCOME10, FLAT100, EXPIRED20 in `reset_demo`. Docs:
+  `docs/COUPONS.md`.
+- Tests: `marketing/tests/test_coupons_at_payment.py` (pricing, validity, apply/remove, race with
+  threads, expiry, cancellation, refunds, rate limit, permissions, report, payroll), vitest
+  (payment page, admin form and report), Playwright `z-coupons.e2e.ts` (axe, 390 px).
+
+## Add-only demo data for every feature (2026-11-13): DONE in code (tested in a Linux copy)
+
+- `python manage.py seed_demo_extras` (`--dry-run`, `--report`) and `remove_demo_extras`
+  (`core/demo_extras.py`, model `core.DemoExtra`). Adds 4 customers on `@alankar.test`, 6 coupons,
+  2 products, 60 days of history, bookings in every state, AIR actions, wallet sales, shop orders,
+  campaigns, one unrated visit; then build_recommendations. Every created row is recorded; the
+  second run adds nothing; remove deletes only recorded rows. Only the invoice-number counter and
+  the derived recommendation tables change. Proof: `core/tests/test_demo_extras.py` (fingerprint of
+  every row of every table). Docs: "Demo extras" in `docs/START_HERE.md`.
+
+## Customer login to dashboard, coupon cards, demo coupons from the owner's admin (2026-11-13): DONE in code (tested in a Linux copy)
+
+- Customers always land on `/customer-dashboard` after every sign-in path (password, emailed
+  code, trusted device, registration); `next` is ignored for them. A booking started before
+  signing in is kept (only `/customer/book...`, sessionStorage) and shown as "Continue your
+  booking" at the top of the dashboard; a held slot (awaiting payment) shows "Continue to
+  payment". Signed-in customers opening /login or /register go to the dashboard. Staff unchanged.
+  Files: `routes/destination.ts`, `routes/pending-booking.ts`, `LoginPage`, `RegisterPage`,
+  `CustomerHome`, `BookPage`.
+- Payment page: every listed, active, in-date coupon as a card (button, `aria-pressed`), plain
+  terms, "Tap to apply" or a greyed reason, "Best for you", tap to switch, Remove; typed box for
+  private codes; the Coupon row is always present so nothing moves. New coupon fields `listed`
+  (Show in customer coupon list) and `created_by` (migration `marketing 0006`).
+- `python manage.py seed_demo_coupons` (also run by `seed_demo_extras`): WELCOME10, FLAT100, SPA15,
+  GLOW200, HAIR50, CARE10, VIP25 (not listed), created by `akhimarepalli666@gmail.com` (only read;
+  stops if missing or not an admin), skips existing codes, tagged for `remove_demo_extras`.
+- Tests: `marketing/tests/test_coupon_cards.py`, `routes/destination.test.ts`, `App.test.tsx`,
+  `booking.test.tsx`, `admin-growth.test.tsx`, e2e `customer-login.e2e.ts`, `z-coupons.e2e.ts`.
+
+## Production deployment for Azure for Students (2026-11-14): DONE in code (Docker, Azure and GitHub Actions not run)
+
+- `docker-compose.prod.yml` (web = Caddy with the built frontend, backend = Daphne, scheduler,
+  redis; `db` only under the `localdb` profile), `docker-compose.local.yml` (http://localhost:8080),
+  `backend/Dockerfile`, `frontend/Dockerfile`, `deploy/caddy/Caddyfile` (HTTPS, /api and /ws to the
+  backend, prerendered pages, app routes generated from PRIVATE_PREFIXES, real 404, old-path
+  redirects, compression, caching, security headers and CSP, access log without tokens).
+- `config/settings_production.py` (refuses to start without DOMAIN, SALON_SECRET_KEY,
+  SALON_FIELD_KEY, DATABASE_URL, REDIS_URL; SSL database, Redis cache and channel layer, proxy
+  HTTPS, JSON logs); optional `SALON_JWT_SIGNING_KEY`; `/api/health/` now also checks the cache.
+  `deploy_check --strict` passes with sample values and 0 warnings.
+- Scheduler: `manage.py run_scheduler` (core/scheduler.py), a plain loop with JSON log lines.
+- Scripts `scripts/deploy/`: entrypoint, deploy, rollback, backup, restore, first_run.
+- GitHub Actions: `ci.yml` (tests on PostgreSQL 16, ruff, lint, typecheck, vitest, build; no
+  secrets), `images.yml` (ghcr.io, SHA and latest tags, GITHUB_TOKEN, never deploys).
+- `.env.production.example`, `.env.production.local.example`, `docs/DEPLOY.md`.
+- Also: `/recommendations` added to PRIVATE_PREFIXES (the admin page was missing from the
+  signed-in list, so a reload there would 404 behind a static host); the btree_gist migration
+  now explains how to allow-list the extension on Azure. New dependencies: redis, channels-redis.

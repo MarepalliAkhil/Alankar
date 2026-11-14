@@ -1,0 +1,132 @@
+# Production stack for one small VM (docs/DEPLOY.md). Images are built elsewhere (your PC or
+# GitHub Actions) and pulled from GitHub Container Registry by tag:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml pull
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+# The database is Azure Database for PostgreSQL (DATABASE_URL). The "db" service below exists only
+# for the local test (profile "localdb"; see docker-compose.local.yml).
+# Memory limits fit a 1 GB VM with a 2 GB swap file.
+
+name: alankar
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend: &backend
+  image: ghcr.io/marepalliakhil/alankar-backend:${IMAGE_TAG:-latest}
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  env_file: ${ENV_FILE:-.env.production}
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings_production
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  web:
+    image: ghcr.io/marepalliakhil/alankar-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        SITE_URL: ${SITE_URL:?Set SITE_URL in the env file}
+    environment:
+      SITE_ADDRESS: ${DOMAIN:?Set DOMAIN in the env file}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      CSP_CONNECT: "'self' wss://${DOMAIN}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+      - static:/srv/static:ro
+    depends_on:
+      - backend
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logging
+
+  backend:
+    <<: *backend
+    command: ["server"]
+    volumes:
+      - static:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 400m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-H", "Host: localhost", "http://127.0.0.1:8000/api/health/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+
+  scheduler:
+    <<: *backend
+    command: ["scheduler"]
+    volumes:
+      - media:/app/media:ro
+      - /var/backups/alankar:/var/backups/alankar
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 320m
+    healthcheck:
+      disable: true
+
+  redis:
+    image: redis:7.4.1-alpine
+    # Cache and chat channel layer only: no persistence; evict the least recently used keys
+    # rather than run out of memory.
+    command:
+      - redis-server
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 96m
+    restart: unless-stopped
+    logging: *logging
+
+  db:
+    # Local test only (profile "localdb"). Production uses Azure Database for PostgreSQL.
+    image: postgres:16.6-alpine
+    profiles: ["localdb"]
+    environment:
+      POSTGRES_DB: alankar
+      POSTGRES_USER: alankar
+      POSTGRES_PASSWORD: ${LOCALDB_PASSWORD:-local-only-password}
+    volumes:
+      - localdb:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alankar -d alankar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:
+  static:
+  media:
+  localdb:

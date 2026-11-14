@@ -96,6 +96,8 @@ describe('For Zenotians: structure', () => {
       'About Zenoti',
       'A day at Alankar',
       'The project',
+      'AIR, the AI receptionist',
+      'AI Alankar Intelligence',
       'How it maps to Zenoti',
       'Quality evidence',
       'Security and privacy',
@@ -147,7 +149,8 @@ describe('For Zenotians: structure', () => {
     bare.security = {};
     bare.limitations = {};
     bare.resume = { contacts: [] };
-    expect(buildMenu(bare).map((e) => e.id)).toEqual(['overview']);
+    // The AIR and AI Alankar Intelligence sections are part of the page itself.
+    expect(buildMenu(bare).map((e) => e.id)).toEqual(['overview', 'air', 'ai-intelligence']);
   });
 
   it('shows the sidebar menu and the footer line', async () => {

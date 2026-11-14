@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureCsrf, getSession } from '../api/auth';
+import * as adminOpsApi from '../api/adminOps';
 import * as contentApi from '../api/content';
 import * as customersApi from '../api/customers';
 import * as marketingApi from '../api/marketing';
@@ -60,6 +61,7 @@ vi.mock('../api/marketing', () => ({
   updateOffer: vi.fn(),
   deleteOffer: vi.fn(),
   listCoupons: vi.fn(),
+  getCouponReport: vi.fn(),
   createCoupon: vi.fn(),
   updateCoupon: vi.fn(),
   getLoyalty: vi.fn(),
@@ -72,12 +74,18 @@ vi.mock('../api/marketing', () => ({
   scheduleCampaign: vi.fn(),
   unscheduleCampaign: vi.fn(),
   runDueCampaigns: vi.fn(),
+  previewCampaign: vi.fn(),
+  testCampaign: vi.fn(),
   listPrivateCoupons: vi.fn(),
   issuePrivateCoupons: vi.fn(),
   withdrawPrivateCoupon: vi.fn(),
   unsubscribe: vi.fn(),
 }));
 vi.mock('../api/customers', () => ({ searchCustomers: vi.fn() }));
+vi.mock('../api/adminOps', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/adminOps')>()),
+  listProducts: vi.fn(),
+}));
 vi.mock('../api/reports', () => ({
   listReports: vi.fn(),
   getReport: vi.fn(),
@@ -157,6 +165,12 @@ const campaign: marketingApi.CampaignRow = {
   recipients: null,
   would_reach: 4,
   created_at: '2026-10-20T10:00:00Z',
+  kind: 'custom',
+  kind_label: 'Your own message',
+  approved_at: null,
+  approved_by: null,
+  problem: null,
+  results: null,
 };
 
 const revenue: reportsApi.Report = {
@@ -183,6 +197,17 @@ function setup(role: 'admin' | 'customer' | 'stylist' | 'receptionist' = 'admin'
   vi.mocked(getSession).mockResolvedValue(userFor(role));
   vi.mocked(publicApi.getSite).mockResolvedValue(site);
   vi.mocked(publicApi.getServices).mockResolvedValue([haircut]);
+  vi.mocked(adminOpsApi.listProducts).mockResolvedValue({ low_count: 0, results: [] });
+  vi.mocked(marketingApi.getCouponReport).mockResolvedValue({
+    from: '2026-10-15',
+    to: '2026-11-13',
+    coupons: [{ code: 'WELCOME10', title: 'Welcome', uses: 3, discount: '360.00' }],
+    total_uses: 3,
+    total_discount: '360.00',
+    with_coupon: { bookings: 3, revenue: '2700.00' },
+    without_coupon: { bookings: 9, revenue: '8100.00' },
+    note: 'Revenue is the money taken online; the discount is borne by the shop.',
+  });
   vi.mocked(workApi.pingActivity).mockResolvedValue({ idle_minutes: 15 });
   vi.mocked(contentApi.listBlocks).mockResolvedValue([hero, about, announcements, zenotians]);
   vi.mocked(contentApi.listFaqs).mockResolvedValue([
@@ -419,6 +444,62 @@ describe('marketing', () => {
     );
   });
 
+  it('shows the coupon report and limits a coupon to chosen divisions and services', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.createCoupon).mockResolvedValue(coupon);
+    renderAt('/marketing');
+    const report = await screen.findByRole('region', { name: 'Coupon report' });
+    expect(within(report).getByText('3 bookings · ₹2,700.00')).toBeInTheDocument();
+    expect(within(report).getAllByText('₹360.00')).toHaveLength(2); // total and per coupon
+    await user.click(screen.getByRole('button', { name: /New coupon/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'New coupon' });
+    await user.type(within(dialog).getByLabelText('Code'), 'SALON10');
+    await user.type(within(dialog).getByLabelText('Name'), 'Salon 10');
+    await user.type(within(dialog).getByLabelText('Percent off'), '10');
+    await user.selectOptions(within(dialog).getByLabelText('Applies to'), 'chosen');
+    await user.click(await within(dialog).findByRole('checkbox', { name: 'Salon' }));
+    await user.click(await within(dialog).findByRole('checkbox', { name: haircut.name }));
+    await user.click(within(dialog).getByRole('checkbox', { name: /First visit only/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save coupon' }));
+    await waitFor(() =>
+      expect(marketingApi.createCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({
+          applies_to: 'chosen',
+          divisions: ['salon'],
+          services: [haircut.id],
+          first_visit_only: true,
+        }),
+      ),
+    );
+  });
+
+  it('keeps a code private and shows who created each coupon', async () => {
+    const user = userEvent.setup();
+    vi.mocked(marketingApi.listCoupons).mockResolvedValue([
+      { ...coupon, listed: false, created_by: 'akhimarepalli666@gmail.com' },
+    ]);
+    vi.mocked(marketingApi.createCoupon).mockResolvedValue(coupon);
+    renderAt('/marketing');
+    expect(await screen.findByText('Private code')).toBeInTheDocument();
+    expect(screen.getByText('Created by akhimarepalli666@gmail.com')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /New coupon/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'New coupon' });
+    await user.type(within(dialog).getByLabelText('Code'), 'VIP30');
+    await user.type(within(dialog).getByLabelText('Name'), 'VIP');
+    await user.type(within(dialog).getByLabelText('Percent off'), '30');
+    const listedBox = within(dialog).getByRole('checkbox', {
+      name: /Show in customer coupon list/,
+    });
+    expect(listedBox).toBeChecked();
+    await user.click(listedBox);
+    await user.click(within(dialog).getByRole('button', { name: 'Save coupon' }));
+    await waitFor(() =>
+      expect(marketingApi.createCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'VIP30', listed: false }),
+      ),
+    );
+  });
+
   it('saves the loyalty rules', async () => {
     const user = userEvent.setup();
     vi.mocked(marketingApi.saveLoyalty).mockResolvedValue({
@@ -452,11 +533,11 @@ describe('marketing', () => {
     await user.click(await screen.findByRole('tab', { name: 'Campaigns' }));
     expect(await screen.findByText(/would reach 4/)).toBeInTheDocument();
     expect(screen.getByText(/4 customers can be reached now/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Send…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Send this campaign?' });
+    await user.click(screen.getByRole('button', { name: 'Approve and send…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Approve and send this campaign?' });
     expect(within(dialog).getByText(/4 opted-in customers/)).toBeInTheDocument();
     expect(marketingApi.sendCampaign).not.toHaveBeenCalled();
-    await user.click(within(dialog).getByRole('button', { name: 'Send now' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Approve and send' }));
     await waitFor(() => expect(marketingApi.sendCampaign).toHaveBeenCalledWith('k1'));
   });
 
@@ -468,9 +549,9 @@ describe('marketing', () => {
     });
     renderAt('/marketing');
     await user.click(await screen.findByRole('tab', { name: 'Campaigns' }));
-    await user.click(await screen.findByRole('button', { name: 'Send…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Send this campaign?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Send now' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve and send…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Approve and send this campaign?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Approve and send' }));
     expect(
       await within(dialog).findByText('No opted-in customers match this audience.'),
     ).toBeInTheDocument();

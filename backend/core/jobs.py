@@ -77,9 +77,16 @@ def end_lapsed_memberships(now) -> int:
 
 
 def campaigns(now) -> int:
-    from marketing.campaigns import run_due
+    from marketing.campaigns import send_all
 
-    return run_due(now)
+    return send_all(now)["emails"]
+
+
+def rebook_reminders(now) -> int:
+    """Personal recommendations: one "time to rebook" message per customer, service and cycle."""
+    from recommendations.reminders import send_due
+
+    return send_due(now)
 
 
 def rating_reminders(now) -> int:
@@ -114,6 +121,7 @@ JOBS: list[tuple[str, Callable]] = [
     ("air_cover_sweep", air_cover_sweep),
     ("end_lapsed_memberships", end_lapsed_memberships),
     ("campaigns", campaigns),
+    ("rebook_reminders", rebook_reminders),
     ("rating_reminders", rating_reminders),
     ("purge_old_rows", purge_old_rows),
     ("chat_photo_retention", chat_photo_retention),

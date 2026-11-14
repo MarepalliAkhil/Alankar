@@ -37,6 +37,8 @@ class Item:
     amount: Decimal  # incl. GST
     gst_percent: Decimal = Decimal("18")
     key: str = ""
+    ref_id: str = ""  # the service or product id (coupons for chosen items)
+    division: str = ""  # the service's division (coupons for chosen divisions)
     after: Decimal = ZERO
     coupon: Decimal = ZERO
     member: Decimal = ZERO
@@ -53,6 +55,7 @@ class Breakdown:
     items_total: Decimal = ZERO
     coupon: Coupon | None = None
     coupon_amount: Decimal = ZERO
+    eligible_total: Decimal = ZERO  # what the coupon applied to (incl. GST)
     member_plan: str = ""
     member_percent: Decimal = ZERO
     member_amount: Decimal = ZERO
@@ -70,9 +73,26 @@ class Breakdown:
     def gst_included(self) -> Decimal:
         return sum((i.gst for i in self.items), ZERO)
 
+    @property
+    def taxable_value(self) -> Decimal:
+        """The value GST is charged on: what is left of the lines after every discount, without
+        the GST inside it (prices include GST, so GST is worked out from the discounted price)."""
+        return sum((i.after for i in self.items), ZERO) - self.gst_included
+
     def data(self) -> dict:
         return {
+            "lines": [
+                {
+                    "kind": i.kind,
+                    "description": i.description,
+                    "amount": str(money(i.amount)),
+                    "coupon": str(money(i.coupon)),
+                }
+                for i in self.items
+            ],
             "items_total": str(money(self.items_total)),
+            "eligible_total": str(money(self.eligible_total)),
+            "taxable_value": str(money(self.taxable_value)),
             "coupon_code": self.coupon.code if self.coupon else "",
             "coupon_amount": str(money(self.coupon_amount)),
             "member_plan": self.member_plan,
@@ -105,12 +125,12 @@ def _share(amount: Decimal, targets: list[Item], attr: str) -> Decimal:
     return given
 
 
-def find_coupon(code: str, customer, *, lock: bool = False) -> Coupon | None:
+def find_coupon(code: str, customer, *, lock: bool = False, appointment=None) -> Coupon | None:
     code = coupons.normalize(code)
     if not code:
         return None
     coupon = coupons.find(code, lock=lock)
-    coupons.check_usable(coupon, customer, ZERO)
+    coupons.check_usable(coupon, customer, ZERO, appointment=appointment)
     return coupon
 
 
@@ -146,8 +166,11 @@ def calculate(
             )
             for i in items
         ]
+        for i, ln in zip(items, lines, strict=True):
+            ln.ref_id, ln.division = i.ref_id, i.division
         amount = coupons.amount_for(coupon, lines, ZERO)
         targets = [i for i, ln in zip(items, lines, strict=True) if coupons.eligible(ln, coupon)]
+        b.eligible_total = sum((t.amount for t in targets), ZERO)
         b.coupon = coupon
         b.coupon_amount = _share(amount, targets, "coupon")
 

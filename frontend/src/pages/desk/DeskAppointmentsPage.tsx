@@ -34,7 +34,7 @@ import {
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { cn } from '../../lib/cn';
-import { formatDateTime, formatDuration, formatINR } from '../../lib/format';
+import { formatDateTime, formatDuration, formatINR, formatINRExact } from '../../lib/format';
 import { statusEdge } from '../../components/ui/status-styles';
 
 const tabLabels: Record<DeskFilter, string> = {
@@ -346,6 +346,14 @@ function RequestCard({
           <dt className="text-xs text-text-muted">Total (incl. GST)</dt>
           <dd className="font-medium text-text">{formatINR(appt.price_total)}</dd>
         </div>
+        {appt.coupon_code && (
+          <div>
+            <dt className="text-xs text-text-muted">Coupon</dt>
+            <dd className="font-medium text-success-text">
+              {appt.coupon_code} (- {formatINRExact(appt.coupon_discount ?? '0')})
+            </dd>
+          </div>
+        )}
         {appt.room_name && (
           <div>
             <dt className="text-xs text-text-muted">Room</dt>

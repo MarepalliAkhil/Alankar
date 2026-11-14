@@ -44,6 +44,8 @@ class Line:
     prefilled: bool = False
     paid_online: bool = False
     discount: Decimal = ZERO
+    ref_id: str = ""  # service or product id, for coupons limited to chosen items
+    division: str = ""
     after: Decimal = ZERO
     gst: Decimal = ZERO
 

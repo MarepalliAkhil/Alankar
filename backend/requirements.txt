@@ -20,3 +20,7 @@ pyotp>=2.9
 psycopg[binary]>=3.2,<4
 # Chat photos: real file-type check, size/dimension limits, re-encoding (strips EXIF/GPS), thumbnails
 Pillow>=11.0,<13
+# Production (docs/DEPLOY.md): Redis for the shared cache (Django's built-in RedisCache) and the
+# chat channel layer. Only used when DJANGO_SETTINGS_MODULE=config.settings_production.
+redis==5.2.1
+channels-redis==4.2.1

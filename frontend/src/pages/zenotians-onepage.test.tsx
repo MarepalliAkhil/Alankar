@@ -109,6 +109,8 @@ describe('For Zenotians as one page', () => {
       'about-zenoti',
       'day',
       'project',
+      'air',
+      'ai-intelligence',
       'mapping',
       'quality',
       'security',
@@ -158,10 +160,10 @@ describe('For Zenotians as one page', () => {
     const user = userEvent.setup();
     await page();
     const bar = document.querySelector('[data-zen-bar]') as HTMLElement;
-    expect(within(bar).getByRole('button', { name: /Sections: Overview, 1 of 10/ })).toBeTruthy();
+    expect(within(bar).getByRole('button', { name: /Sections: Overview, 1 of 12/ })).toBeTruthy();
     await user.click(within(bar).getByRole('button', { name: 'Next: About me' }));
     expect(scrolled.at(-1)?.id).toBe('zen-sec-about');
-    expect(within(bar).getByRole('button', { name: /2 of 10/ })).toBeTruthy();
+    expect(within(bar).getByRole('button', { name: /2 of 12/ })).toBeTruthy();
     await user.click(within(bar).getByRole('button', { name: 'Previous: Overview' }));
     expect(scrolled.at(-1)?.id).toBe('zen-sec-overview');
     const overview = document.getElementById('zen-sec-overview')!;

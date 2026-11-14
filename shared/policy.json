@@ -42,6 +42,7 @@
     "my.appointments.update": "Cancel, flag (I'm here, reschedule, cancel request) or resend the payment link for my own appointment",
     "my.payment.read": "Read the payment due for my own appointment",
     "my.payment.pay": "Pay for my own appointment (mock gateway)",
+    "my.payment.coupon": "Apply or remove one coupon on my own payment (the server works out the discount)",
     "my.invoices.list": "List my own invoices",
     "my.invoices.read": "Read one of my own invoices",
     "my.ratings.list": "List my visits that are waiting for a rating",
@@ -115,7 +116,7 @@
     "content.edit": "Edit content drafts, FAQs and achievements",
     "content.publish": "Publish or unpublish public content",
     "marketing.manage": "Manage offers, coupons, loyalty rules and campaign drafts",
-    "marketing.send": "Send a campaign to opted-in customers",
+    "marketing.send": "Approve and send a campaign, send a test to yourself, or schedule it",
     "reports.view": "View and download reports",
     "public.unsubscribe": "Unsubscribe from marketing messages with the emailed link",
     "audit.export": "Download the audit log as CSV (the download is itself audited)",
@@ -237,7 +238,13 @@
     "air.desk.needs": "Receptionist and admin: claim or resolve an AIR needs-you item",
     "air.desk.undo": "Receptionist and admin: undo one of AIR's own reversible actions (never a paid booking)",
     "air.desk.phone": "Receptionist and admin: show a customer's phone number from the AIR activity page (audited)",
-    "air.desk.briefing": "Receptionist and admin: the AIR popup briefing (counts only)"
+    "air.desk.briefing": "Receptionist and admin: the AIR popup briefing (counts only)",
+    "my.recommendations.read": "See my personal recommendations, rebook times, aftercare, quieter times and booking add-ons",
+    "my.recommendations.prefs": "Switch personal recommendations on or off and choose my interests",
+    "my.recommendations.feedback": "Click a recommendation or mark it 'not interested'",
+    "admin.recommendations.read": "See recommendation results (shown, clicked, booked) and the offline evaluation",
+    "admin.recommendations.manage": "Switch recommendations on or off, exclude services, pin an offer and rebuild",
+    "public.campaign_click": "Count a click on a link in a marketing email, then open the app (no tracking pixels)"
   },
   "public": {
     "api": [
@@ -266,7 +273,8 @@
       "public.unsubscribe",
       "chatbot.ask",
       "air.chat",
-      "air.status"
+      "air.status",
+      "public.campaign_click"
     ],
     "routes": [
       "/",
@@ -286,6 +294,8 @@
       "/for-zenotians/about/achievements",
       "/for-zenotians/about-zenoti",
       "/for-zenotians/project",
+      "/for-zenotians/air",
+      "/for-zenotians/ai-intelligence",
       "/for-zenotians/mapping",
       "/for-zenotians/day",
       "/for-zenotians/decisions",
@@ -322,6 +332,7 @@
         "my.appointments.update",
         "my.payment.read",
         "my.payment.pay",
+        "my.payment.coupon",
         "my.invoices.list",
         "my.invoices.read",
         "my.ratings.list",
@@ -384,7 +395,10 @@
         "auth.step_up_verify",
         "my.trusted_devices.list",
         "my.trusted_devices.revoke",
-        "my.trusted_devices.revoke_all"
+        "my.trusted_devices.revoke_all",
+        "my.recommendations.read",
+        "my.recommendations.prefs",
+        "my.recommendations.feedback"
       ],
       "routes": [
         "/customer/pay/:id",
@@ -882,7 +896,9 @@
         "air.desk.undo",
         "air.desk.phone",
         "air.desk.briefing",
-        "desk.appointments.reassign"
+        "desk.appointments.reassign",
+        "admin.recommendations.read",
+        "admin.recommendations.manage"
       ],
       "routes": [
         "/customers/:id",
@@ -1014,6 +1030,15 @@
           "path": "/marketing",
           "description": "Offers, coupons (rules, dates and limits), loyalty rules, and campaigns to customers who opted in.",
           "task": "Task 5c",
+          "status": "available",
+          "group": "Catalogue"
+        },
+        {
+          "id": "recommendations",
+          "label": "Recommendations",
+          "path": "/recommendations",
+          "description": "Personal recommendations: what was shown, clicked and booked, the offline evaluation against a popularity baseline, excluded services and a pinned offer.",
+          "task": "Task REC-1",
           "status": "available",
           "group": "Catalogue"
         },
@@ -1184,7 +1209,10 @@
         "staff.edit",
         "customer.read_other",
         "staff.private.read",
-        "chat.photo.open"
+        "chat.photo.open",
+        "coupon.create",
+        "coupon.apply",
+        "coupon.remove"
       ]
     }
   }

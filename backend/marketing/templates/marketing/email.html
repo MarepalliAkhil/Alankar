@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f8f6ff;font-family:Arial,Helvetica,sans-serif;color:#1e1b4b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;padding:32px;">
+            <tr><td style="font-size:22px;font-weight:bold;padding-bottom:16px;">{{ shop_name }}</td></tr>
+            <tr><td style="font-size:16px;font-weight:bold;padding-bottom:12px;">{{ heading }}</td></tr>
+            <tr><td style="font-size:15px;line-height:1.5;padding-bottom:16px;">{{ greeting }}<br><br>{{ intro|linebreaksbr }}</td></tr>
+            {% for item in items %}
+            <tr>
+              <td style="padding:12px 0;border-top:1px solid #ede9fe;">
+                <div style="font-size:15px;font-weight:bold;">{{ item.title }}{% if item.price %} <span style="font-weight:normal;color:#5b5675;">· from Rs {{ item.price }}</span>{% endif %}</div>
+                <div style="font-size:14px;color:#5b5675;padding:4px 0 8px;">{{ item.reason }}</div>
+                {% if item.link %}<a href="{{ item.link }}" style="color:#6d28d9;font-weight:bold;">{{ item.action }}</a>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            {% if extra %}<tr><td style="font-size:15px;line-height:1.5;padding:12px 0;">{{ extra|linebreaksbr }}</td></tr>{% endif %}
+            <tr>
+              <td style="font-size:12px;color:#5b5675;padding-top:20px;border-top:1px solid #ede9fe;">
+                {{ why }}<br>
+                <a href="{{ unsubscribe }}" style="color:#5b5675;">Unsubscribe</a> with one click. We never use tracking pixels.
+              </td>
+            </tr>
+            <tr><td style="font-size:12px;color:#5b5675;padding-top:12px;">{{ footer }}</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

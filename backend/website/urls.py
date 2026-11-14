@@ -1,6 +1,6 @@
 from django.urls import path
 
-from marketing.views import UnsubscribeView
+from marketing.views import CampaignClickView, UnsubscribeView
 from website import views
 
 urlpatterns = [
@@ -11,5 +11,6 @@ urlpatterns = [
     path("services/<slug:slug>/", views.ServiceDetailView.as_view(), name="public-service"),
     path("team/", views.TeamView.as_view(), name="public-team"),
     path("unsubscribe/", UnsubscribeView.as_view(), name="public-unsubscribe"),
+    path("c/<uuid:token>/", CampaignClickView.as_view(), name="public-campaign-click"),
     path("pages/<slug:key>/", views.PolicyPageView.as_view(), name="public-page"),
 ]

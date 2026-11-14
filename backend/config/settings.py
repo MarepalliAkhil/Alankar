@@ -1,5 +1,6 @@
 """Django settings. Every value comes from the environment (see backend/.env.example)."""
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -7,7 +8,9 @@ from core import brand
 from core.env import env, env_bool, env_list, load_env_file
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_env_file(BASE_DIR / ".env")
+# backend/.env is for development; the containers get their variables from the environment.
+if not os.environ.get("SALON_SKIP_ENV_FILE"):
+    load_env_file(BASE_DIR / ".env")
 
 SECRET_KEY = env("SALON_SECRET_KEY")
 DEBUG = env_bool("SALON_DEBUG", False)
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
     "chatbot",
     "notifications",
     "air",
+    "recommendations",
 ]
 
 MIDDLEWARE = [
@@ -171,6 +175,14 @@ EMAIL_BACKEND = (
     else "django.core.mail.backends.dummy.EmailBackend"
 )
 
+# Marketing emails (marketing/limits.py): no sending between these hours (shop time, 21:00 to
+# 09:00 by default; empty switches it off) and at most one marketing email per customer per week.
+SALON_MARKETING_QUIET_HOURS = (
+    tuple(int(h) for h in env("SALON_MARKETING_QUIET_HOURS", "21,9").split(",") if h.strip())
+    or None
+)
+SALON_MARKETING_MIN_DAYS = int(env("SALON_MARKETING_MIN_DAYS", "7"))
+
 # Field-level encryption master key (base64, 32 bytes). Only in .env, never committed.
 SALON_FIELD_KEY = env("SALON_FIELD_KEY")
 
@@ -205,7 +217,8 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
-    "SIGNING_KEY": SECRET_KEY,
+    # A separate signing key can be set for the sign-in tokens (production); else SECRET_KEY.
+    "SIGNING_KEY": env("SALON_JWT_SIGNING_KEY", "") or SECRET_KEY,
     # Tokens carry a fingerprint of the password hash: changing or resetting a password makes every
     # access token issued before it stop working at once (not only after 15 minutes).
     "CHECK_REVOKE_TOKEN": True,
@@ -269,3 +282,7 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+# Coupons at payment (docs/COUPONS.md): apply attempts per customer and per IP address in a window.
+SALON_COUPON_ATTEMPTS = int(env("SALON_COUPON_ATTEMPTS", "10"))
+SALON_COUPON_WINDOW_SECONDS = int(env("SALON_COUPON_WINDOW_SECONDS", "600"))

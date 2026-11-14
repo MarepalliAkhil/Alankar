@@ -50,6 +50,34 @@ class UserTools:
     def __init__(self, user) -> None:
         self.user = user
 
+    def recommendations(self, _user_id=None, top: int = 3) -> list[dict]:
+        """Personal picks for "what do you recommend?" (customers with recommendations on)."""
+        from recommendations import engine
+        from recommendations.models import RecEvent
+
+        if getattr(self.user, "role", "") != "customer" or not engine.personal_on(self.user):
+            return []
+        due = engine.rebook(self.user, slots=False)
+        picks = [{"service": e["service"].name, "reason": e["reason"].rstrip(".")} for e in due]
+        for item in engine.for_you(self.user, top=top):
+            picks.append({"service": item.info.name, "reason": item.reasons[0]})
+        picks = picks[:top]
+        names = [p["service"] for p in picks]
+        from scheduling.models import Service
+
+        RecEvent.objects.bulk_create(
+            [
+                RecEvent(
+                    user=self.user,
+                    kind=RecEvent.Kind.IMPRESSION,
+                    placement=RecEvent.Placement.CHAT,
+                    service_id=sid,
+                )
+                for sid in Service.objects.filter(name__in=names).values_list("pk", flat=True)
+            ]
+        )
+        return picks
+
     def _mine(self):
         return Appointment.objects.filter(customer=self.user).select_related("stylist")
 

@@ -42,6 +42,11 @@ export function collect() {
 
   const pyTests = files(backend, (p) => /\/(test_[^/]*|tests)\.py$/.test(p));
   const backendTests = count(pyTests, /^\s*(?:async )?def test_/gm);
+  // AIR's own tests (backend/air/tests), quoted on the For Zenotians AIR section.
+  const airTests = count(
+    pyTests.filter((p) => /[\\/]air[\\/]tests[\\/]/.test(p)),
+    /^\s*(?:async )?def test_/gm,
+  );
   const unitTests = count(
     files(join(frontend, 'src'), (p) => /\.test\.tsx?$/.test(p)),
     /^\s*(?:it|test)(?:\.each\([^)]*\))?\(/gm,
@@ -66,6 +71,7 @@ export function collect() {
     apiEndpoints: endpoints,
     automatedTests: backendTests + unitTests + e2eTests,
     testBreakdown: { backend: backendTests, frontendUnit: unitTests, endToEnd: e2eTests },
+    airTests,
     migrations,
     accessibilityScreens: axeScreens,
     method: {
@@ -73,6 +79,7 @@ export function collect() {
       pages: 'frontend/src/pages/**/*Page.tsx files',
       apiEndpoints: 'path() routes in backend urls.py files, not counting include()',
       automatedTests: 'test functions: pytest def test_, Vitest it/test, Playwright test',
+      airTests: 'pytest def test_ in backend/air/tests',
       migrations: 'numbered files in backend/*/migrations',
       accessibilityScreens: 'paths listed in frontend/e2e/pages.ts, scanned by axe-core',
     },

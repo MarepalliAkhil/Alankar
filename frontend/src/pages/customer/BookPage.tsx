@@ -4,6 +4,7 @@ import { CalendarX, Minus, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cn } from '../../lib/cn';
 import { Link, useSearchParams } from 'react-router-dom';
+import { clearPendingBooking } from '../../routes/pending-booking';
 import { z } from 'zod';
 import { genericErrorMessage } from '../../api/auth-messages';
 import {
@@ -51,6 +52,7 @@ import {
 } from '../../lib/format';
 import { fieldErrors, isIndianMobile } from '../../lib/validation';
 import { ButtonLink } from '../../components/ui/ButtonLink';
+import { AddAfter } from '../../components/recommendations/AddAfter';
 
 /** /customer/book: pick a service first, then the booking sheet for it. */
 export default function BookPage() {
@@ -262,7 +264,10 @@ function BookingForm({ options }: { options: BookingOptions }) {
     (prefill.get('addons') ?? '').split(',').filter(Boolean),
   );
   const [day, setDay] = useState(days.includes(wantedDay) ? wantedDay : (days[0] ?? ''));
-  const [stylist, setStylist] = useState('');
+  const wantedStylist = prefill.get('stylist') ?? '';
+  const [stylist, setStylist] = useState(
+    stylists.some((s) => s.id === wantedStylist) ? wantedStylist : '',
+  );
   const [slot, setSlot] = useState('');
   const [suggested, setSuggested] = useState<string[]>([]);
   const [form, setForm] = useState({
@@ -315,6 +320,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
   const send = useMutation({
     mutationFn: (payload: BookingRequestPayload) => sendBookingRequest(payload),
     onSuccess: () => {
+      clearPendingBooking(); // the booking started before signing in is now sent
       void queryClient.invalidateQueries({ queryKey: ['my-appointments'] });
       setSent(true);
     },
@@ -607,6 +613,7 @@ function BookingForm({ options }: { options: BookingOptions }) {
             {errors.slot && slots.data?.slots.length === 0 && (
               <p className="text-xs font-medium text-danger-text">{errors.slot}</p>
             )}
+            {stylist && slot && <AddAfter service={service.slug} stylist={stylist} start={slot} />}
           </Card>
 
           <Card

@@ -34,6 +34,9 @@ class MailOutbox(models.Model):
     subject = models.CharField(max_length=200)
     body = models.TextField()
     link = models.URLField(max_length=500, blank=True)
+    # Marketing mails: a ready HTML version and List-Unsubscribe headers (one-click unsubscribe).
+    html = models.TextField(blank=True, default="")
+    headers = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SIMULATED)
     error = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -45,3 +48,23 @@ class MailOutbox(models.Model):
 
     def __str__(self) -> str:
         return f"{self.subject} -> {self.to_email}"
+
+
+class DemoExtra(models.Model):
+    """A row added by `seed_demo_extras` (docs/START_HERE.md, "Demo extras").
+
+    `key` is stable: "step:<name>" marks a finished step (so a second run adds nothing) and
+    "row:<app.model>:<pk>" names one row the command created, so `remove_demo_extras` can delete
+    exactly those rows and nothing else.
+    """
+
+    key = models.CharField(max_length=200, unique=True)
+    label = models.CharField(max_length=100, blank=True)  # app_label.model_name
+    object_pk = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return self.key

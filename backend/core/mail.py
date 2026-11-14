@@ -45,6 +45,8 @@ def frontend_link(path: str) -> str:
 def render_message(message: MailOutbox) -> tuple[str, str]:
     """The same content for the saved copy and the real email: (text, html)."""
     footer = f"{brand.SHOP_NAME} · {brand.POWERED_BY}"
+    if message.html:  # marketing mails carry their own text and HTML versions
+        return message.body, message.html
     text = message.body
     if message.link:
         text += f"\n\n{message.link}"
@@ -77,6 +79,7 @@ def deliver(outbox_id, on_success: Callback = None, on_failure: Callback = None)
         body=text,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[message.to_email],
+        headers=dict(message.headers or {}),
     )
     email.attach_alternative(html, "text/html")
     try:
@@ -110,6 +113,8 @@ def queue_mail(
     subject: str,
     body: str,
     link: str = "",
+    html: str = "",
+    headers: dict | None = None,
     on_success: Callback = None,
     on_failure: Callback = None,
 ) -> MailOutbox:
@@ -121,6 +126,8 @@ def queue_mail(
         subject=subject,
         body=body,
         link=link,
+        html=html,
+        headers=headers or {},
         status=MailOutbox.Status.QUEUED if real else MailOutbox.Status.SIMULATED,
     )
     if real:

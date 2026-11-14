@@ -98,6 +98,9 @@ def detail(appt: Appointment, profile: StylistProfile) -> dict:
     )
     data = {
         **card(appt, images.reference_appointment_ids([appt.id])),
+        # Read-only: the coupon on the online payment. The stylist's pay is not affected.
+        "coupon_code": appt.prepay_coupon.code if appt.prepay_coupon_id else "",
+        "coupon_discount": str(appt.prepay_coupon_amount),
         "allergies": allergy_text,
         "preferences": preference_text,
         "booked_services": [

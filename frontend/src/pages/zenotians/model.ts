@@ -6,6 +6,8 @@ export type SectionId =
   | 'about'
   | 'about-zenoti'
   | 'project'
+  | 'air'
+  | 'ai-intelligence'
   | 'mapping'
   | 'day'
   | 'quality'
@@ -141,6 +143,14 @@ export function buildMenu(content: ZenotiansContent): MenuEntry[] {
       path: `${ROOT}/project`,
       has: projectConfigured(content),
     },
+    // Built features described by the page itself (pages/zenotians/ai-sections.tsx), so always on.
+    { id: 'air', label: 'AIR, the AI receptionist', path: `${ROOT}/air`, has: true },
+    {
+      id: 'ai-intelligence',
+      label: 'AI Alankar Intelligence',
+      path: `${ROOT}/ai-intelligence`,
+      has: true,
+    },
     {
       id: 'mapping',
       label: 'How it maps to Zenoti',
@@ -178,7 +188,10 @@ export function buildMenu(content: ZenotiansContent): MenuEntry[] {
       has: publicContacts(content).length > 0,
     },
   ];
-  return entries.filter((e) => e.has).map((e) => ({ ...e, has: undefined }) as MenuEntry);
+  const shown = entries.filter((e) => e.has).map((e) => ({ ...e, has: undefined }) as MenuEntry);
+  // An unpublished page (no content at all) stays unpublished: the two built-in sections do not
+  // publish it on their own.
+  return shown.some((e) => e.id !== 'air' && e.id !== 'ai-intelligence') ? shown : [];
 }
 
 export interface MenuGroup {
@@ -195,6 +208,8 @@ const GROUP_OF: Record<SectionId, MenuGroup['id']> = {
   'about-zenoti': 'about',
   day: 'project',
   project: 'project',
+  air: 'project',
+  'ai-intelligence': 'project',
   mapping: 'project',
   quality: 'project',
   security: 'project',

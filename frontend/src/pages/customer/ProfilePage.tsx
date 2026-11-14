@@ -10,6 +10,7 @@ import { changePassword, getProfile, updateProfile, type ProfilePayload } from '
 import { serverFieldErrors } from '../../api/client';
 import { AiHelpCard } from '../../components/customer/AiHelpCard';
 import { YourDataCard } from '../../components/customer/YourDataCard';
+import { RecommendationsCard } from '../../components/recommendations/RecommendationsCard';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   Button,
@@ -83,6 +84,9 @@ export default function ProfilePage() {
           <div id="ai-help" className="scroll-mt-lg lg:col-span-2">
             <AiHelpCard />
           </div>
+          <div id="suggestions" className="scroll-mt-lg lg:col-span-2">
+            <RecommendationsCard />
+          </div>
           <div id="your-data" className="scroll-mt-lg lg:col-span-2">
             <YourDataCard />
           </div>
@@ -103,6 +107,7 @@ function DetailsForm({
     preferences: string;
     marketing_opt_in: boolean;
     marketing_opt_changed_at?: string | null;
+    marketing_text?: string;
   };
 }) {
   const toast = useToast();
@@ -207,7 +212,7 @@ function DetailsForm({
           name="marketing"
           checked={marketing}
           onChange={(event) => setMarketing(event.target.checked)}
-          label="Send me offers and news by email."
+          label={initial.marketing_text || 'Send me offers and news by email.'}
         />
         <p className="-mt-sm text-xs text-text-muted">
           {initial.marketing_opt_changed_at

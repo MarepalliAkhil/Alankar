@@ -19,7 +19,15 @@ def add_overlap_constraints(apps, schema_editor):
     """
     if schema_editor.connection.vendor != "postgresql":
         return
-    schema_editor.execute("CREATE EXTENSION IF NOT EXISTS btree_gist")
+    try:
+        schema_editor.execute("CREATE EXTENSION IF NOT EXISTS btree_gist")
+    except Exception as exc:
+        raise RuntimeError(
+            "Could not create the btree_gist extension. On Azure Database for PostgreSQL, allow-list "
+            "it first: Azure portal > your PostgreSQL server > Server parameters > azure.extensions "
+            "> tick BTREE_GIST > Save, then run migrate again (docs/DEPLOY.md). Elsewhere, run once "
+            "as the database owner: CREATE EXTENSION IF NOT EXISTS btree_gist;"
+        ) from exc
     schema_editor.execute(
         "ALTER TABLE air_slothold ADD CONSTRAINT air_hold_no_stylist_overlap "
         "EXCLUDE USING gist (stylist_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) "

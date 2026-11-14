@@ -6,13 +6,16 @@ import {
   deleteCampaign,
   listCampaigns,
   listCoupons,
+  previewCampaign,
   runDueCampaigns,
   scheduleCampaign,
   sendCampaign,
+  testCampaign,
   unscheduleCampaign,
   updateCampaign,
   type AudienceKind,
   type CampaignInput,
+  type CampaignKind,
   type CampaignList,
   type CampaignRow,
 } from '../../../api/marketing';
@@ -39,6 +42,7 @@ export function CampaignsPanel() {
   const [editing, setEditing] = useState<CampaignRow | 'new' | null>(null);
   const [confirming, setConfirming] = useState<CampaignRow | null>(null);
   const [scheduling, setScheduling] = useState<CampaignRow | null>(null);
+  const [previewing, setPreviewing] = useState<CampaignRow | null>(null);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['mk-campaigns'] });
   const remove = useMutation({
     mutationFn: (c: CampaignRow) => deleteCampaign(c.id),
@@ -71,7 +75,10 @@ export function CampaignsPanel() {
           <h2 className="text-lg font-semibold text-text">Campaigns</h2>
           <p className="mt-1 text-sm text-text-muted">
             Messages are simulated in this version. Only customers who agreed to marketing receive
-            them, and every message has an unsubscribe link.
+            them, every message has a one-click unsubscribe link, and no tracking pixels are used.
+            {list.data?.limits
+              ? ` Nothing is sent between ${list.data.limits.quiet_hours[0] ?? 21}:00 and ${String(list.data.limits.quiet_hours[1] ?? 9).padStart(2, '0')}:00, and each customer gets at most one email in ${list.data.limits.min_days} days.`
+              : ''}
             {list.data
               ? ` ${list.data.opted_in} customer${list.data.opted_in === 1 ? '' : 's'} can be reached now.`
               : ''}
@@ -114,7 +121,7 @@ export function CampaignsPanel() {
                     tone={
                       c.status === 'sent'
                         ? 'success'
-                        : c.status === 'scheduled'
+                        : c.status === 'scheduled' || c.status === 'sending'
                           ? 'info'
                           : 'warning'
                     }
@@ -123,8 +130,11 @@ export function CampaignsPanel() {
                       ? 'Sent'
                       : c.status === 'scheduled'
                         ? 'Scheduled'
-                        : 'Draft'}
+                        : c.status === 'sending'
+                          ? 'Sending'
+                          : 'Draft'}
                   </Badge>
+                  {c.kind_label && <Badge tone="neutral">{c.kind_label}</Badge>}
                   {c.coupon && <Badge tone="primary">Coupon {c.coupon}</Badge>}
                 </div>
                 <p className="mt-xs text-sm text-text">{c.subject}</p>
@@ -135,11 +145,25 @@ export function CampaignsPanel() {
                     : c.status === 'scheduled' && c.scheduled_for
                       ? `goes out ${new Date(c.scheduled_for).toLocaleString()} · would reach ${c.would_reach}`
                       : `would reach ${c.would_reach}`}
+                  {c.approved_by ? ` · approved by ${c.approved_by}` : ''}
                 </p>
+                {c.problem && <p className="mt-xs text-sm text-warning-text">{c.problem}</p>}
+                {c.results && (
+                  <p className="mt-xs text-sm text-text" data-campaign-results>
+                    {c.results.sent} sent
+                    {c.results.waiting ? ` · ${c.results.waiting} waiting` : ''} ·{' '}
+                    {c.results.skipped} skipped · {c.results.clicked} clicked · {c.results.booked}{' '}
+                    booked within {c.results.booked_within_days} days
+                    {c.results.skipped_reasons.length > 0 &&
+                      ` (skipped: ${c.results.skipped_reasons
+                        .map((r) => `${r.count} ${r.reason}`)
+                        .join('; ')})`}
+                  </p>
+                )}
                 {c.status === 'scheduled' && (
                   <div className="mt-sm flex flex-wrap gap-sm">
                     <Button type="button" size="sm" onClick={() => setConfirming(c)}>
-                      Send…
+                      Approve and send…
                     </Button>
                     <Button
                       type="button"
@@ -154,8 +178,21 @@ export function CampaignsPanel() {
                 )}
                 {c.status === 'draft' && (
                   <div className="mt-sm flex flex-wrap gap-sm">
-                    <Button type="button" size="sm" onClick={() => setConfirming(c)}>
-                      Send…
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setPreviewing(c)}
+                    >
+                      Preview and test…
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!!c.problem}
+                      onClick={() => setConfirming(c)}
+                    >
+                      Approve and send…
                     </Button>
                     <Button
                       type="button"
@@ -193,6 +230,7 @@ export function CampaignsPanel() {
         <CampaignForm
           campaign={editing === 'new' ? null : editing}
           audiences={list.data.audiences}
+          kinds={list.data.kinds ?? [{ value: 'custom', label: 'Your own message' }]}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -210,6 +248,7 @@ export function CampaignsPanel() {
           }}
         />
       )}
+      {previewing && <PreviewDialog campaign={previewing} onClose={() => setPreviewing(null)} />}
       {confirming && (
         <SendDialog
           campaign={confirming}
@@ -304,17 +343,29 @@ function SendDialog({
     onSuccess: (c) => {
       toast.show({
         tone: 'success',
-        title: `Sent to ${c.recipients} customer${c.recipients === 1 ? '' : 's'}`,
+        title:
+          c.status === 'sending'
+            ? 'Approved. It goes out after the quiet hours, in batches.'
+            : `Sent to ${c.recipients} customer${c.recipients === 1 ? '' : 's'}`,
       });
       onSent();
     },
     onError: (error) => setProblem(errorDetail(error) ?? 'Could not send.'),
   });
   return (
-    <Modal busy={send.isPending} open onClose={onClose} title="Send this campaign?" size="sm">
+    <Modal
+      busy={send.isPending}
+      open
+      onClose={onClose}
+      title="Approve and send this campaign?"
+      size="sm"
+    >
       <p className="text-sm text-text">
-        “{campaign.subject}” will go to {campaign.would_reach ?? 0} opted-in customer
-        {campaign.would_reach === 1 ? '' : 's'}. A sent campaign cannot be changed or sent again.
+        “{campaign.subject}” ({campaign.kind_label ?? 'Your own message'}) will go to up to{' '}
+        {campaign.would_reach ?? 0} opted-in customer
+        {campaign.would_reach === 1 ? '' : 's'}. Customers with nothing to receive, or emailed in
+        the last week, are skipped. Your approval is recorded, and a sent campaign cannot be changed
+        or sent again.
       </p>
       {problem && (
         <p role="alert" className="mt-sm text-sm font-medium text-danger-text">
@@ -323,7 +374,7 @@ function SendDialog({
       )}
       <div className="mt-md flex gap-sm">
         <Button type="button" onClick={() => send.mutate()} loading={send.isPending}>
-          Send now
+          Approve and send
         </Button>
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancel
@@ -336,11 +387,13 @@ function SendDialog({
 function CampaignForm({
   campaign,
   audiences,
+  kinds,
   onClose,
   onSaved,
 }: {
   campaign: CampaignRow | null;
   audiences: CampaignList['audiences'];
+  kinds: NonNullable<CampaignList['kinds']>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -352,6 +405,7 @@ function CampaignForm({
     body: campaign?.body ?? '',
     audience: (campaign?.audience ?? 'all') as AudienceKind,
     coupon: campaign?.coupon ?? '',
+    kind: (campaign?.kind ?? 'custom') as CampaignKind,
   });
   const [problem, setProblem] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -402,12 +456,22 @@ function CampaignForm({
           error={fields.subject}
           onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
         />
+        <Select
+          label="Kind of email"
+          value={form.kind}
+          onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as CampaignKind }))}
+          options={kinds}
+        />
         <Textarea
-          label="Message"
+          label={form.kind === 'custom' ? 'Message' : 'Opening text'}
           rows={6}
           value={form.body}
           error={fields.body}
-          hint="An unsubscribe link is added for you."
+          hint={
+            form.kind === 'custom'
+              ? 'An unsubscribe link is added for you.'
+              : 'Shown above each customer’s own list. The list comes from real data only.'
+          }
           onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
         />
         <div className="grid gap-md sm:grid-cols-2">
@@ -441,6 +505,77 @@ function CampaignForm({
           </Button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function PreviewDialog({ campaign, onClose }: { campaign: CampaignRow; onClose: () => void }) {
+  const toast = useToast();
+  const preview = useQuery({
+    queryKey: ['mk-campaign-preview', campaign.id],
+    queryFn: () => previewCampaign(campaign.id),
+  });
+  const [problem, setProblem] = useState('');
+  const test = useMutation({
+    mutationFn: () => testCampaign(campaign.id),
+    onSuccess: (r) => toast.show({ tone: 'success', title: r.detail }),
+    onError: (error) => setProblem(errorDetail(error) ?? 'Could not send the test.'),
+  });
+  const data = preview.data;
+  return (
+    <Modal open onClose={onClose} title="Preview and test" size="lg">
+      {preview.isPending ? (
+        <LoadingState label="Building the preview…" />
+      ) : preview.isError ? (
+        <ErrorState
+          description="We couldn't build the preview."
+          onRetry={() => void preview.refetch()}
+        />
+      ) : data?.problem ? (
+        <p role="alert" className="text-sm font-medium text-warning-text">
+          {data.problem}
+        </p>
+      ) : !data?.customer ? (
+        <p className="text-sm text-text-muted">
+          No opted-in customer in this audience has anything to receive yet.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-md">
+          <p className="text-sm text-text-muted">
+            What {data.customer.name} would get. Nothing is sent from this preview.
+          </p>
+          <p className="font-semibold text-text">{data.subject}</p>
+          <iframe
+            title="Email preview"
+            sandbox=""
+            srcDoc={data.html}
+            className="h-80 w-full rounded-nested border border-border bg-surface"
+          />
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-text">Text version</summary>
+            <pre className="mt-sm whitespace-pre-wrap text-xs text-text">{data.text}</pre>
+          </details>
+        </div>
+      )}
+      {problem && (
+        <p role="alert" className="mt-sm text-sm font-medium text-danger-text">
+          {problem}
+        </p>
+      )}
+      <div className="mt-md flex gap-sm">
+        <Button
+          type="button"
+          variant="secondary"
+          loading={test.isPending}
+          disabled={!data?.customer}
+          onClick={() => test.mutate()}
+        >
+          Send a test to me
+        </Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Close
+        </Button>
+      </div>
     </Modal>
   );
 }

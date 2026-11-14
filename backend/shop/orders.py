@@ -229,6 +229,7 @@ def price(
                     amount=ln.amount,
                     gst_percent=ln.gst_percent,
                     key=str(ln.product.id),
+                    ref_id=str(ln.product.id),
                 )
                 for ln in quote.lines
             ],

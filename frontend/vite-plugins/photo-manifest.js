@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  AI_FOLDER,
   AIR_FOLDER,
   LEADER_FOLDER,
   MEERA_FOLDER,
@@ -41,7 +42,8 @@ export function readManifest(dir) {
   // optional pictures of Zenoti's leaders in public/photos/zenoti-leaders/. A folder that does not
   // exist yet is simply skipped (the tour shows the letter "M", a leader card shows a monogram).
   // AIR's pictures (Task AIR-3) live in public/photos/air/ ("air/air-01-welcome.webp").
-  for (const folder of [MEERA_FOLDER, LEADER_FOLDER, AIR_FOLDER]) {
+  // The AI Alankar Intelligence screenshots: public/photos/ai-intelligence/.
+  for (const folder of [MEERA_FOLDER, LEADER_FOLDER, AIR_FOLDER, AI_FOLDER]) {
     try {
       const sub = fs
         .readdirSync(path.join(dir, folder))

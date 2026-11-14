@@ -142,6 +142,11 @@ export default function AppointmentDetailPage() {
           </Card>
           <Card className="flex flex-col gap-sm">
             <h2 className="text-lg font-semibold text-text">About the guest</h2>
+            {data.coupon_code && (
+              <p className="text-sm text-text-muted">
+                Paid online with coupon {data.coupon_code}. Your pay is not affected.
+              </p>
+            )}
             {data.allergies ? (
               <p className="rounded-input bg-danger-soft p-md text-sm text-danger-text">
                 Allergies: {data.allergies}

@@ -396,6 +396,65 @@ describe('login page', () => {
     await user.click(screen.getByRole('button', { name: 'Sign in as Admin' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Staff' })).toBeInTheDocument();
   });
+  describe('customer sign-in always lands on the dashboard', () => {
+    beforeEach(() => sessionStorage.clear());
+
+    it.each([
+      ['/customer/invoices'],
+      ['https://evil.example.com/steal'],
+      ['//evil.example.com'],
+      ['/staff'],
+    ])('ignores next=%s for a customer', async (next) => {
+      loginMock.mockResolvedValue(userFor('customer'));
+      const user = userEvent.setup();
+      renderAt(`/login?role=customer&next=${encodeURIComponent(next)}`);
+      await user.type(await screen.findByLabelText(/Email/), 'customer@example.com');
+      await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+      await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+      expect(
+        await screen.findByRole('heading', { level: 1, name: /Hello, Test/ }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Continue your booking' })).toBeNull();
+    });
+
+    it('keeps a booking started before sign-in as a Continue your booking card', async () => {
+      loginMock.mockResolvedValue(userFor('customer'));
+      const user = userEvent.setup();
+      const sheet = '/customer/book?service=womens-haircut';
+      renderAt(`/login?role=customer&next=${encodeURIComponent(sheet)}`);
+      await user.type(await screen.findByLabelText(/Email/), 'customer@example.com');
+      await user.type(screen.getByLabelText(/^Password/), 'Strong-Pass-2026!');
+      await user.click(screen.getByRole('button', { name: 'Sign in as Customer' }));
+      expect(
+        await screen.findByRole('heading', { level: 1, name: /Hello, Test/ }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Continue your booking' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Continue your booking' })).toHaveAttribute(
+        'href',
+        sheet,
+      );
+      await user.click(screen.getByRole('button', { name: 'Not now' }));
+      expect(screen.queryByRole('heading', { name: 'Continue your booking' })).toBeNull();
+    });
+
+    it.each(['/login', '/register'])(
+      'sends a signed-in customer from %s straight to the dashboard',
+      async (path) => {
+        meMock.mockResolvedValue(userFor('customer'));
+        renderAt(`${path}?next=%2Fcustomer%2Finvoices`);
+        expect(
+          await screen.findByRole('heading', { level: 1, name: /Hello, Test/ }),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it('still shows staff the signed-in panel on /login (their behaviour is unchanged)', async () => {
+      meMock.mockResolvedValue(userFor('admin'));
+      renderAt('/login');
+      expect(await screen.findByRole('heading', { name: "You're signed in" })).toBeInTheDocument();
+    });
+  });
+
   it('asks an admin with two-step sign-in for the app code, then opens the dashboard', async () => {
     loginMock.mockResolvedValue({
       two_factor_required: true,

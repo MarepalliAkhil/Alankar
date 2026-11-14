@@ -23,7 +23,8 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
           className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-input border-border accent-primary focus-visible:shadow-focus focus-visible:outline-none"
           {...rest}
         />
-        <label htmlFor={boxId} className="cursor-pointer text-sm text-text">
+        {/* On touch screens the label is the 44 px target (see .touch-target). */}
+        <label htmlFor={boxId} className="touch-target block cursor-pointer text-sm text-text">
           {label}
         </label>
       </div>

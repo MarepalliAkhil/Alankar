@@ -93,6 +93,17 @@ PHOTO_SLOTS[MEERA_DEFAULT] = { ...MEERA_SIZE };
 // AIR, the virtual receptionist (AIR Task 3): square character pictures the owner supplies in
 // public/photos/air/ as `air-NN-<pose>.webp|png`, plus an optional default `air.webp`.
 export const AIR_FOLDER = 'air';
+// AI Alankar Intelligence screenshots for the For Zenotians page (owner-supplied, optional), in
+// public/photos/ai-intelligence/ as `ai-NN-<name>.webp|png|jpg`. A missing one hides its picture.
+export const AI_FOLDER = 'ai-intelligence';
+export const AI_SLOTS = {
+  language: 'ai-01-language',
+  intent: 'ai-02-intent',
+  answers: 'ai-03-answers',
+  accuracy: 'ai-04-accuracy',
+  model: 'ai-05-language-model',
+  privacy: 'ai-06-privacy',
+};
 export const AIR_POSES = {
   welcome: 'air-01-welcome',
   idle: 'air-02-idle',

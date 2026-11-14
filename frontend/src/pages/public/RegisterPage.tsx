@@ -1,6 +1,6 @@
 import { CircleCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { registerCustomer } from '../../api/auth';
 import { registerErrorMessage } from '../../api/auth-messages';
@@ -61,7 +61,7 @@ export default function RegisterPage() {
   const [done, setDone] = useState<string | null>(null);
   const [otp, setOtp] = useState<{ email: string; detail: string } | null>(null);
   const navigate = useNavigate();
-  const { completeOtp } = useSession();
+  const { completeOtp, status, user } = useSession();
   const [params] = useSearchParams();
   const next = params.get('next');
   const loginPath = `/login?role=customer${next ? `&next=${encodeURIComponent(next)}` : ''}`;
@@ -107,6 +107,11 @@ export default function RegisterPage() {
       setSubmitting(false);
     }
   };
+
+  // A signed-in customer goes straight to the dashboard instead of the register form.
+  if (status === 'authenticated' && user?.role === 'customer' && !submitting) {
+    return <Navigate to={user.home} replace />;
+  }
 
   if (otp) {
     return (

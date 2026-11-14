@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { clearPendingBooking, pendingBooking } from '../../routes/pending-booking';
 import { listMyAppointments, type CustomerAppointment } from '../../api/booking';
 import { RatingPrompt } from '../../components/booking/RatingPrompt';
+import { ForYou } from '../../components/recommendations/ForYou';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
   AlankarIcon,
+  Button,
   ButtonLink,
   Card,
   ErrorState,
@@ -68,14 +72,54 @@ export function CustomerHome({ firstName }: { firstName: string }) {
     .filter((a) => UPCOMING.has(a.status) && a.start)
     .sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))[0];
 
+  const [draft, setDraft] = useState(pendingBooking);
+  const held = toPay[0];
+
   return (
     <div className="flex flex-col gap-lg pb-xl">
+      {(draft || held) && (
+        <Card
+          padding="lg"
+          as="section"
+          aria-labelledby="continue-booking"
+          className="flex flex-col gap-sm border-primary sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="min-w-0">
+            <h2 id="continue-booking" className="text-lg font-semibold">
+              Continue your booking
+            </h2>
+            <p className="text-sm text-text-muted">
+              {held
+                ? `Your ${held.service_name} is held for you until the payment link runs out.`
+                : 'You started a booking before signing in. Pick up where you left off.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-sm">
+            <ButtonLink to={held ? `/customer/pay/${held.id}` : (draft ?? '/customer/book')}>
+              {held ? 'Continue to payment' : 'Continue your booking'}
+            </ButtonLink>
+            {!held && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  clearPendingBooking();
+                  setDraft(null);
+                }}
+              >
+                Not now
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
       <PageHeader
         title={`Hello, ${firstName}`}
         description="Here is what needs you, then the quickest ways to get around."
         actions={<ButtonLink to="/customer/book">Book a visit</ButtonLink>}
       />
-      <RatingPrompt />
+      <div id="rate-your-visit">
+        <RatingPrompt />
+      </div>
 
       {list.isPending ? (
         <LoadingState label="Loading your visits…" />
@@ -134,6 +178,8 @@ export function CustomerHome({ firstName }: { firstName: string }) {
           </Card>
         </div>
       )}
+
+      <ForYou />
 
       <section aria-labelledby="shortcuts">
         <h2 id="shortcuts" className="mb-sm text-lg font-semibold">

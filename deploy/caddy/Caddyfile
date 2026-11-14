@@ -1,0 +1,102 @@
+# Alankar web server (docs/DEPLOY.md). One site: the built frontend and, on the same domain,
+# the backend under /api (WebSockets included) and /ws. Values come from the environment:
+#   SITE_ADDRESS  the DOMAIN in production (automatic HTTPS from Let's Encrypt), ":80" locally
+#   ACME_EMAIL    the address Let's Encrypt writes to about the certificate (optional)
+#   HSTS          the Strict-Transport-Security value ("max-age=0" in the local HTTP test)
+#   CSP_CONNECT   where the app may connect: "'self' wss://DOMAIN" (or ws://localhost:8080 locally)
+#   CSP_LAST      the last CSP directive: upgrade-insecure-requests on HTTPS, a harmless
+#                 "manifest-src 'self'" in the local HTTP test
+{
+	email {$ACME_EMAIL:}
+	servers {
+		# Only Caddy talks to the backend; it passes the real client address on.
+		trusted_proxies static private_ranges
+	}
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Security headers for every response from this site.
+	header {
+		Strict-Transport-Security "{$HSTS:max-age=31536000; includeSubDomains}"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src {$CSP_CONNECT:'self'}; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; {$CSP_LAST:upgrade-insecure-requests}"
+		-Server
+	}
+
+	# Old addresses (docs/SEO.md): permanent redirects.
+	redir /zenotians /for-zenotians 301
+	@oldZen path_regexp oldzen ^/zenotians/(.*)$
+	redir @oldZen /for-zenotians/{re.oldzen.1} 301
+
+	# The backend: the API (and its WebSockets at /api/ws/...), /ws, and the developer-only
+	# Django admin if it is ever switched on. Caddy upgrades WebSockets automatically.
+	@backend path /api/* /ws/* /django-admin/*
+	handle @backend {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Static files collected by Django (shared volume).
+	handle_path /static/* {
+		root * /srv/static
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	handle {
+		root * /srv/site
+
+		# Hashed build files never change: cache them for a year. HTML is always checked again.
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@html path *.html / /*/
+		header @html Cache-Control "no-cache"
+
+		# Signed-in areas (generated from PRIVATE_PREFIXES when the image is built) open the app.
+		import /etc/caddy/private-routes.caddy
+		handle @app {
+			rewrite * /app.html
+			header Cache-Control "no-cache"
+			header X-Robots-Tag "noindex, nofollow"
+			file_server
+		}
+
+		# Public routes: the prerendered page (dist/<route>/index.html) or a real file.
+		try_files {path} {path}/index.html {path}.html
+		file_server
+	}
+
+	# Anything else is a real 404 with the designed page.
+	handle_errors 404 {
+		root * /srv/site
+		rewrite * /404.html
+		header Cache-Control "no-cache"
+		file_server
+	}
+
+	# Access log as JSON on stdout, without cookies and without the one-time tokens that some
+	# links carry (payment links, password resets, invites, unsubscribe).
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete link
+					delete token
+					delete code
+				}
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				request>headers>X-Csrftoken delete
+			}
+		}
+	}
+}

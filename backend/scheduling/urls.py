@@ -47,6 +47,11 @@ my_patterns = [
         name="my-appointment-payment",
     ),
     path(
+        "appointments/<uuid:pk>/payment/coupon/",
+        views.PaymentCouponView.as_view(),
+        name="my-appointment-payment-coupon",
+    ),
+    path(
         "appointments/<uuid:pk>/change/",
         views.MyAppointmentChangeView.as_view(),
         name="my-appointment-change",

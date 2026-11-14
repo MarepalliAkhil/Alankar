@@ -33,6 +33,13 @@ class PaymentLink(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     sent_by_air = models.BooleanField(default=False)
+    # The coupon the customer applied on the payment page (docs/COUPONS.md). Nothing is counted as
+    # used until the payment succeeds; an expired or cancelled link simply drops it.
+    coupon = models.ForeignKey(
+        "marketing.Coupon", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    coupon_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    coupon_applied_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

@@ -1,0 +1,16 @@
+{% autoescape off %}{{ heading }}
+
+{{ greeting }}
+
+{{ intro }}
+{% for item in items %}
+- {{ item.title }}{% if item.price %} (from Rs {{ item.price }}){% endif %}
+  {{ item.reason }}{% if item.link %}
+  {{ item.action }}: {{ item.link }}{% endif %}
+{% endfor %}{% if extra %}
+{{ extra }}
+{% endif %}
+--
+{{ why }}
+Unsubscribe with one click: {{ unsubscribe }}
+{{ footer }}{% endautoescape %}

@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import {
   createCoupon,
+  getCouponReport,
   listCoupons,
   updateCoupon,
   type CouponInput,
@@ -10,6 +11,9 @@ import {
   type CouponState,
 } from '../../../api/marketing';
 import { errorDetail, serverFieldErrors } from '../../../api/client';
+import { listProducts } from '../../../api/adminOps';
+import { getServices } from '../../../api/public';
+import { formatINRExact } from '../../../lib/format';
 import { describe } from './couponText';
 import {
   Badge,
@@ -87,8 +91,12 @@ export function CouponsPanel() {
                   <span className="text-sm text-text-muted">{c.name}</span>
                   <Badge tone={STATE[c.state].tone}>{STATE[c.state].label}</Badge>
                   {c.stackable && <Badge tone="info">Can be combined</Badge>}
+                  {c.listed === false && <Badge tone="neutral">Private code</Badge>}
                 </div>
                 <p className="mt-xs text-sm text-text-muted">{describe(c)}</p>
+                {c.created_by && (
+                  <p className="text-xs text-text-muted">Created by {c.created_by}</p>
+                )}
                 <p className="mt-xs text-xs text-text-muted">
                   Used {c.used}
                   {c.total_limit ? ` of ${c.total_limit}` : ''} · {c.per_customer_limit} per
@@ -152,6 +160,12 @@ function CouponForm({
     total_limit: coupon?.total_limit ? String(coupon.total_limit) : '',
     per_customer_limit: String(coupon?.per_customer_limit ?? 1),
     applies_to: coupon?.applies_to ?? 'all',
+    description: coupon?.description ?? '',
+    first_visit_only: coupon?.first_visit_only ?? false,
+    listed: coupon?.listed ?? true,
+    divisions: coupon?.divisions ?? ([] as string[]),
+    services: coupon?.services ?? ([] as string[]),
+    products: coupon?.products ?? ([] as string[]),
     stackable: coupon?.stackable ?? false,
     is_active: coupon?.is_active ?? true,
   });
@@ -198,6 +212,12 @@ function CouponForm({
       total_limit: form.total_limit ? Number(form.total_limit) : null,
       per_customer_limit: Number(form.per_customer_limit || 1),
       applies_to: form.applies_to,
+      description: form.description.trim(),
+      first_visit_only: form.first_visit_only,
+      listed: form.listed,
+      divisions: form.applies_to === 'chosen' ? form.divisions : [],
+      services: form.applies_to === 'chosen' ? form.services : [],
+      products: form.applies_to === 'chosen' ? form.products : [],
       stackable: form.stackable,
       is_active: form.is_active,
     });
@@ -289,9 +309,31 @@ function CouponForm({
               { value: 'all', label: 'Whole bill' },
               { value: 'services', label: 'Services only' },
               { value: 'products', label: 'Products only' },
+              { value: 'chosen', label: 'Chosen divisions, services or products' },
             ]}
           />
         </div>
+        <Input
+          label="Description (shown to customers)"
+          value={form.description}
+          onChange={set('description')}
+        />
+        {form.applies_to === 'chosen' && (
+          <ChosenItems
+            value={{ divisions: form.divisions, services: form.services, products: form.products }}
+            onChange={(next) => setForm((f) => ({ ...f, ...next }))}
+          />
+        )}
+        <Checkbox
+          label="Show in customer coupon list (off: a private code for campaigns)"
+          checked={form.listed}
+          onChange={(e) => setForm((f) => ({ ...f, listed: e.target.checked }))}
+        />
+        <Checkbox
+          label="First visit only (for customers with no paid booking yet)"
+          checked={form.first_visit_only}
+          onChange={(e) => setForm((f) => ({ ...f, first_visit_only: e.target.checked }))}
+        />
         <Checkbox
           label="Can be combined with a manual discount (still capped for receptionists)"
           checked={form.stackable}
@@ -317,5 +359,118 @@ function CouponForm({
         </div>
       </form>
     </Modal>
+  );
+}
+
+const DIVISIONS = [
+  { id: 'salon', label: 'Salon' },
+  { id: 'spa', label: 'Spa' },
+  { id: 'beauty-parlor', label: 'Beauty Parlor' },
+];
+
+type Chosen = { divisions: string[]; services: string[]; products: string[] };
+
+function ChosenItems({ value, onChange }: { value: Chosen; onChange: (next: Chosen) => void }) {
+  const services = useQuery({ queryKey: ['coupon-services'], queryFn: () => getServices({}) });
+  const products = useQuery({ queryKey: ['coupon-products'], queryFn: listProducts });
+  const toggle = (key: keyof Chosen, id: string) =>
+    onChange({
+      ...value,
+      [key]: value[key].includes(id) ? value[key].filter((x) => x !== id) : [...value[key], id],
+    });
+  const group = (key: keyof Chosen, title: string, items: { id: string; label: string }[]) => (
+    <fieldset className="flex flex-col gap-xs">
+      <legend className="text-sm font-semibold text-text">{title}</legend>
+      <div className="flex max-h-40 flex-col gap-xs overflow-y-auto">
+        {items.map((item) => (
+          <Checkbox
+            key={item.id}
+            label={item.label}
+            checked={value[key].includes(item.id)}
+            onChange={() => toggle(key, item.id)}
+          />
+        ))}
+      </div>
+    </fieldset>
+  );
+  return (
+    <div className="grid gap-md rounded-nested border border-border p-md sm:grid-cols-3">
+      {group('divisions', 'Divisions', DIVISIONS)}
+      {group(
+        'services',
+        'Services',
+        (services.data ?? []).map((s) => ({ id: s.id, label: s.name })),
+      )}
+      {group(
+        'products',
+        'Products',
+        (products.data?.results ?? []).map((p) => ({ id: p.id, label: p.name })),
+      )}
+    </div>
+  );
+}
+
+/** Uses and discount per coupon, and online bookings and revenue with and without a coupon. */
+export function CouponReportCard() {
+  const report = useQuery({ queryKey: ['mk-coupon-report'], queryFn: getCouponReport });
+  if (report.isPending) return <LoadingState label="Loading the coupon report…" />;
+  if (report.isError)
+    return (
+      <ErrorState
+        description="We couldn't load the coupon report."
+        onRetry={() => void report.refetch()}
+      />
+    );
+  const r = report.data;
+  return (
+    <Card variant="dense" as="section" aria-labelledby="coupon-report">
+      <h2 id="coupon-report" className="text-lg font-semibold text-text">
+        Coupon report
+      </h2>
+      <p className="mt-1 text-sm text-text-muted">
+        {r.from} to {r.to}. {r.note}
+      </p>
+      <dl className="mt-sm grid gap-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-xs text-text-muted">Discount given</dt>
+          <dd className="font-semibold text-text">{formatINRExact(r.total_discount)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-text-muted">With a coupon</dt>
+          <dd className="font-semibold text-text">
+            {r.with_coupon.bookings} bookings · {formatINRExact(r.with_coupon.revenue)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-text-muted">Without a coupon</dt>
+          <dd className="font-semibold text-text">
+            {r.without_coupon.bookings} bookings · {formatINRExact(r.without_coupon.revenue)}
+          </dd>
+        </div>
+      </dl>
+      {r.coupons.length === 0 ? (
+        <p className="mt-sm text-sm text-text-muted">No coupon was used in this period.</p>
+      ) : (
+        <table className="mt-sm w-full text-sm">
+          <caption className="sr-only">Uses and discount per coupon</caption>
+          <thead>
+            <tr className="text-left text-text-muted">
+              <th scope="col">Coupon</th>
+              <th scope="col">Uses</th>
+              <th scope="col">Discount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.coupons.map((c) => (
+              <tr key={c.code} className="border-t border-border">
+                <td className="font-mono">{c.code}</td>
+                <td>{c.uses}</td>
+                <td>{formatINRExact(c.discount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Card>
   );
 }

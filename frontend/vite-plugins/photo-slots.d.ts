@@ -20,3 +20,8 @@ export declare const WEBP_QUALITY: number;
 export declare const JPEG_QUALITY: number;
 export declare function maxBytesForWidth(width: number): number;
 export declare function variantWidths(originalWidth: number, maxWidth?: number): number[];
+export declare const AIR_FOLDER: string;
+export declare const AI_FOLDER: string;
+export declare const AI_SLOTS: Readonly<
+  Record<'language' | 'intent' | 'answers' | 'accuracy' | 'model' | 'privacy', string>
+>;

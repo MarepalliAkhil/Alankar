@@ -19,6 +19,8 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from accounts import otp
+from accounts.audit import audit
+from accounts.models import AuditLog
 from accounts.tokens import hash_token, new_link_token
 from billing import online, tender
 from billing.models import Payment, PaymentLink, Refund
@@ -26,6 +28,7 @@ from billing.pos import CheckoutError
 from core import brand
 from core.mail import frontend_link, queue_mail
 from core.models import MailOutbox
+from marketing import coupons
 from marketing.models import CouponRedemption
 from notifications import templates
 from people import ratings
@@ -446,8 +449,12 @@ def expire_due(now: datetime | None = None) -> int:
                 continue
             appt.status = S.PAYMENT_EXPIRED
             appt.save(update_fields=["status", "updated_at"])
+            # The applied coupon is released with the link (it was never counted as used).
             appt.payment_links.filter(status=PaymentLink.Status.ACTIVE).update(
-                status=PaymentLink.Status.EXPIRED
+                status=PaymentLink.Status.EXPIRED,
+                coupon=None,
+                coupon_amount=Decimal("0"),
+                coupon_applied_at=None,
             )
             packagecodes.release(appt, note="Payment link expired")
             products.release(appt, note="Payment link expired")
@@ -842,8 +849,8 @@ def _request_refunds(appt: Appointment, reason: str) -> Decimal:
     """Asks the admin to approve refunds for online payments not yet refunded."""
     total = Decimal("0")
     for payment in appt.payments.filter(status=Payment.Status.SUCCEEDED):
-        if payment.refunds.exists():
-            continue
+        if payment.refunds.exists() or payment.amount <= 0:
+            continue  # nothing to give back for "Rs 0, covered by coupon"
         Refund.objects.create(
             payment=payment,
             amount=payment.amount,
@@ -1120,7 +1127,10 @@ def active_link(appt: Appointment, token: str | None) -> PaymentLink | None:
 
 
 def payment_breakdown(appt: Appointment, link: PaymentLink, *, coupon_code: str = "", lock=False):
-    """What the customer pays online for this booking, step by step (billing.online)."""
+    """What the customer pays online for this booking, step by step (billing.online).
+
+    The coupon is the one passed in, else the one applied on the payment page (stored on the link).
+    """
     held = [r for r in products.held(appt) if r.paid_online]
     product_total = sum((r.amount for r in held), Decimal("0"))
     items = [
@@ -1128,16 +1138,177 @@ def payment_breakdown(appt: Appointment, link: PaymentLink, *, coupon_code: str 
             kind="service",
             description=appt.service_name,
             amount=max(link.amount - product_total, Decimal("0")),
+            ref_id=str(appt.service_id),
+            division=appt.service.category.division,
         )
     ] + [
-        online.Item(kind="product", description=r.name, amount=r.amount, gst_percent=r.gst_percent)
+        online.Item(
+            kind="product",
+            description=r.name,
+            amount=r.amount,
+            gst_percent=r.gst_percent,
+            ref_id=str(r.product_id),
+        )
         for r in held
     ]
+    code = coupon_code or (link.coupon.code if link.coupon_id else "")
     try:
-        coupon = online.find_coupon(coupon_code, appt.customer, lock=lock)
+        coupon = online.find_coupon(code, appt.customer, lock=lock, appointment=appt)
         return online.calculate(items, customer=appt.customer, coupon=coupon)
     except CheckoutError as exc:
-        raise BookingError(exc.message, field="coupon") from exc
+        raise BookingError(exc.message, code=exc.code, field="coupon") from exc
+
+
+def _coupon_attempt(customer, ip: str | None, request=None) -> None:
+    """At most SALON_COUPON_ATTEMPTS apply attempts per customer and per IP address in the window.
+    A blocked attempt is audited."""
+    from django.conf import settings
+    from django.core.cache import cache
+
+    limit = settings.SALON_COUPON_ATTEMPTS
+    window = settings.SALON_COUPON_WINDOW_SECONDS
+    keys = [f"coupon-apply:user:{customer.pk}"] + ([f"coupon-apply:ip:{ip}"] if ip else [])
+    for key in keys:
+        cache.add(key, 0, timeout=window)
+        if cache.incr(key) > limit:
+            audit(
+                AuditLog.Action.COUPON_APPLY_BLOCKED,
+                request=request,
+                actor=customer,
+                by="customer" if key.startswith("coupon-apply:user") else "ip",
+            )
+            raise BookingError(
+                "Too many coupon attempts. Please wait a few minutes and try again.",
+                code="throttled",
+                field="coupon",
+            )
+
+
+def _due_link(appt_id, customer, token):
+    appt = Appointment.objects.select_for_update().get(pk=appt_id, customer=customer)
+    if appt.status != S.AWAITING_PAYMENT:
+        raise BookingError("There is no payment waiting for this booking.")
+    link = active_link(appt, token)
+    if link is None:
+        raise BookingError(
+            "This payment link was replaced by a newer one. Use the latest email or pay "
+            "from My Appointments.",
+            code="conflict",
+        )
+    return appt, link
+
+
+def apply_coupon(appt_id, *, customer, token, code: str, ip=None, request=None):
+    """Checks the code against this payment and keeps it on the link with the discount. Nothing
+    is counted as used until the payment succeeds. One coupon per payment: a new code replaces
+    the old one."""
+    expire_due()
+    _coupon_attempt(customer, ip, request)
+    code = coupons.normalize(code)[:24]
+    if not code:
+        raise BookingError("Enter a coupon code.", field="coupon")
+    with transaction.atomic():
+        appt, link = _due_link(appt_id, customer, token)
+        b = payment_breakdown(appt, link, coupon_code=code)
+        link.coupon = b.coupon
+        link.coupon_amount = b.coupon_amount
+        link.coupon_applied_at = timezone.now()
+        link.save(update_fields=["coupon", "coupon_amount", "coupon_applied_at"])
+        audit(
+            AuditLog.Action.COUPON_APPLIED,
+            request=request,
+            actor=customer,
+            coupon=b.coupon.code,
+            amount=str(b.coupon_amount),
+            appointment=str(appt.pk),
+        )
+    return appt, link, b
+
+
+def remove_coupon(appt_id, *, customer, token, request=None):
+    with transaction.atomic():
+        appt, link = _due_link(appt_id, customer, token)
+        if link.coupon_id:
+            code = link.coupon.code
+            _clear_link_coupon(link)
+            audit(
+                AuditLog.Action.COUPON_REMOVED,
+                request=request,
+                actor=customer,
+                coupon=code,
+                appointment=str(appt.pk),
+            )
+        return appt, link, payment_breakdown(appt, link)
+
+
+def _clear_link_coupon(link: PaymentLink) -> None:
+    link.coupon = None
+    link.coupon_amount = Decimal("0")
+    link.coupon_applied_at = None
+    link.save(update_fields=["coupon", "coupon_amount", "coupon_applied_at"])
+
+
+def coupon_cards(appt: Appointment, link: PaymentLink) -> list[dict]:
+    """Every listed, active, in-date shared coupon as a card for this payment.
+
+    Each card says whether it can be used here: when it can, what it saves (worked out by the
+    same pricing as the payment); when it cannot, the exact reason. The usable card that saves
+    the most is marked best. Private and unlisted codes are never shown (they can be typed).
+    """
+    from marketing.models import Coupon
+
+    today = timezone.localdate()
+    listed = Coupon.objects.filter(is_active=True, listed=True, customer__isnull=True).filter(
+        Q(starts_on__isnull=True) | Q(starts_on__lte=today),
+        Q(ends_on__isnull=True) | Q(ends_on__gte=today),
+    )
+    keep_id, keep = link.coupon_id, link.coupon
+    link.coupon_id, link.coupon = None, None
+    try:
+        base = payment_breakdown(appt, link)
+        cards = []
+        for coupon in listed.order_by("code"):
+            card = {
+                "code": coupon.code,
+                "title": coupon.name,
+                "description": coupon.description,
+                "terms": coupons.terms(coupon),
+                "eligible": False,
+                "reason": "",
+                "saves": "0.00",
+                "best": False,
+                "applied": coupon.pk == keep_id,
+            }
+            try:
+                b = payment_breakdown(appt, link, coupon_code=coupon.code)
+            except BookingError as exc:
+                card["reason"] = coupons.reason(
+                    coupon, CheckoutError(exc.message, exc.code), base.items_total
+                )
+            else:
+                if b.coupon_amount > 0:
+                    card["eligible"] = True
+                    card["saves"] = str(b.coupon_amount)
+                else:
+                    card["reason"] = "Nothing to take off this payment"
+            cards.append(card)
+    finally:
+        link.coupon_id, link.coupon = keep_id, keep
+    usable = [c for c in cards if c["eligible"]]
+    if usable:
+        max(usable, key=lambda c: Decimal(c["saves"]))["best"] = True
+    cards.sort(key=lambda c: (not c["eligible"], -Decimal(c["saves"]), c["code"]))
+    return cards
+
+
+def _total_without_coupon(appt: Appointment, link: PaymentLink) -> Decimal:
+    keep = link.coupon_id
+    link.coupon_id = None
+    link.coupon = None
+    try:
+        return payment_breakdown(appt, link).total
+    finally:
+        link.coupon_id = keep
 
 
 def release_coupon(appt: Appointment) -> None:
@@ -1147,7 +1318,26 @@ def release_coupon(appt: Appointment) -> None:
     ).update(released_at=timezone.now())
 
 
-def pay(
+def pay(appt_id, **kwargs) -> tuple[Appointment, bool]:
+    """Pays the held booking (see `_pay`). When the applied coupon can no longer be used (its
+    last use went to someone else, it expired...), no money is taken: the coupon is removed from
+    the link and the customer is shown the new total to confirm."""
+    try:
+        return _pay(appt_id, **kwargs)
+    except BookingError as exc:
+        if exc.code == "coupon_changed":
+            with transaction.atomic():
+                link = (
+                    PaymentLink.objects.select_for_update()
+                    .filter(appointment_id=appt_id, status=PaymentLink.Status.ACTIVE)
+                    .first()
+                )
+                if link is not None:
+                    _clear_link_coupon(link)
+        raise
+
+
+def _pay(
     appt_id,
     *,
     customer,
@@ -1188,7 +1378,20 @@ def pay(
                 "from My Appointments.",
                 code="conflict",
             )
-        b = payment_breakdown(appt, link, coupon_code=coupon_code, lock=True)
+        # The browser sends no amounts: everything is worked out here again, with the coupon row
+        # locked so its total and per-customer limits hold even when two people pay at once.
+        try:
+            b = payment_breakdown(appt, link, coupon_code=coupon_code, lock=True)
+        except BookingError as exc:
+            if coupon_code or not link.coupon_id:
+                raise
+            raise BookingError(
+                f"{exc.message} We removed it, so the total is now "
+                f"{coupons.rupees(_total_without_coupon(appt, link))}. No money was taken. "
+                "Please check the new total and pay again.",
+                code="coupon_changed",
+                field="coupon",
+            ) from exc
         due = b.total
         from_card = Decimal("0")
         if card is not None:
@@ -1234,6 +1437,17 @@ def pay(
                 status=Payment.Status.SUCCEEDED,
                 reference=reference,
             )
+        elif from_card == 0:
+            # Rs 0, covered by the coupon: recorded so the booking shows how it was paid.
+            reference = tender.reference("COUPON")
+            Payment.objects.create(
+                appointment=appt,
+                link=link,
+                method="coupon",
+                amount=Decimal("0"),
+                status=Payment.Status.SUCCEEDED,
+                reference=reference,
+            )
         link.status = PaymentLink.Status.PAID
         link.paid_at = timezone.now()
         link.save(update_fields=["status", "paid_at"])
@@ -1258,6 +1472,10 @@ def pay(
             )
         record(appt, "paid", actor=customer, from_status=S.AWAITING_PAYMENT, note=reference)
         how = f" Rs. {from_card} came from your gift card." if from_card > 0 else ""
+        if b.coupon is not None:
+            how += f" Coupon {b.coupon.code}: - Rs. {b.coupon_amount}."
+            if due == 0:
+                how += " Rs 0, covered by coupon."
         if b.discount > 0:
             how += f" You saved Rs. {b.discount}."
         email_customer(
@@ -1336,7 +1554,7 @@ def customer_cancel(appt_id, *, customer, reason: str = "", change: bool = False
             status=PaymentLink.Status.CANCELLED
         )
         refunded = Decimal("0")
-        for payment in appt.payments.filter(status=Payment.Status.SUCCEEDED):
+        for payment in appt.payments.filter(status=Payment.Status.SUCCEEDED, amount__gt=0):
             Refund.objects.create(
                 payment=payment,
                 amount=payment.amount,

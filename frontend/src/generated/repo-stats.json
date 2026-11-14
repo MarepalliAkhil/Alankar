@@ -1,20 +1,22 @@
 {
   "roles": 4,
-  "pages": 72,
-  "apiEndpoints": 278,
-  "automatedTests": 2197,
+  "pages": 73,
+  "apiEndpoints": 290,
+  "automatedTests": 2356,
   "testBreakdown": {
-    "backend": 1276,
-    "frontendUnit": 779,
-    "endToEnd": 142
+    "backend": 1376,
+    "frontendUnit": 817,
+    "endToEnd": 163
   },
-  "migrations": 108,
-  "accessibilityScreens": 43,
+  "airTests": 279,
+  "migrations": 120,
+  "accessibilityScreens": 48,
   "method": {
     "roles": "roles in shared/policy.json",
     "pages": "frontend/src/pages/**/*Page.tsx files",
     "apiEndpoints": "path() routes in backend urls.py files, not counting include()",
     "automatedTests": "test functions: pytest def test_, Vitest it/test, Playwright test",
+    "airTests": "pytest def test_ in backend/air/tests",
     "migrations": "numbered files in backend/*/migrations",
     "accessibilityScreens": "paths listed in frontend/e2e/pages.ts, scanned by axe-core"
   }

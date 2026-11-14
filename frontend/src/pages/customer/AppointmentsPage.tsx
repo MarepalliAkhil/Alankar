@@ -30,7 +30,13 @@ import {
   useToast,
 } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { formatDateTime, formatDuration, formatINR, shopLocalToIso } from '../../lib/format';
+import {
+  formatDateTime,
+  formatDuration,
+  formatINR,
+  formatINRExact,
+  shopLocalToIso,
+} from '../../lib/format';
 
 type Dialog =
   | { kind: 'cancel'; appt: CustomerAppointment; late: boolean }
@@ -313,6 +319,14 @@ function AppointmentCard({
           <dt className="text-xs text-text-muted">Total (incl. GST)</dt>
           <dd className="font-medium text-text">{formatINR(appt.price_total)}</dd>
         </div>
+        {appt.coupon_code && (
+          <div>
+            <dt className="text-xs text-text-muted">Coupon</dt>
+            <dd className="font-medium text-success-text">
+              {appt.coupon_code} (- {formatINRExact(appt.coupon_discount ?? '0')})
+            </dd>
+          </div>
+        )}
       </dl>
 
       <VisitProducts appt={appt} />

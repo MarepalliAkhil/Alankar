@@ -48,6 +48,65 @@ signed in (signing a receptionist in hands the desk back). The optional AI servi
 
 the coding assistant and Cowork run as **separate sessions**. They cannot see this chat. So we give them the plan as files in your project folder; they read the files, and you do not need to re-discuss anything.
 
+## Demo extras (add-only, on top of the demo)
+
+`python manage.py seed_demo_extras` ADDS demo data for every feature to a database that already
+has the demo (`reset_demo`). It never changes or deletes an existing row, account, password,
+setting, booking, rating or payment, and never runs `reset_demo`. Everything goes through the
+normal service layer (encryption, audit, constraints), books only free times, and uses only the
+simulated outbox (no real email or SMS). Running it again adds nothing. `--dry-run` shows what it
+would add and saves nothing; `--report` lists what it added. `python manage.py remove_demo_extras`
+deletes only the rows it added (it asks first). The only existing rows that change are the
+invoice-number counter (it must move forward) and the derived recommendation tables, which
+`build_recommendations` rebuilds at the end.
+
+New logins (password `Demo-Extra-2026!`, reserved `.test` domain, phones `90000 00101` to `104`):
+
+| Login | Shows |
+|---|---|
+| `kavya.extra@alankar.test` | Rich history (60 days, ratings, loyalty, gift card received, package, membership, paid shop order), a visit waiting to be rated, coupon-paid bookings, Any stylist reassigned, marketing consent |
+| `nikhil.extra@alankar.test` | Cold start: no history at all |
+| `sana.extra@alankar.test` | Unsubscribed from marketing (consent given, then withdrawn); declined and expired requests; AIR Any stylist request |
+| `tara.extra@alankar.test` | Marketing consent; requested, declined by the stylist, payment link expired, moved by the salon, checked in / in progress today, AIR accepted and paid, unpaid shop order |
+
+Coupons (all new codes):
+
+| Code | Tests |
+|---|---|
+| `XTRA15` | Percent with a cap (15%, up to Rs 300); used on a paid booking |
+| `XTRAFLAT150` | Flat with a minimum order (Rs 150 off Rs 1,499 or more) |
+| `XTRAFIRST20` | First visit only (try with Nikhil) |
+| `XTRAPROD10` | Products only |
+| `XTRAOLD25` | Expired |
+| `XTRAUSED1` | Usage limit 1, already reached |
+
+Demo coupons from the owner's admin account (`python manage.py seed_demo_coupons`, also run by
+`seed_demo_extras`). They are created with `created_by` = `akhimarepalli666@gmail.com` (that account
+is only read, never changed; if it is missing or not an admin, nothing is created). Valid from
+today for 90 days. A code that already exists is skipped and reported (`reset_demo` already makes
+WELCOME10 and FLAT100, so on a fresh demo those two are skipped).
+
+| Code | Demonstrates |
+|---|---|
+| `WELCOME10` | 10% off, up to Rs 200, first visit only (greyed "First visit only" for regulars) |
+| `FLAT100` | Rs 100 off with a minimum order of Rs 999 ("Add Rs X more to use this") |
+| `SPA15` | 15% off Spa services only, up to Rs 300 ("Only for Spa services" on a haircut) |
+| `GLOW200` | Rs 200 off facials, minimum Rs 1,500 |
+| `HAIR50` | Rs 50 off Salon services, minimum Rs 400 |
+| `CARE10` | 10% off products only, up to Rs 150 |
+| `VIP25` | 25% off, up to Rs 500, NOT listed: a private code for campaigns, typed in the code box |
+
+Also added: two products with stock linked as aftercare (salon and beauty parlor), a draft, a
+scheduled and a sent campaign (sent to the extra customers only, with a click and a skipped
+recipient), bell notifications and simulated emails for every step, and a fresh
+`build_recommendations` run. Every feature in the app is built (memberships, packages, gift cards
+and loyalty included), so nothing is skipped as "not built"; the AIR step is skipped only if AIR is
+switched off in that database.
+
+Short demo script: sign in as Kavya (dashboard: "Rate your last visit", For you, Time to rebook,
+wallet), then Nikhil (cold start: popular picks; pay with `XTRAFIRST20`), then the admin (Marketing
+> Coupons report, Recommendations, AIR Activity), then the receptionist (bookings in every state).
+
 ## Step 1: Create the project folder
 
 ```

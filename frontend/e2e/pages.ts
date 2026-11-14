@@ -12,6 +12,8 @@ export const ZENOTIANS_PAGES = [
   '/for-zenotians/about-zenoti',
   '/for-zenotians/day',
   '/for-zenotians/project',
+  '/for-zenotians/air',
+  '/for-zenotians/ai-intelligence',
   '/for-zenotians/mapping',
   '/for-zenotians/quality',
   '/for-zenotians/security',
@@ -38,6 +40,7 @@ export const ROLE_PAGES: Record<Exclude<Who, 'other'>, string[]> = {
     '/customer/book',
     '/customer/appointments',
     '/customer/invoices',
+    '/customer/profile',
   ],
   receptionist: [
     '/dashboard',
@@ -56,5 +59,7 @@ export const ROLE_PAGES: Record<Exclude<Who, 'other'>, string[]> = {
     '/payroll',
     '/staff',
     '/air-activity',
+    '/recommendations',
+    '/marketing',
   ],
 };

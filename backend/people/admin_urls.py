@@ -165,6 +165,7 @@ admin_patterns = [
     path("marketing/offers/<int:pk>/", m.OfferDetailView.as_view(), name="admin-offer"),
     path("marketing/coupons/", m.CouponListView.as_view(), name="admin-coupons"),
     path("marketing/coupons/<uuid:pk>/", m.CouponDetailView.as_view(), name="admin-coupon"),
+    path("marketing/coupons/report/", m.CouponReportView.as_view(), name="admin-coupon-report"),
     path("marketing/loyalty/", m.LoyaltyView.as_view(), name="admin-loyalty"),
     path("marketing/campaigns/", m.CampaignListView.as_view(), name="admin-campaigns"),
     path("marketing/campaigns/<uuid:pk>/", m.CampaignDetailView.as_view(), name="admin-campaign"),
@@ -184,6 +185,16 @@ admin_patterns = [
         name="admin-campaign-unschedule",
     ),
     path("marketing/campaigns/run-due/", m.CampaignRunDueView.as_view(), name="admin-campaign-run"),
+    path(
+        "marketing/campaigns/<uuid:pk>/preview/",
+        m.CampaignPreviewView.as_view(),
+        name="admin-campaign-preview",
+    ),
+    path(
+        "marketing/campaigns/<uuid:pk>/test/",
+        m.CampaignTestView.as_view(),
+        name="admin-campaign-test",
+    ),
     path("marketing/private-coupons/", pc.PrivateCouponListView.as_view(), name="admin-private"),
     path(
         "marketing/private-coupons/<uuid:pk>/withdraw/",

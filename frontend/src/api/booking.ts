@@ -196,6 +196,9 @@ export interface CustomerAppointment extends AppointmentBase {
   actions: CustomerAction[];
   free_cancel_until: string | null;
   amount_paid: string;
+  /** The coupon used on the online payment, if any, and its rupees. */
+  coupon_code?: string;
+  coupon_discount?: string;
   /** Zen Chat thread with this visit's stylist, once the visit is scheduled. */
   chat_thread_id: string | null;
 }
@@ -208,11 +211,46 @@ export interface PaymentState {
   /** Task 8.5: the online price step by step (coupon, then membership). */
   quote?: PaymentQuote | null;
   coupon_error?: string;
+  /** The coupon applied on this payment (kept by the server; docs/COUPONS.md). */
+  applied_coupon?: string;
+  /** Every listed, active, in-date coupon, with whether it can be used on this payment. */
+  coupons?: CouponCard[];
   appointment: CustomerAppointment;
 }
 
+export interface CouponCard {
+  code: string;
+  title: string;
+  description: string;
+  /** e.g. "10% off, up to Rs 200 · minimum order Rs 500 · Spa services only · valid till 30 Nov" */
+  terms: string;
+  eligible: boolean;
+  /** Why it cannot be used here, e.g. "Add Rs 200 more to use this". */
+  reason: string;
+  saves: string;
+  best: boolean;
+  applied: boolean;
+}
+
+export interface QuoteLine {
+  kind: 'service' | 'product';
+  description: string;
+  amount: string;
+  coupon: string;
+}
+
+export interface CouponResult {
+  applied_coupon: string;
+  quote: PaymentQuote;
+  coupons: CouponCard[];
+}
+
 export interface PaymentQuote {
+  lines?: QuoteLine[];
   items_total: string;
+  eligible_total?: string;
+  taxable_value?: string;
+  gst_included?: string;
   coupon_code: string;
   coupon_amount: string;
   member_plan: string;
@@ -289,6 +327,26 @@ export async function getPayment(
   return data;
 }
 
+/** Only the code is sent: the server works out the discount and the new total. */
+export async function applyCoupon(
+  id: string,
+  code: string,
+  link?: string | null,
+): Promise<CouponResult> {
+  const { data } = await api.post<CouponResult>(`/my/appointments/${id}/payment/coupon/`, {
+    code,
+    link: link ?? '',
+  });
+  return data;
+}
+
+export async function removeCoupon(id: string, link?: string | null): Promise<CouponResult> {
+  const { data } = await api.delete<CouponResult>(`/my/appointments/${id}/payment/coupon/`, {
+    params: link ? { link } : {},
+  });
+  return data;
+}
+
 export async function payAppointment(
   id: string,
   outcome: 'success' | 'fail',
@@ -339,6 +397,8 @@ export interface Profile {
   marketing_opt_in: boolean;
   /** When the customer last ticked or unticked the marketing box. */
   marketing_opt_changed_at?: string | null;
+  /** The exact wording next to the marketing box (its version is recorded with each change). */
+  marketing_text?: string;
 }
 
 export async function getProfile(): Promise<Profile> {
@@ -346,7 +406,7 @@ export async function getProfile(): Promise<Profile> {
   return data;
 }
 
-export type ProfilePayload = Omit<Profile, 'email' | 'marketing_opt_changed_at'>;
+export type ProfilePayload = Omit<Profile, 'email' | 'marketing_opt_changed_at' | 'marketing_text'>;
 
 export async function updateProfile(payload: ProfilePayload): Promise<Profile> {
   const { data } = await api.patch<Profile>('/my/profile/', payload);

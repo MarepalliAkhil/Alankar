@@ -88,3 +88,61 @@ def ensure_air_cover() -> None:
     if not obj.air_enabled:
         obj.air_enabled = True
         obj.save(update_fields=["air_enabled", "updated_at"])
+
+
+# Demo coupons for the payment page (docs/COUPONS.md). get_or_create by code: safe to run twice.
+DEMO_COUPONS = (
+    {
+        "code": "WELCOME10",
+        "name": "Welcome 10% off",
+        "description": "10% off your first visit.",
+        "kind": "percent",
+        "value": "10",
+        "max_discount": "200",
+        "first_visit_only": True,
+    },
+    {
+        "code": "FLAT100",
+        "name": "Rs 100 off",
+        "description": "Rs 100 off a bill of Rs 999 or more.",
+        "kind": "flat",
+        "value": "100",
+        "min_bill": "999",
+        "per_customer_limit": 3,
+    },
+    {
+        "code": "EXPIRED20",
+        "name": "Old 20% offer (expired, for testing)",
+        "description": "Expired on purpose: shows the 'has expired' message.",
+        "kind": "percent",
+        "value": "20",
+        "max_discount": "300",
+        "expired": True,
+    },
+)
+
+
+def ensure_demo_coupons() -> list[str]:
+    from datetime import timedelta
+    from decimal import Decimal
+
+    from django.utils import timezone
+
+    from marketing.models import Coupon
+
+    today = timezone.localdate()
+    made = []
+    for spec in DEMO_COUPONS:
+        spec = dict(spec)
+        expired = spec.pop("expired", False)
+        code = spec.pop("code")
+        for key in ("value", "max_discount", "min_bill"):
+            if key in spec:
+                spec[key] = Decimal(spec[key])
+        if expired:
+            spec["starts_on"] = today - timedelta(days=60)
+            spec["ends_on"] = today - timedelta(days=30)
+        _, created = Coupon.objects.get_or_create(code=code, defaults=spec)
+        if created:
+            made.append(code)
+    return made

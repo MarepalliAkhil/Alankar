@@ -54,6 +54,8 @@ describe('For Zenotians sidebar: groups', () => {
       [
         'A day at Alankar',
         'The project',
+        'AIR, the AI receptionist',
+        'AI Alankar Intelligence',
         'How it maps to Zenoti',
         'Quality evidence',
         'Security and privacy',
@@ -69,7 +71,7 @@ describe('For Zenotians sidebar: groups', () => {
     expect(grouped).toEqual(flat);
   });
 
-  it('hides a group when all of its sections are hidden', () => {
+  it('hides a group when all of its sections are hidden (the AIR and AI sections are built in)', () => {
     const bare = clone(fullContent);
     bare.mapping = [];
     bare.project = {};
@@ -78,7 +80,10 @@ describe('For Zenotians sidebar: groups', () => {
     bare.security = {};
     bare.limitations = {};
     const groups = groupMenu(buildMenu(bare));
-    expect(groups.map((g) => g.heading)).not.toContain('The project');
+    expect(groups.find((g) => g.heading === 'The project')?.entries.map((e) => e.id)).toEqual([
+      'air',
+      'ai-intelligence',
+    ]);
     expect(groups.map((g) => g.heading)).toContain('About');
     const noAbout = clone(bare);
     noAbout.zenoti = {};

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CampaignsPanel } from '../../components/admin/marketing/CampaignsPanel';
-import { CouponsPanel } from '../../components/admin/marketing/CouponsPanel';
+import { CouponReportCard, CouponsPanel } from '../../components/admin/marketing/CouponsPanel';
 import { LoyaltyPanel } from '../../components/admin/marketing/LoyaltyPanel';
 import { PrivateCouponsPanel } from '../../components/admin/marketing/PrivateCouponsPanel';
 import { OffersPanel } from '../../components/admin/marketing/OffersPanel';
@@ -36,7 +36,12 @@ export default function MarketingPage() {
         idPrefix="marketing"
       />
       <TabPanel idPrefix="marketing" id={tab}>
-        {tab === 'coupons' && <CouponsPanel />}
+        {tab === 'coupons' && (
+          <div className="flex flex-col gap-md">
+            <CouponsPanel />
+            <CouponReportCard />
+          </div>
+        )}
         {tab === 'private' && <PrivateCouponsPanel />}
         {tab === 'offers' && <OffersPanel />}
         {tab === 'loyalty' && <LoyaltyPanel />}

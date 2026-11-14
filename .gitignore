@@ -3,6 +3,8 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.production.local.example
 __pycache__/
 *.pyc
 .venv/
@@ -55,3 +57,6 @@ mobile-screens/
 
 # Bundle map from npm run build:analyze
 dist-stats.html
+
+# Deployment state on the server (scripts/deploy)
+.deploy/

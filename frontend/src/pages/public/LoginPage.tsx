@@ -1,6 +1,6 @@
 import { Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { needsOtp, needsTwoFactor, type OtpPurpose } from '../../api/auth';
 import { loginErrorMessage } from '../../api/auth-messages';
@@ -130,6 +130,10 @@ export default function LoginPage() {
     }
   };
 
+  // A signed-in customer never sees the sign-in form: straight to the dashboard.
+  if (status === 'authenticated' && user?.role === 'customer' && !submitting) {
+    return <Navigate to={user.home} replace />;
+  }
   if (status === 'authenticated' && user && !submitting) {
     return (
       <PageContainer className="flex justify-center py-xl">

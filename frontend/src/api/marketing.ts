@@ -14,7 +14,7 @@ export interface OfferRow {
 export type OfferInput = Partial<Omit<OfferRow, 'id'>>;
 
 export type CouponKind = 'percent' | 'flat';
-export type CouponScope = 'all' | 'services' | 'products';
+export type CouponScope = 'all' | 'services' | 'products' | 'chosen';
 export type CouponState = 'live' | 'off' | 'scheduled' | 'expired' | 'used_up';
 
 export interface CouponRow {
@@ -30,6 +30,18 @@ export interface CouponRow {
   total_limit: number | null;
   per_customer_limit: number;
   applies_to: CouponScope;
+  /** applies_to "chosen": the divisions, services and products it covers. */
+  divisions?: string[];
+  services?: string[];
+  products?: string[];
+  description?: string;
+  first_visit_only?: boolean;
+  /** Shown as a card on the customer payment page (off: a private code for campaigns). */
+  listed?: boolean;
+  /** The admin who created it (read-only). */
+  created_by?: string;
+  /** e.g. "10% off, up to Rs 200, minimum Rs 500, valid till 30 Nov" */
+  terms?: string;
   stackable: boolean;
   is_active: boolean;
   used: number;
@@ -44,6 +56,17 @@ export interface LoyaltyRules {
 }
 
 export type AudienceKind = 'all' | 'recent' | 'lapsed';
+export type CampaignKind =
+  'custom' | 'for_you' | 'products' | 'rebook' | 'most_booked' | 'top_rated' | 'offers';
+export interface CampaignResults {
+  sent: number;
+  waiting: number;
+  skipped: number;
+  skipped_reasons: { reason: string; count: number }[];
+  clicked: number;
+  booked: number;
+  booked_within_days: number;
+}
 export interface CampaignRow {
   id: string;
   name: string;
@@ -52,7 +75,13 @@ export interface CampaignRow {
   audience: AudienceKind;
   audience_label: string;
   coupon: string | null;
-  status: 'draft' | 'scheduled' | 'sent';
+  kind: CampaignKind;
+  kind_label: string;
+  status: 'draft' | 'scheduled' | 'sending' | 'sent';
+  approved_at: string | null;
+  approved_by: string | null;
+  problem: string | null;
+  results: CampaignResults | null;
   scheduled_for: string | null;
   sent_at: string | null;
   recipients: number | null;
@@ -62,9 +91,21 @@ export interface CampaignRow {
 export interface CampaignList {
   opted_in: number;
   audiences: { value: AudienceKind; label: string }[];
+  kinds?: { value: CampaignKind; label: string }[];
+  limits?: { quiet_hours: number[]; min_days: number; quiet_now: boolean };
+  consent_version?: string;
   results: CampaignRow[];
 }
-export type CampaignInput = Partial<Pick<CampaignRow, 'name' | 'subject' | 'body' | 'audience'>> & {
+export interface CampaignPreview {
+  problem: string | null;
+  customer: { id: string; name: string } | null;
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+export type CampaignInput = Partial<
+  Pick<CampaignRow, 'name' | 'subject' | 'body' | 'audience' | 'kind'>
+> & {
   coupon?: string | null;
 };
 
@@ -93,6 +134,20 @@ export async function updateCoupon(id: string, body: CouponInput): Promise<Coupo
   return (await api.patch<CouponRow>(`${M}/coupons/${id}/`, body)).data;
 }
 
+export interface CouponReport {
+  from: string;
+  to: string;
+  coupons: { code: string; title: string; uses: number; discount: string }[];
+  total_uses: number;
+  total_discount: string;
+  with_coupon: { bookings: number; revenue: string };
+  without_coupon: { bookings: number; revenue: string };
+  note: string;
+}
+export async function getCouponReport(): Promise<CouponReport> {
+  return (await api.get<CouponReport>(`${M}/coupons/report/`)).data;
+}
+
 export async function getLoyalty(): Promise<LoyaltyRules> {
   return (await api.get<LoyaltyRules>(`${M}/loyalty/`)).data;
 }
@@ -114,6 +169,17 @@ export async function deleteCampaign(id: string): Promise<void> {
 }
 export async function sendCampaign(id: string): Promise<CampaignRow> {
   return (await api.post<CampaignRow>(`${M}/campaigns/${id}/send/`)).data;
+}
+
+export async function previewCampaign(id: string, customer?: string): Promise<CampaignPreview> {
+  return (
+    await api.get<CampaignPreview>(`${M}/campaigns/${id}/preview/`, {
+      params: customer ? { customer } : undefined,
+    })
+  ).data;
+}
+export async function testCampaign(id: string): Promise<{ detail: string }> {
+  return (await api.post<{ detail: string }>(`${M}/campaigns/${id}/test/`)).data;
 }
 
 export async function scheduleCampaign(id: string, sendAt: string): Promise<CampaignRow> {

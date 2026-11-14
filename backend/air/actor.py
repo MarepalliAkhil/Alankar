@@ -92,6 +92,10 @@ NEVER = (
     "customer.read_other",
     "staff.private.read",
     "chat.photo.open",
+    # Coupons: AIR never creates, applies or removes one (docs/COUPONS.md).
+    "coupon.create",
+    "coupon.apply",
+    "coupon.remove",
 )
 
 

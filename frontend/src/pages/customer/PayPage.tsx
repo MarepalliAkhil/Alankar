@@ -3,10 +3,17 @@ import { CheckCircle2, Clock, CreditCard, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { genericErrorMessage } from '../../api/auth-messages';
-import { getPayment, payAppointment } from '../../api/booking';
+import {
+  applyCoupon,
+  getPayment,
+  payAppointment,
+  removeCoupon,
+  type PaymentState,
+} from '../../api/booking';
 import { checkMyGiftCard } from '../../api/wallet';
 import { PageHeader } from '../../components/layout/PageContainer';
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -20,6 +27,7 @@ import {
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDateTime, formatINR, formatINRExact } from '../../lib/format';
 import { ButtonLink } from '../../components/ui/ButtonLink';
+import { cn } from '../../lib/cn';
 
 /**
  * Mock payment gateway (v1). No card details are ever asked for: the two buttons simulate a
@@ -33,15 +41,12 @@ export default function PayPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const [couponInput, setCouponInput] = useState('');
-  const [coupon, setCoupon] = useState('');
   const payment = useQuery({
-    queryKey: ['payment', id, link, coupon],
-    queryFn: () => (coupon ? getPayment(id, link, coupon) : getPayment(id, link)),
+    queryKey: ['payment', id, link],
+    queryFn: () => getPayment(id, link),
     retry: false,
     placeholderData: (previous) => previous,
   });
-  const couponOk = Boolean(coupon) && !payment.data?.coupon_error;
 
   const [giftCode, setGiftCode] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
@@ -67,7 +72,6 @@ export default function PayPage() {
         outcome,
         link,
         giftCode.trim() ? { code: giftCode.trim(), amount: giftAmount.trim() } : null,
-        ...(couponOk ? [coupon] : []),
       ),
     onSuccess: () => {
       toast.show({
@@ -77,9 +81,12 @@ export default function PayPage() {
       });
     },
     onError: (error) => {
+      const changed =
+        (error as { response?: { data?: { code?: string } } })?.response?.data?.code ===
+        'coupon_changed';
       toast.show({
-        tone: 'danger',
-        title: 'Payment did not go through',
+        tone: changed ? 'warning' : 'danger',
+        title: changed ? 'Please check the new total' : 'Payment did not go through',
         description: genericErrorMessage(error, 'No money was taken. You can try again.'),
       });
     },
@@ -164,63 +171,8 @@ export default function PayPage() {
             </div>
             <StatusBadge status={appointment.status} />
           </div>
-          <div className="rounded-nested bg-primary-soft p-md">
-            <p className="text-xs text-text-muted">Amount due (incl. GST)</p>
-            <p className="text-2xl font-semibold text-text">{formatINR(amount)}</p>
-            {quote && Number(quote.discount) > 0 && (
-              <dl className="mt-xs flex flex-col gap-1 text-xs text-text-muted">
-                <div className="flex justify-between">
-                  <dt>Price</dt>
-                  <dd>{formatINRExact(quote.items_total)}</dd>
-                </div>
-                {Number(quote.coupon_amount) > 0 && (
-                  <div className="flex justify-between">
-                    <dt>Coupon {quote.coupon_code}</dt>
-                    <dd>- {formatINRExact(quote.coupon_amount)}</dd>
-                  </div>
-                )}
-                {Number(quote.member_amount) > 0 && (
-                  <div className="flex justify-between">
-                    <dt>
-                      {quote.member_plan} membership ({Number(quote.member_percent)}%)
-                    </dt>
-                    <dd>- {formatINRExact(quote.member_amount)}</dd>
-                  </div>
-                )}
-              </dl>
-            )}
-            {expires && (
-              <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
-            <div className="flex flex-wrap items-end gap-sm">
-              <div className="min-w-0 flex-1">
-                <Input
-                  label="Coupon code (optional)"
-                  autoComplete="off"
-                  value={couponInput}
-                  error={coupon ? payment.data.coupon_error || undefined : undefined}
-                  onChange={(e) => setCouponInput(e.target.value)}
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={couponInput.trim() === ''}
-                loading={payment.isFetching && coupon !== ''}
-                onClick={() => setCoupon(couponInput.trim().toUpperCase())}
-              >
-                Apply
-              </Button>
-            </div>
-            {couponOk && (
-              <p role="status" className="text-sm text-text">
-                Coupon {coupon} applied.
-              </p>
-            )}
-          </div>
+          <Breakdown data={payment.data} amount={amount} expires={expires} />
+          <CouponPanel id={id} link={link} data={payment.data} />
           <div className="flex flex-col gap-xs rounded-nested border border-border p-md">
             <Input
               label="Gift card code (optional)"
@@ -291,6 +243,252 @@ export default function PayPage() {
     <section className="flex flex-col gap-lg py-lg">
       <PageHeader title="Pay for your booking" />
       {body()}
+    </section>
+  );
+}
+
+/** Each service and product, Subtotal, Coupon, GST and Total. A live region reads out the new
+ * total whenever a coupon is applied or removed. */
+function Breakdown({
+  data,
+  amount,
+  expires,
+}: {
+  data: PaymentState;
+  amount: string;
+  expires: string | null;
+}) {
+  const quote = data.quote;
+  return (
+    <div className="rounded-nested bg-primary-soft p-md">
+      <dl className="flex flex-col gap-1 text-sm text-text" aria-label="Price breakdown">
+        {(quote?.lines ?? []).map((line, i) => (
+          <div key={`${line.description}-${i}`} className="flex justify-between gap-sm">
+            <dt className="min-w-0">{line.description}</dt>
+            <dd className="tabular">{formatINRExact(line.amount)}</dd>
+          </div>
+        ))}
+        {quote && (
+          <div className="flex justify-between gap-sm border-t border-border pt-1">
+            <dt>Subtotal</dt>
+            <dd className="tabular">{formatINRExact(quote.items_total)}</dd>
+          </div>
+        )}
+        {quote && (
+          // Always present (with a dash when empty) so applying a coupon never moves the page.
+          <div
+            className={`flex justify-between gap-sm ${Number(quote.coupon_amount) > 0 ? 'text-success-text' : 'text-text-muted'}`}
+          >
+            <dt>{Number(quote.coupon_amount) > 0 ? `Coupon ${quote.coupon_code}` : 'Coupon'}</dt>
+            <dd className="tabular">
+              {Number(quote.coupon_amount) > 0 ? `- ${formatINRExact(quote.coupon_amount)}` : '–'}
+            </dd>
+          </div>
+        )}
+        {quote && Number(quote.member_amount) > 0 && (
+          <div className="flex justify-between gap-sm">
+            <dt>
+              {quote.member_plan} membership ({Number(quote.member_percent)}%)
+            </dt>
+            <dd className="tabular">- {formatINRExact(quote.member_amount)}</dd>
+          </div>
+        )}
+        {quote?.gst_included !== undefined && (
+          <div className="flex justify-between gap-sm text-text-muted">
+            <dt>GST (included)</dt>
+            <dd className="tabular">{formatINRExact(quote.gst_included)}</dd>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between gap-sm border-t border-border pt-1">
+          <dt className="font-semibold">Total</dt>
+          <dd className="text-2xl font-semibold tabular" data-testid="pay-total">
+            {formatINR(amount)}
+          </dd>
+        </div>
+      </dl>
+      <p aria-live="polite" className="sr-only">
+        Total to pay: {formatINRExact(amount)}
+      </p>
+      {expires && <p className="mt-1 text-xs text-text-muted">Pay by {formatDateTime(expires)}.</p>}
+    </div>
+  );
+}
+
+function CouponPanel({ id, link, data }: { id: string; link: string | null; data: PaymentState }) {
+  const queryClient = useQueryClient();
+  const [typed, setTyped] = useState('');
+  const [message, setMessage] = useState<{ text: string; bad: boolean } | null>(null);
+  const applied = data.applied_coupon ?? '';
+  const update = (result: Awaited<ReturnType<typeof applyCoupon>>) =>
+    queryClient.setQueryData<PaymentState>(['payment', id, link], (old) =>
+      old
+        ? {
+            ...old,
+            quote: result.quote,
+            applied_coupon: result.applied_coupon,
+            coupons: result.coupons,
+          }
+        : old,
+    );
+  const apply = useMutation({
+    // Only the code goes to the server; it re-checks every rule and works out the discount.
+    mutationFn: (code: string) => applyCoupon(id, code, link),
+    onSuccess: (result) => {
+      update(result);
+      setTyped('');
+      setMessage({
+        text: `${result.applied_coupon} applied, you save ${formatINRExact(result.quote.coupon_amount)}.`,
+        bad: false,
+      });
+    },
+    onError: (error) =>
+      setMessage({ text: genericErrorMessage(error, 'That coupon code is not valid.'), bad: true }),
+  });
+  const remove = useMutation({
+    mutationFn: () => removeCoupon(id, link),
+    onSuccess: (result) => {
+      update(result);
+      setMessage({ text: 'Coupon removed. The full price is back.', bad: false });
+    },
+    onError: (error) =>
+      setMessage({ text: genericErrorMessage(error, 'Could not remove the coupon.'), bad: true }),
+  });
+  const list = data.coupons ?? [];
+  const saving = data.quote?.coupon_amount ?? '0';
+  return (
+    <section
+      aria-labelledby="coupons-title"
+      className="glass flex flex-col gap-sm rounded-nested border border-border p-md"
+    >
+      <h3 id="coupons-title" className="text-sm font-semibold text-text">
+        Coupons
+      </h3>
+      {list.length > 0 && (
+        <ul
+          aria-label="Coupons for this payment"
+          className="grid grid-cols-1 gap-xs sm:grid-cols-2"
+        >
+          {list.map((c) => {
+            const isApplied = c.code === applied;
+            const name = isApplied
+              ? `${c.code}, applied, you save ${formatINRExact(saving)}`
+              : c.eligible
+                ? `Apply ${c.code}: ${c.title}, save ${formatINRExact(c.saves)}${c.best ? ', best for you' : ''}`
+                : `${c.code}: ${c.title}, not available. ${c.reason}`;
+            return (
+              <li
+                key={c.code}
+                data-coupon={c.code}
+                data-state={isApplied ? 'applied' : c.eligible ? 'eligible' : 'unavailable'}
+                className={cn(
+                  'flex min-w-0 flex-col gap-xs rounded-nested border p-sm transition-colors duration-base ease-brand',
+                  isApplied
+                    ? 'border-primary bg-primary-soft'
+                    : c.eligible
+                      ? 'border-border bg-surface'
+                      : 'border-border bg-surface opacity-60',
+                )}
+              >
+                <button
+                  type="button"
+                  aria-pressed={isApplied}
+                  aria-label={name}
+                  disabled={!c.eligible || apply.isPending || isApplied}
+                  onClick={() => apply.mutate(c.code)}
+                  className="touch-target flex min-h-11 w-full flex-col items-start gap-1 rounded-input text-left focus-visible:shadow-focus focus-visible:outline-none disabled:cursor-default"
+                >
+                  <span className="flex w-full flex-wrap items-center justify-between gap-xs">
+                    <span className="font-mono text-sm font-semibold text-text">{c.code}</span>
+                    {c.best && !isApplied && <Badge tone="success">Best for you</Badge>}
+                  </span>
+                  <span className="text-sm font-medium text-text">{c.title}</span>
+                  <span className="text-xs text-text-muted">{c.terms}</span>
+                  <span
+                    className={cn(
+                      'text-xs font-semibold',
+                      isApplied
+                        ? 'text-success-text'
+                        : c.eligible
+                          ? 'text-primary-hover'
+                          : 'text-text-muted',
+                    )}
+                  >
+                    {isApplied
+                      ? `Applied, you save ${formatINRExact(saving)}`
+                      : c.eligible
+                        ? `Tap to apply · save ${formatINRExact(c.saves)}`
+                        : c.reason}
+                  </span>
+                </button>
+                {isApplied && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    loading={remove.isPending}
+                    aria-label={`Remove coupon ${c.code}`}
+                    onClick={() => remove.mutate()}
+                    className="self-start"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {applied && !list.some((c) => c.code === applied) && (
+        <div className="flex flex-wrap items-center justify-between gap-sm">
+          <p className="text-sm font-medium text-text">
+            {applied} applied, you save {formatINRExact(saving)}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            loading={remove.isPending}
+            aria-label={`Remove coupon ${applied}`}
+            onClick={() => remove.mutate()}
+          >
+            Remove
+          </Button>
+        </div>
+      )}
+      <form
+        className="flex flex-wrap items-end gap-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (typed.trim()) apply.mutate(typed.trim().toUpperCase());
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <Input
+            label="Have a private code?"
+            autoComplete="off"
+            autoCapitalize="characters"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+          />
+        </div>
+        <Button
+          type="submit"
+          size="sm"
+          variant="secondary"
+          aria-label="Apply typed coupon code"
+          disabled={typed.trim() === '' || apply.isPending}
+          loading={apply.isPending && apply.variables === typed.trim().toUpperCase()}
+        >
+          Apply
+        </Button>
+      </form>
+      {/* Space is kept for the message so applying or removing never moves the page. */}
+      <p
+        role={message?.bad ? 'alert' : 'status'}
+        className={`min-h-[1.25rem] text-sm ${message?.bad ? 'font-medium text-danger-text' : 'text-text'}`}
+      >
+        {message?.text ?? ''}
+      </p>
     </section>
   );
 }

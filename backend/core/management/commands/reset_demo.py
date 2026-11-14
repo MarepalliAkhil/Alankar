@@ -52,6 +52,12 @@ class Command(BaseCommand):
         else:
             demo_story.build(write=self.stdout.write)
         demo.ensure_air_cover()  # AIR desk cover is ON in the demo (OFF by default elsewhere)
+        demo.ensure_demo_coupons()  # WELCOME10, FLAT100 and the expired EXPIRED20
+        if not options["no_history"]:
+            from recommendations import demo as rec_demo
+
+            rec_demo.build(write=self.stdout.write)
+        call_command("build_recommendations", stdout=self.stdout)
         self.stdout.write(self.style.SUCCESS("Demo ready. Everything in it is fictional."))
         self.stdout.write(f"Password for every demo login: {demo.DEMO_PASSWORD}")
         for _role, email, name_, _profile, _phone in demo.DEMO_STAFF:

@@ -197,6 +197,14 @@ class _AppointmentBase(serializers.ModelSerializer):
     service_slug = serializers.CharField(source="service.slug", read_only=True)
     package_used = serializers.SerializerMethodField()
     products = serializers.SerializerMethodField()
+    # The coupon used on the online payment (read-only for every role; docs/COUPONS.md).
+    coupon_code = serializers.SerializerMethodField()
+    coupon_discount = serializers.DecimalField(
+        source="prepay_coupon_amount", max_digits=10, decimal_places=2, read_only=True
+    )
+
+    def get_coupon_code(self, obj: Appointment) -> str:
+        return obj.prepay_coupon.code if obj.prepay_coupon_id else ""
 
     def get_products(self, obj: Appointment) -> list[dict]:
         """Task 8.5 part 4: products added to the visit (held, or billed)."""
@@ -224,6 +232,8 @@ class _AppointmentBase(serializers.ModelSerializer):
 
 
 COMMON_FIELDS = [
+    "coupon_code",
+    "coupon_discount",
     "id",
     "status",
     "status_label",

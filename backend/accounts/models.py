@@ -167,8 +167,19 @@ class AuditLog(models.Model):
         FRESH_OTP_REQUIRED = "fresh_otp_required", "A sensitive action needed a fresh code"
         COUPONS_ISSUED = "coupons_issued", "Private coupons issued"
         COUPON_REVOKED = "coupon_revoked", "Private coupon withdrawn"
+        COUPON_APPLIED = "coupon_applied", "Coupon applied on a payment page"
+        COUPON_REMOVED = "coupon_removed", "Coupon removed from a payment page"
+        COUPON_APPLY_BLOCKED = "coupon_apply_blocked", "Too many coupon attempts blocked"
+        DEMO_EXTRAS = "demo_extras", "Demo extras added or removed (demo-seed)"
         CAMPAIGN_SCHEDULED = "campaign_scheduled", "Campaign scheduled"
         CAMPAIGN_UNSCHEDULED = "campaign_unscheduled", "Campaign schedule removed"
+        CAMPAIGN_APPROVED = "campaign_approved", "Campaign approved and sent"
+        CAMPAIGN_TEST_SENT = "campaign_test_sent", "Campaign test email sent to the admin"
+        RECOMMENDATIONS_CONSENT = (
+            "recommendations_consent",
+            "Personal recommendations switched on or off by the customer",
+        )
+        RECOMMENDATIONS_CHANGED = "recommendations_changed", "Recommendation settings changed"
         TWO_FACTOR_ENABLED = "two_factor_enabled", "Two-step sign-in switched on"
         TWO_FACTOR_DISABLED = "two_factor_disabled", "Two-step sign-in switched off"
         TWO_FACTOR_RESET = "two_factor_reset", "Two-step sign-in reset by another admin"

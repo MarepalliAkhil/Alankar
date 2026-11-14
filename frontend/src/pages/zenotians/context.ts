@@ -1,10 +1,12 @@
 import { createContext, useContext } from 'react';
 import type { ZenotiansContent } from '../../api/zenotians';
-import type { MenuEntry } from './model';
+import type { MenuEntry, SectionId } from './model';
 
 export interface ZenotiansContext {
   content: ZenotiansContent;
   menu: MenuEntry[];
+  /** Scrolls the one page to a section (the menu does the same). */
+  goTo?: (section: SectionId) => void;
 }
 
 /** The page content and the menu of visible sections, provided by the page (ZenotiansLayout). */

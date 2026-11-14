@@ -1,6 +1,7 @@
 import './zenotians-type.css';
 import { useQuery } from '@tanstack/react-query';
 import {
+  BrainCircuit,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   ClipboardCheck,
   FolderKanban,
   GitCompareArrows,
+  Headset,
   LayoutDashboard,
   ListTree,
   Mail,
@@ -37,6 +39,7 @@ import { Drawer, EmptyState, ErrorState } from '../../components/ui';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/cn';
 import { usePageHead } from '../../seo/head';
+import { AiIntelligenceSection, AirSection } from './AiSections';
 import { ZenotiansData } from './context';
 import {
   aboutDomId,
@@ -74,6 +77,8 @@ const BODY: Record<Exclude<SectionId, 'about'>, () => JSX.Element> = {
   'about-zenoti': () => <AboutZenoti />,
   day: () => <Day />,
   project: () => <Project />,
+  air: () => <AirSection />,
+  'ai-intelligence': () => <AiIntelligenceSection />,
   mapping: () => <Mapping />,
   quality: () => <Quality />,
   security: () => <Security />,
@@ -89,6 +94,8 @@ const ICONS: Record<SectionId, LucideIcon> = {
   'about-zenoti': Building2,
   day: CalendarDays,
   project: FolderKanban,
+  air: Headset,
+  'ai-intelligence': BrainCircuit,
   mapping: GitCompareArrows,
   quality: ClipboardCheck,
   security: ShieldCheck,
@@ -366,7 +373,15 @@ function Section({
       aria-label={entry.label}
       className="zen-section"
     >
-      <Suspense fallback={<Skeleton className="h-96" />}>{children}</Suspense>
+      <Suspense
+        fallback={
+          <div aria-busy="true">
+            <Skeleton className="h-96" />
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
       {next && (
         <p className="zen-noprint mt-xl">
           <a
@@ -564,7 +579,9 @@ export default function ZenotiansLayout() {
 
   const hasOverview = menu.some((e) => e.id === 'overview');
   return (
-    <ZenotiansData.Provider value={{ content, menu }}>
+    <ZenotiansData.Provider
+      value={{ content, menu, goTo: (section: SectionId) => go({ section }) }}
+    >
       <div ref={setStage} className="zen-stage zen-type" data-zen-page>
         <ReducedMotionNote />
         {/* The page's one H1 is the overview headline; without an overview, this one. */}

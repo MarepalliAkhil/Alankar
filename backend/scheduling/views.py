@@ -11,7 +11,7 @@ from django.db.models import Prefetch, Q
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -75,6 +75,9 @@ def booking_error(exc: booking.BookingError) -> Response:
     elif exc.code == "ratings_pending":
         code = status.HTTP_403_FORBIDDEN
         body["code"] = "ratings_pending"
+    elif exc.code == "coupon_changed":
+        code = status.HTTP_409_CONFLICT
+        body["code"] = "coupon_changed"
     if exc.field:
         body["field"] = exc.field
     return Response(body, status=code)
@@ -390,6 +393,8 @@ class PaymentView(APIView):
                 "expires_at": link.expires_at.isoformat() if link else None,
                 "quote": quote,
                 "coupon_error": coupon_error,
+                "applied_coupon": link.coupon.code if link and link.coupon_id else "",
+                "coupons": booking.coupon_cards(appt, link) if link else [],
                 "appointment": CustomerAppointmentSerializer(appt).data,
             }
         )
@@ -434,6 +439,57 @@ class PaymentView(APIView):
                 status=status.HTTP_402_PAYMENT_REQUIRED,
             )
         return Response({"appointment": CustomerAppointmentSerializer(appt).data})
+
+
+class CouponBody(serializers.Serializer):
+    code = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    link = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
+class PaymentCouponView(APIView):
+    """Apply (POST) or remove (DELETE) one coupon on my own payment. Only the code is sent; the
+    server works out the discount and the new total (docs/COUPONS.md)."""
+
+    policy_actions = {"POST": "my.payment.coupon", "DELETE": "my.payment.coupon"}
+
+    def _reply(self, appt, link, b):
+        return Response(
+            {
+                "applied_coupon": link.coupon.code if link.coupon_id else "",
+                "quote": b.data(),
+                "coupons": booking.coupon_cards(appt, link),
+            }
+        )
+
+    @extend_schema(summary="Apply a coupon to my payment", request=CouponBody)
+    def post(self, request: Request, pk) -> Response:
+        own_appointment(request, pk)
+        body = CouponBody(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            appt, link, b = booking.apply_coupon(
+                pk,
+                customer=request.user,
+                token=body.validated_data["link"] or None,
+                code=body.validated_data["code"],
+                ip=client_ip(request),
+                request=request,
+            )
+        except booking.BookingError as exc:
+            return booking_error(exc)
+        return self._reply(appt, link, b)
+
+    @extend_schema(summary="Remove the coupon from my payment", request=CouponBody)
+    def delete(self, request: Request, pk) -> Response:
+        own_appointment(request, pk)
+        token = request.query_params.get("link") or (request.data or {}).get("link") or None
+        try:
+            appt, link, b = booking.remove_coupon(
+                pk, customer=request.user, token=token, request=request
+            )
+        except booking.BookingError as exc:
+            return booking_error(exc)
+        return self._reply(appt, link, b)
 
 
 # --------------------------------------------------------------------------- desk

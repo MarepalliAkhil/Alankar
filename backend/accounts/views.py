@@ -114,9 +114,12 @@ class RegisterView(AuthThrottleMixin, APIView):
                 user.save()
                 profile = CustomerProfile(user=user)
                 profile.set_phone(data["phone"])
-                if data.get("marketing_opt_in"):
-                    profile.set_marketing(True)
                 profile.save()
+                if data.get("marketing_opt_in"):
+                    from marketing import consent
+
+                    consent.change(profile, True, "register")
+                    profile.save()
             audit(AuditLog.Action.REGISTER, request=request, actor=user, target=user)
             if data.get("marketing_opt_in"):
                 audit(

@@ -34,8 +34,9 @@ def load_env_file(path: str | os.PathLike[str]) -> None:
 
 
 def env(key: str, default: object = _MISSING) -> str:
-    value = os.environ.get(key)
-    if value is None or value == "":
+    # Strip spaces: in cmd.exe, "set NAME=value && next" keeps the space before "&&".
+    value = (os.environ.get(key) or "").strip()
+    if value == "":
         if default is _MISSING:
             raise ImproperlyConfigured(f"Missing required environment variable: {key}")
         return str(default)

@@ -189,6 +189,9 @@ def _build(
             gst_included=gst_included,
         )
     ]
+    # For coupons limited to chosen services or divisions (marketing/coupons.py).
+    lines[0].ref_id = str(appt.service_id)
+    lines[0].division = appt.service.category.division
     for product, qty in rows:
         lines.append(
             Line(

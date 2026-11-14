@@ -30,6 +30,12 @@ class ProfileSerializer(serializers.Serializer):
         return crypto.normalize_phone(value)
 
 
+def consent_text() -> str:
+    from marketing import consent
+
+    return consent.TEXT
+
+
 def profile_data(user) -> dict:
     profile = CustomerProfile.objects.filter(user=user).first()
     return {
@@ -39,6 +45,7 @@ def profile_data(user) -> dict:
         "allergies": profile.allergies if profile else "",
         "preferences": profile.preferences if profile else "",
         "marketing_opt_in": bool(profile and profile.marketing_opt_in),
+        "marketing_text": consent_text(),
         "marketing_opt_changed_at": (
             profile.marketing_opt_changed_at.isoformat()
             if profile and profile.marketing_opt_changed_at
@@ -72,7 +79,11 @@ class ProfileView(APIView):
             profile.set_phone(data["phone"])
             profile.allergies = data.get("allergies", "")
             profile.preferences = data.get("preferences", "")
-            consent_changed = profile.set_marketing(bool(data.get("marketing_opt_in", False)))
+            from marketing import consent
+
+            consent_changed = consent.change(
+                profile, bool(data.get("marketing_opt_in", False)), "profile"
+            )
             profile.save()
             if consent_changed:
                 audit(

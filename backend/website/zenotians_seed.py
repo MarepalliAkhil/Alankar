@@ -531,6 +531,32 @@ MAPPING = [
         "not_built": "",
     },
     {
+        "workflow": "Personal recommendations",
+        "built": (
+            "Suggestions on the customer dashboard with a plain reason each (booked together, "
+            "similar to a past visit, chosen interests, most booked, well rated), rebook reminders "
+            "with real free times, an add-on only when the same stylist is free right after, "
+            "aftercare products, quieter times, chat answers, and an admin page with shown, "
+            "clicked and booked counts and a time-split evaluation against a popularity baseline. "
+            "Counting rules only, from booking history; never gender, age, caste or religion. On "
+            "by default with a one-time notice and a switch for the customer."
+        ),
+        "limits": ["demo-data", "single-shop"],
+        "not_built": "",
+    },
+    {
+        "workflow": "Personal emails",
+        "built": (
+            "Campaign emails built on those recommendations (for you, products, time to rebook, "
+            "most booked, highest rated with at least five ratings, real offers only), with an "
+            "unticked consent box, recorded consent versions, one-click unsubscribe, preview, a "
+            "test send, approve and send, quiet hours, one email a week per customer, batches, "
+            "and clicks and bookings counted without tracking pixels."
+        ),
+        "limits": ["messages", "demo-data"],
+        "not_built": "",
+    },
+    {
         "workflow": "Roles, security and audit",
         "built": "Four roles with strict isolation, encryption of sensitive fields, and an audit log.",
         "limits": ["single-shop", "sign-in", "encryption"],
@@ -990,7 +1016,7 @@ LIMITATIONS = {
             "id": "chatbot",
             "area": "The chatbot and the admin side",
             "today": "The chatbot's own engine is a rule program (text matching, a rule table and a search formula). It answers from the shop's own data and, for a signed-in customer, their own bookings, invoices and points. Measured on questions I wrote myself: 130 of 143 (90.9%) on the set it was tuned on and 67 of 91 (73.6%) on a holdout set, measured on 5 November 2026. In the same chat window, AIR (below) can prepare booking requests and orders.",
-            "out_of_scope": "Open conversation and unusual phrasing (the holdout misses include 'what time do you shut' and 'which area are you in'), and accuracy on real customers' questions, which I have not measured. There is no admin assistant: the admin side has shop statistics, the AIR Activity page and a list of questions the bot could not answer.",
+            "out_of_scope": "Open conversation and unusual phrasing (the holdout misses include 'what time do you shut' and 'which area are you in'), and accuracy on real customers' questions, which I have not measured. The admin assistant, \"Alankar Intelligence\", is planned future work and is not built: the admin side has shop statistics, the AIR Activity page and a list of questions the bot could not answer.",
             "where": [
                 "backend/chatbot/engine/",
                 "backend/chatbot/tests/test_accuracy.py",

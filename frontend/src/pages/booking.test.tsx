@@ -72,6 +72,8 @@ vi.mock('../api/booking', async (importOriginal) => {
     actOnAppointment: vi.fn(),
     getPayment: vi.fn(),
     payAppointment: vi.fn(),
+    applyCoupon: vi.fn(),
+    removeCoupon: vi.fn(),
     getProfile: vi.fn(),
     updateProfile: vi.fn(),
     changePassword: vi.fn(),
@@ -459,55 +461,138 @@ describe('payment page', () => {
     );
   });
 
-  it('applies a coupon, shows the coupon and membership lines, and pays the lower amount', async () => {
-    const base = {
-      state: 'due' as const,
+  const fullQuote = {
+    lines: [
+      { kind: 'service' as const, description: 'Haircut', amount: '1000.00', coupon: '0.00' },
+    ],
+    items_total: '1000.00',
+    gst_included: '152.54',
+    coupon_code: '',
+    coupon_amount: '0.00',
+    member_plan: '',
+    member_percent: '0',
+    member_amount: '0.00',
+    discount: '0.00',
+    total: '1000.00',
+  };
+  const savedQuote = {
+    ...fullQuote,
+    gst_included: '137.29',
+    coupon_code: 'SAVE10',
+    coupon_amount: '100.00',
+    discount: '100.00',
+    total: '900.00',
+  };
+  const card = (
+    code: string,
+    extra: Partial<bookingApi.CouponCard> = {},
+  ): bookingApi.CouponCard => ({
+    code,
+    title: `${code} title`,
+    description: '',
+    terms: '10% off, up to Rs 200 · minimum order Rs 500 · Spa services only · valid till 30 Nov',
+    eligible: true,
+    reason: '',
+    saves: '100.00',
+    best: false,
+    applied: false,
+    ...extra,
+  });
+  const listed = [
+    card('FLAT150', { saves: '150.00', best: true }),
+    card('SAVE10'),
+    card('SPA15', { eligible: false, saves: '0.00', reason: 'Only for Spa services' }),
+    card('BIG', { eligible: false, saves: '0.00', reason: 'Add Rs 200 more to use this' }),
+  ];
+  const savedQuote150 = {
+    ...savedQuote,
+    coupon_code: 'FLAT150',
+    coupon_amount: '150.00',
+    discount: '150.00',
+    total: '850.00',
+  };
+  const mark = (code: string) => listed.map((c) => ({ ...c, applied: c.code === code }));
+
+  it('shows every coupon as a card, marks the best one, switches with a tap and removes', async () => {
+    vi.mocked(bookingApi.getPayment).mockResolvedValue({
+      state: 'due',
       amount: '1000.00',
       expires_at: '2026-10-27T14:00:00Z',
       appointment: awaiting,
-    };
-    vi.mocked(bookingApi.getPayment).mockImplementation(async (_id, _link, coupon) =>
-      coupon === 'FLAT100'
-        ? {
-            ...base,
-            quote: {
-              items_total: '1000.00',
-              coupon_code: 'FLAT100',
-              coupon_amount: '100.00',
-              member_plan: 'Gold',
-              member_percent: '10.00',
-              member_amount: '90.00',
-              discount: '190.00',
-              total: '810.00',
-            },
-            coupon_error: '',
-          }
-        : coupon
-          ? { ...base, coupon_error: 'That coupon code is not valid.' }
-          : base,
-    );
+      quote: fullQuote,
+      applied_coupon: '',
+      coupons: listed,
+    });
+    vi.mocked(bookingApi.applyCoupon).mockImplementation(async (_id, code) => ({
+      applied_coupon: code,
+      quote: code === 'FLAT150' ? savedQuote150 : savedQuote,
+      coupons: mark(code),
+    }));
+    vi.mocked(bookingApi.removeCoupon).mockResolvedValue({
+      applied_coupon: '',
+      quote: fullQuote,
+      coupons: listed,
+    });
     vi.mocked(bookingApi.payAppointment).mockResolvedValue({ appointment: awaiting });
     const user = userEvent.setup();
     renderAt('/customer/pay/ap2?link=tok123');
-    const box = await screen.findByLabelText(/Coupon code/);
-    await user.type(box, 'nope');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(await screen.findByText('That coupon code is not valid.')).toBeInTheDocument();
-    await user.clear(box);
-    await user.type(box, 'flat100');
-    await user.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(await screen.findByText('Coupon FLAT100')).toBeInTheDocument();
-    expect(screen.getByText(/Gold membership/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^Pay ₹810/ }));
+    const list = await screen.findByRole('list', { name: 'Coupons for this payment' });
+    expect(within(list).getByText('Best for you')).toBeInTheDocument();
+    expect(within(list).getAllByText(/Spa services only/).length).toBeGreaterThan(0);
+    // Greyed cards say why, and cannot be pressed.
+    const spa = screen.getByRole('button', {
+      name: /SPA15: .* not available\. Only for Spa services/,
+    });
+    expect(spa).toBeDisabled();
+    expect(screen.getByText('Add Rs 200 more to use this')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Apply SAVE10/ }));
+    expect(bookingApi.applyCoupon).toHaveBeenCalledWith('ap2', 'SAVE10', 'tok123');
+    const applied = await screen.findByRole('button', { name: /SAVE10, applied, you save ₹100/ });
+    expect(applied).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/Total to pay: ₹900/)).toBeInTheDocument(); // live region
+
+    // Tapping another card switches to it: still only one coupon.
+    await user.click(screen.getByRole('button', { name: /^Apply FLAT150.*best for you/ }));
+    expect(
+      await screen.findByRole('button', { name: /FLAT150, applied, you save ₹150/ }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(1);
+    expect(screen.getByText(/Total to pay: ₹850/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remove coupon FLAT150' }));
+    expect(await screen.findByText('Coupon removed. The full price is back.')).toBeInTheDocument();
+    expect(screen.getByText(/Total to pay: ₹1,000/)).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { pressed: true })).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: /^Apply SAVE10/ }));
+    await user.click(await screen.findByRole('button', { name: /^Pay ₹900/ }));
+    // Only the outcome and the link: the browser never sends a coupon amount or a total.
     await waitFor(() =>
-      expect(bookingApi.payAppointment).toHaveBeenCalledWith(
-        'ap2',
-        'success',
-        'tok123',
-        null,
-        'FLAT100',
-      ),
+      expect(bookingApi.payAppointment).toHaveBeenCalledWith('ap2', 'success', 'tok123', null),
     );
+  });
+
+  it('applies a typed private code and shows a short error for a bad one', async () => {
+    vi.mocked(bookingApi.getPayment).mockResolvedValue({
+      state: 'due',
+      amount: '1000.00',
+      expires_at: null,
+      appointment: awaiting,
+      quote: fullQuote,
+      applied_coupon: '',
+      coupons: [],
+    });
+    vi.mocked(bookingApi.applyCoupon).mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 400, data: { detail: 'That coupon code is not valid.' } },
+    });
+    const user = userEvent.setup();
+    renderAt('/customer/pay/ap2?link=tok123');
+    await user.type(await screen.findByLabelText('Have a private code?'), 'vip25');
+    await user.click(screen.getByRole('button', { name: 'Apply typed coupon code' }));
+    expect(bookingApi.applyCoupon).toHaveBeenCalledWith('ap2', 'VIP25', 'tok123');
+    expect(await screen.findByRole('alert')).toHaveTextContent('That coupon code is not valid.');
   });
 
   it.each([

@@ -667,6 +667,10 @@ def test_profile_read_and_update(catalogue, customer):
         "allergies": "Peanuts",
         "preferences": "",
         "marketing_opt_in": False,
+        "marketing_text": (
+            "Send me occasional emails with offers and suggestions picked from my visits. "
+            "I can unsubscribe at any time."
+        ),
         "marketing_opt_changed_at": None,
     }
     with connection.cursor() as cursor:

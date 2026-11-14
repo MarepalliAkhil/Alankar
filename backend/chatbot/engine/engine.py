@@ -27,6 +27,7 @@ URL_INVOICES = "/customer/invoices"
 URL_WALLET = "/customer/wallet"
 URL_BOOK = "/customer/book"
 URL_ORDERS = "/customer/orders"
+URL_DASHBOARD = "/customer-dashboard"
 WORDS_NOT_LANGUAGE = "I can read English, and Telugu or Hindi words typed in English letters (for example 'haircut entha'). Please type your question using English letters."
 
 
@@ -390,6 +391,14 @@ class Engine:
             r.text = self._duration(ents)
         elif n == "recommend":
             r.text, r.actions = self._recommend(ents)
+            generic = not (ents.get("services") or ents.get("division") or ents.get("gender"))
+            if user is not None and generic:
+                picks = getattr(tools, "recommendations", lambda _uid: [])(user["id"])
+                if picks:
+                    r.text = "Picked for you from your visits:\n" + "\n".join(
+                        f"- {p['service']}: {p['reason']}." for p in picks
+                    )
+                    r.actions = [{"label": "See more on your dashboard", "url": URL_DASHBOARD}]
         elif n == "stylist_info":
             r.text = self._stylists(ents)
         return r
