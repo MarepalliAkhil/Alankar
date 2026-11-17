@@ -4,6 +4,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   /** Public address of the site, no trailing slash (docs/SEO.md). */
   readonly VITE_SITE_URL?: string;
+  /** Free deployment only: wss://<Render host> for chat sockets (docs/DEPLOY_FREE.md). */
+  readonly VITE_WS_ORIGIN?: string;
   readonly VITE_BUSINESS_NAME?: string;
   readonly VITE_BUSINESS_PHONE?: string;
   readonly VITE_BUSINESS_EMAIL?: string;

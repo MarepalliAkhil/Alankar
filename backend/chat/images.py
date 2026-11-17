@@ -16,6 +16,7 @@ import io
 import logging
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
@@ -84,6 +85,49 @@ def _encode(img: Image.Image, fmt: str) -> bytes:
     return out.getvalue()
 
 
+COMPACT_SIDE = 1600
+COMPACT_BYTES = 300 * 1024
+
+
+def _compact(img: Image.Image) -> bytes:
+    """WebP at falling quality (then smaller) until it fits COMPACT_BYTES."""
+    work = img
+    while True:
+        for quality in (82, 72, 62, 52, 42):
+            out = io.BytesIO()
+            work.convert("RGBA" if "A" in work.getbands() else "RGB").save(
+                out, "WEBP", quality=quality, method=4
+            )
+            if out.tell() <= COMPACT_BYTES:
+                return out.getvalue()
+        if max(work.size) <= 400:
+            return out.getvalue()
+        work = work.copy()
+        work.thumbnail((int(max(work.size) * 0.75),) * 2, Image.Resampling.LANCZOS)
+
+
+def check_storage_caps(user, new_bytes: int) -> None:
+    """Free plan: per-user and total limits for stored chat photos (SALON_PHOTO_USER_MB,
+    SALON_PHOTO_TOTAL_MB; 0 = no limit). Deleted photos keep no bytes and do not count."""
+    from django.db.models import Sum
+
+    user_mb = getattr(settings, "SALON_PHOTO_USER_MB", 0)
+    total_mb = getattr(settings, "SALON_PHOTO_TOTAL_MB", 0)
+    live = ChatImage.objects.filter(original_enc__isnull=False)
+    if user_mb:
+        used = live.filter(message__sender=user).aggregate(n=Sum("size"))["n"] or 0
+        if used + new_bytes > user_mb * 1024 * 1024:
+            raise service.ChatError(
+                "storage_full", "You have used all the photo space. Delete an old photo first."
+            )
+    if total_mb:
+        used = live.aggregate(n=Sum("size"))["n"] or 0
+        if used + new_bytes > total_mb * 1024 * 1024:
+            raise service.ChatError(
+                "storage_full", "Photo storage is full right now. Please try again later."
+            )
+
+
 def process(raw: bytes) -> dict:
     """Checks the bytes and returns clean original + thumbnail. Raises ChatError."""
     if not raw:
@@ -115,7 +159,14 @@ def process(raw: bytes) -> dict:
             )
         pixels = img.copy()  # a fresh image object carries no EXIF, GPS or profile
         pixels.info.clear()
-        original = _encode(pixels, fmt)
+        if getattr(settings, "SALON_PHOTO_COMPACT", False):
+            # Free plan (small database): store a WebP of at most COMPACT_SIDE px and
+            # COMPACT_BYTES. Privacy is unchanged (still encrypted, still metadata-free).
+            pixels.thumbnail((COMPACT_SIDE, COMPACT_SIDE), Image.Resampling.LANCZOS)
+            fmt = "WEBP"
+            original = _compact(pixels)
+        else:
+            original = _encode(pixels, fmt)
         thumb_img = pixels.copy()
         thumb_img.thumbnail((THUMB_SIDE, THUMB_SIDE), Image.Resampling.LANCZOS)
         thumb = _encode(thumb_img, "WEBP")
@@ -173,6 +224,7 @@ def send_image(thread: Thread, user: User, upload, tag: object, caption: object,
             "rate_limited", f"You can send {PER_MINUTE} photos a minute. Wait a moment."
         )
     processed = process(upload.read(MAX_BYTES + 1))
+    check_storage_caps(user, len(processed["original"]) + len(processed["thumb"]))
     with transaction.atomic():
         Thread.objects.select_for_update().get(pk=thread.pk)  # serialises the daily count
         if day_count(thread) >= PER_DAY:

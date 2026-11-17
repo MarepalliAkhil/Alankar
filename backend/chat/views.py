@@ -216,3 +216,20 @@ class ImageThumbView(APIView):
         if data is None:
             return Response({"detail": "Photo deleted.", "code": "deleted"}, status=410)
         return private_file(data, "image/webp")
+
+
+class WsTicketView(APIView):
+    """A 30-second single-use ticket for opening the chat WebSocket on another host
+    (chat/tickets.py). The normal cookie session authenticates this request."""
+
+    policy_action = "chat.ws.ticket"
+
+    @extend_schema(summary="A single-use chat WebSocket ticket", responses={200: None})
+    def get(self, request: Request) -> Response:
+        from chat import tickets
+
+        response = Response(
+            {"ticket": tickets.issue(request.user), "expires_in": tickets.TICKET_SECONDS}
+        )
+        response["Cache-Control"] = "no-store"
+        return response

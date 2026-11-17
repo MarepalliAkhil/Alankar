@@ -1,5 +1,8 @@
 # Production deployment (Azure for Students)
 
+A free alternative (Vercel + Render + Neon + cron-job.org) is in `docs/DEPLOY_FREE.md`; it uses the
+same code and leaves everything here unchanged.
+
 One small always-on VM runs four containers with Docker Compose; the database is a separate,
 managed Azure Database for PostgreSQL. Images are built on your PC or by GitHub Actions and pulled
 by the VM, which never runs a heavy build.

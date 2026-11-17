@@ -1,0 +1,57 @@
+# Render Blueprint for the free backend (docs/DEPLOY_FREE.md). Render > New > Blueprint > pick this
+# repository. Secrets are "sync: false": Render asks for them when the Blueprint is created.
+# The Docker and Azure files are unchanged; this only adds a second way to run the same image.
+services:
+  - type: web
+    name: alankar-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    rootDir: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    # migrate, then ONE Daphne process on $PORT (scripts/deploy/entrypoint.sh, mode "free")
+    dockerCommand: /app/deploy/entrypoint.sh free
+    healthCheckPath: /api/ping/
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings_free
+      # The Vercel host name only, e.g. alankar.vercel.app (no https://).
+      - key: FRONTEND_DOMAIN
+        sync: false
+      # Optional custom domain later (host name only).
+      - key: CUSTOM_DOMAIN
+        sync: false
+      # Neon connection string (with ?sslmode=require).
+      - key: DATABASE_URL
+        sync: false
+      - key: SALON_SECRET_KEY
+        sync: false
+      - key: SALON_JWT_SIGNING_KEY
+        sync: false
+      # NEW key, generated for this deployment; back it up offline (docs/DEPLOY_FREE.md).
+      - key: SALON_FIELD_KEY
+        sync: false
+      - key: TICK_SECRET
+        sync: false
+      # Optional: empty = in-memory cache and channel layer (one instance).
+      - key: REDIS_URL
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "2525"
+      - key: EMAIL_USE_TLS
+        value: "true"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: AI_TEXT_PROVIDER
+        value: disabled
+      - key: SALON_LOG_LEVEL
+        value: INFO

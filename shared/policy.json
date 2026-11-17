@@ -3,6 +3,9 @@
   "_comment": "Single source of truth for role access. Read by backend/core/policy.py and frontend/src/policy/policy.ts. Anything not listed is denied.",
   "actions": {
     "health": "Health check",
+    "ping": "Liveness check without the database (hosting health checks, keep-awake ping)",
+    "internal.tick": "Run the timed jobs (cron over HTTP; needs the X-Tick-Secret header)",
+    "internal.nightly": "Run the nightly jobs (cron over HTTP; needs the X-Tick-Secret header)",
     "auth.csrf": "Get a CSRF cookie",
     "auth.register": "Create a customer account",
     "auth.login": "Sign in with a role tab",
@@ -99,6 +102,7 @@
     "chat.images.read": "View a photo or its thumbnail from one of my conversations (members only)",
     "chat.images.delete": "Delete a photo I sent in one of my conversations",
     "chat.ws.connect": "Open the live Zen Chat connection for one of my conversations",
+    "chat.ws.ticket": "Get a 30-second single-use ticket to open the chat WebSocket on the backend host",
     "chat.ws.send": "Send messages, typing and read signals over the live connection",
     "staff.details.read": "Read a staff member's role-specific details (profile, services, hours)",
     "staff.details.update": "Edit a stylist's profile, services, working hours and public visibility",
@@ -249,6 +253,9 @@
   "public": {
     "api": [
       "health",
+      "ping",
+      "internal.tick",
+      "internal.nightly",
       "auth.csrf",
       "auth.register",
       "auth.login",
@@ -347,6 +354,7 @@
         "chat.images.read",
         "chat.images.delete",
         "chat.ws.connect",
+        "chat.ws.ticket",
         "chat.ws.send",
         "my.datarequests.list",
         "my.datarequests.create",
@@ -708,6 +716,7 @@
         "chat.images.read",
         "chat.images.delete",
         "chat.ws.connect",
+        "chat.ws.ticket",
         "chat.ws.send",
         "payslips.own",
         "notifications.list",

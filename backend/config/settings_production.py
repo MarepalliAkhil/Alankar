@@ -10,9 +10,10 @@ cache and the chat channel layer, HTTPS behind Caddy, and JSON logs on stdout.
 from __future__ import annotations
 
 import os
-from urllib.parse import parse_qsl, unquote, urlparse
 
 from django.core.exceptions import ImproperlyConfigured
+
+from config.dburl import database
 
 REQUIRED = (
     "DOMAIN",
@@ -44,25 +45,8 @@ SITE_URL = (os.environ.get("SITE_URL") or f"https://{DOMAIN}").strip().rstrip("/
 
 
 def _database(url: str) -> dict:
-    parsed = urlparse(url)
-    if parsed.scheme not in ("postgres", "postgresql"):
-        raise ImproperlyConfigured("DATABASE_URL must start with postgresql://")
-    options = dict(parse_qsl(parsed.query))
-    # Azure Database for PostgreSQL requires SSL; the local test database (localdb profile) can
-    # say sslmode=disable explicitly.
-    options.setdefault("sslmode", "require")
-    return {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": unquote(parsed.path.lstrip("/")),
-        "USER": unquote(parsed.username or ""),
-        "PASSWORD": unquote(parsed.password or ""),
-        "HOST": parsed.hostname or "",
-        "PORT": str(parsed.port or 5432),
-        # One ASGI process and a small Burstable server: keep few, short-lived connections.
-        "CONN_MAX_AGE": int(os.environ.get("SALON_DB_CONN_MAX_AGE", "60")),
-        "CONN_HEALTH_CHECKS": True,
-        "OPTIONS": options,
-    }
+    # One ASGI process and a small Burstable server: keep few, short-lived connections.
+    return database(url, conn_max_age=int(os.environ.get("SALON_DB_CONN_MAX_AGE", "60")))
 
 
 DATABASE = _database(os.environ["DATABASE_URL"].strip())

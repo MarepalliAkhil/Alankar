@@ -13,6 +13,7 @@
     "build": "tsc --noEmit && vite build && node scripts/seo-build.mjs && node scripts/check-sourcemaps.mjs",
     "build:analyze": "tsc --noEmit && vite build --mode analyze && node scripts/seo-build.mjs",
     "build:check": "node scripts/check-build.mjs",
+    "build:vercel": "node scripts/vercel-build.mjs",
     "og:images": "node scripts/og-images.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

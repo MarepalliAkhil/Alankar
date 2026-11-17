@@ -1,0 +1,114 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/zenotians",
+      "destination": "/for-zenotians",
+      "permanent": true
+    },
+    {
+      "source": "/zenotians/:path*",
+      "destination": "/for-zenotians/:path*",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path(.*)",
+      "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/:path"
+    },
+    {
+      "source": "/:area(customer-dashboard|dashboard|appointments|schedule|customers|staff|my-day|my-appointments|my-schedule|my-hours|requests|earnings|chat|profile|notifications|pos|orders|inventory|settings|content|marketing|recommendations|reports|audit-log|security|ratings|payroll|work-hours|staff-summary|services|memberships|packages|package-requests|gift-cards|waitlist|chatbot-insights|air-activity|cash-close)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/:area(customer|customer-dashboard|dashboard|appointments|schedule|customers|staff|my-day|my-appointments|my-schedule|my-hours|requests|earnings|chat|profile|notifications|pos|orders|inventory|settings|content|marketing|recommendations|reports|audit-log|security|ratings|payroll|work-hours|staff-summary|services|memberships|packages|package-requests|gift-cards|waitlist|chatbot-insights|air-activity|cash-close)/:rest(.*)",
+      "destination": "/app.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' wss://*.onrender.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(brand|photos)/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
+      "source": "/app.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/:area(customer|customer-dashboard|dashboard|appointments|schedule|customers|staff|my-day|my-appointments|my-schedule|my-hours|requests|earnings|chat|profile|notifications|pos|orders|inventory|settings|content|marketing|recommendations|reports|audit-log|security|ratings|payroll|work-hours|staff-summary|services|memberships|packages|package-requests|gift-cards|waitlist|chatbot-insights|air-activity|cash-close)/:rest*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ]
+}

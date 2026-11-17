@@ -1,4 +1,14 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import {
+  changeRetrying,
+  changeSlow,
+  sleep,
+  WAKE_MAX_MS,
+  WAKE_RETRY_MS,
+  WAKE_SLOW_MS,
+  wakeEnabled,
+  wakeRetryable,
+} from './waking';
 
 /**
  * Single HTTP client. Auth lives in httpOnly cookies set by the server; nothing is stored
@@ -52,7 +62,69 @@ function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
-type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
+type RetriableConfig = InternalAxiosRequestConfig & {
+  _retried?: boolean;
+  _wakeStart?: number;
+  _wakeTimer?: ReturnType<typeof setTimeout>;
+  _wakeSlow?: boolean;
+  _wakeRetrying?: boolean;
+};
+
+const DEFAULT_TIMEOUT = 15000;
+const WAKE_TIMEOUT = 60000;
+
+/** Free deployment only (src/api/waking.ts): note slow requests while the backend wakes. */
+api.interceptors.request.use((request) => {
+  const config = request as RetriableConfig;
+  if (!wakeEnabled()) return request;
+  config._wakeStart ??= Date.now();
+  if (config.timeout === DEFAULT_TIMEOUT) config.timeout = WAKE_TIMEOUT;
+  config._wakeTimer = setTimeout(() => {
+    config._wakeSlow = true;
+    changeSlow(1);
+  }, WAKE_SLOW_MS);
+  return request;
+});
+
+function settleWake(config: RetriableConfig | undefined, final: boolean) {
+  if (!config) return;
+  if (config._wakeTimer) clearTimeout(config._wakeTimer);
+  config._wakeTimer = undefined;
+  if (config._wakeSlow) {
+    config._wakeSlow = false;
+    changeSlow(-1);
+  }
+  if (final && config._wakeRetrying) {
+    config._wakeRetrying = false;
+    changeRetrying(-1);
+  }
+}
+
+api.interceptors.response.use(
+  (response) => {
+    settleWake(response.config as RetriableConfig, true);
+    return response;
+  },
+  async (error: AxiosError) => {
+    const config = error.config as RetriableConfig | undefined;
+    settleWake(config, false);
+    if (
+      config &&
+      wakeEnabled() &&
+      wakeRetryable(config.method, error.response?.status, error.code) &&
+      Date.now() - (config._wakeStart ?? Date.now()) < WAKE_MAX_MS
+    ) {
+      if (!config._wakeRetrying) {
+        config._wakeRetrying = true;
+        changeRetrying(1);
+      }
+      await sleep(WAKE_RETRY_MS);
+      return api(config);
+    }
+    settleWake(config, true);
+    return Promise.reject(error);
+  },
+);
 
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const config = error.config as RetriableConfig | undefined;

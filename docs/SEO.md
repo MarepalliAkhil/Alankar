@@ -92,7 +92,9 @@ The order matters: real files first, then the rewrites, then 404.
 **Netlify / Cloudflare Pages**: nothing to do; `dist/_redirects` is written by the build. Unknown
 addresses get `404.html` with status 404 automatically.
 
-**Vercel** (`vercel.json` in the frontend folder, output directory `dist`):
+**Vercel**: the real file is `frontend/vercel.json` (free deployment, docs/DEPLOY_FREE.md: it also
+forwards `/api` to Render and sets the security and cache headers; its signed-in list includes
+`/recommendations`). The core of it, for reference:
 
 ```json
 {

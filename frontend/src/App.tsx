@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { WakingOverlay } from './components/brand/WakingOverlay';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { DelayedLoader, ToastProvider } from './components/ui';
 import { divisions } from './config/divisions';
@@ -120,6 +121,7 @@ export default function App() {
           <Suspense fallback={<DelayedLoader />}>
             <AppRoutes />
           </Suspense>
+          <WakingOverlay />
         </BrowserRouter>
       </AppProviders>
     </ErrorBoundary>

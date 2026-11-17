@@ -9,6 +9,7 @@ import {
   type SendPhotoInput,
   type ThreadHistory,
 } from '../api/chat';
+import { ticketSocketUrl, wsOrigin } from '../api/wsTicket';
 
 export type Connection = 'connecting' | 'live' | 'offline';
 
@@ -70,10 +71,35 @@ export function useChat(threadId: string) {
     void load();
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const retry = () => {
+      const wait = BACKOFF_MS[Math.min(attempts.current, BACKOFF_MS.length - 1)];
+      attempts.current += 1;
+      retryTimer = setTimeout(connect, wait);
+    };
+
     const connect = () => {
       if (closed.current) return;
       setConnection('connecting');
-      const ws = new WebSocket(socketUrl(threadId));
+      const origin = wsOrigin();
+      if (!origin) {
+        open(socketUrl(threadId));
+        return;
+      }
+      // Free deployment: a fresh single-use ticket for every (re)connect (src/api/wsTicket.ts).
+      ticketSocketUrl(threadId, origin).then(
+        (url) => {
+          if (!closed.current) open(url);
+        },
+        () => {
+          if (closed.current) return;
+          setConnection('offline');
+          retry();
+        },
+      );
+    };
+
+    const open = (url: string) => {
+      const ws = new WebSocket(url);
       socket.current = ws;
       ws.onmessage = (event) => {
         let frame: Frame;
@@ -131,9 +157,7 @@ export function useChat(threadId: string) {
         if (closed.current) return;
         setConnection('offline');
         if (event.code === 4403 || event.code === 1008) return; // not allowed: do not hammer
-        const wait = BACKOFF_MS[Math.min(attempts.current, BACKOFF_MS.length - 1)];
-        attempts.current += 1;
-        retryTimer = setTimeout(connect, wait);
+        retry();
       };
     };
     connect();

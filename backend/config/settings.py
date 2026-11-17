@@ -286,3 +286,15 @@ LOGGING = {
 # Coupons at payment (docs/COUPONS.md): apply attempts per customer and per IP address in a window.
 SALON_COUPON_ATTEMPTS = int(env("SALON_COUPON_ATTEMPTS", "10"))
 SALON_COUPON_WINDOW_SECONDS = int(env("SALON_COUPON_WINDOW_SECONDS", "600"))
+
+# Jobs over HTTP for hosts without a worker (core/internal.py, docs/DEPLOY_FREE.md). Empty = off:
+# the endpoints answer 404 unless a secret is set.
+SALON_TICK_SECRET = env("TICK_SECRET", "")
+# Chat WebSocket tickets (chat/tickets.py): always available; required when the socket host
+# differs from the site (free mode). The cookie still works where the socket shares the domain.
+SALON_WS_TICKETS = env_bool("SALON_WS_TICKETS", True)
+# Chat photos are stored encrypted in PostgreSQL (no disk). On a small free database, compact
+# them (WebP, at most 1600 px and 300 KB) and cap the space (MB; 0 = no limit).
+SALON_PHOTO_COMPACT = env_bool("SALON_PHOTO_COMPACT", False)
+SALON_PHOTO_USER_MB = int(env("SALON_PHOTO_USER_MB", "0"))
+SALON_PHOTO_TOTAL_MB = int(env("SALON_PHOTO_TOTAL_MB", "0"))

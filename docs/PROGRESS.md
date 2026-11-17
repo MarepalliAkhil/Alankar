@@ -2929,3 +2929,30 @@ Details and host rules: `docs/SEO.md`.
 - Also: `/recommendations` added to PRIVATE_PREFIXES (the admin page was missing from the
   signed-in list, so a reload there would 404 behind a static host); the btree_gist migration
   now explains how to allow-list the extension on Azure. New dependencies: redis, channels-redis.
+
+## Free deployment: Vercel + Render free + Neon free + cron-job.org (2026-11-17): DONE in code (Render, Vercel, Neon and cron-job.org not run)
+
+- `render.yaml` (one free Docker web service, Singapore, `entrypoint.sh free`: migrate then one
+  Daphne on `$PORT`, health `/api/ping/`). `config/settings_free.py` (refuses to start without
+  SALON_SECRET_KEY, SALON_FIELD_KEY, DATABASE_URL, FRONTEND_DOMAIN; hosts from
+  RENDER_EXTERNAL_HOSTNAME + FRONTEND_DOMAIN; CSRF trusts https://FRONTEND_DOMAIN; SSL database with
+  conn_max_age 0; in-memory cache and channel layer unless REDIS_URL; deploy_check passes with 2
+  documented warnings). `config/dburl.py` shared with the Azure settings.
+- `GET /api/ping/` (no database, no cache). `POST /api/internal/tick/` and `/api/internal/nightly/`
+  (`core/internal.py`: X-Tick-Secret compared in constant time, 20/hour, 25-second budget,
+  "nothing to do"). Correctness never depends on the tick (lazy expiry on reads, AIR signals).
+- Chat over the split hosts: `GET /api/ws-ticket/` (customers and stylists; single use, 30 s, bound
+  to the user, `chat/tickets.py`); the consumer accepts `?ticket=` or the cookie (local, Docker and
+  Azure unchanged); thread membership checks unchanged. Frontend `src/api/wsTicket.ts` (only when
+  `VITE_WS_ORIGIN` is set; a new ticket per reconnect).
+- Waking backend: `src/api/waking.ts` + `WakingOverlay` (LogoLoader, "Waking up the server, this
+  can take up to a minute", automatic retry; only when `VITE_WS_ORIGIN` is set).
+- Photos: free mode compacts chat photos (WebP, 1600 px, 300 KB) and caps space per person and in
+  total (`SALON_PHOTO_USER_MB`, `SALON_PHOTO_TOTAL_MB`); `cleanup_chat_photos` command. Decision:
+  no s3/filesystem backends added, because nothing in the app writes files to disk (chat photos
+  were already encrypted in PostgreSQL; admin pictures are web addresses).
+- `frontend/vercel.json` (Vite, `npm run build:vercel`, /api rewrite with the Render URL in one
+  place, app routes from PRIVATE_PREFIXES, 404, 301 redirects, security and cache headers) and
+  `scripts/vercel-build.mjs` (fails on the placeholder, checks SITE_URL and VITE_WS_ORIGIN).
+- `manage.py first_run_free`. Docs: `docs/DEPLOY_FREE.md`.
+- Tests: `core/tests/test_free_mode.py`, `src/api/free-deploy.test.tsx`.

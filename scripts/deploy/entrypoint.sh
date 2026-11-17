@@ -2,6 +2,7 @@
 # Backend container entrypoint (docs/DEPLOY.md).
 #   server     wait for the database and Redis, migrate, collect static files, start Daphne
 #   scheduler  wait, then run the timed jobs loop (no migrate: the server container does that)
+#   free       Render free web service: migrate, then Daphne on $PORT (no Redis, no static)
 #   anything else is run as a command, e.g. "python manage.py createsuperuser"
 set -euo pipefail
 cd /app/backend
@@ -46,6 +47,16 @@ case "${1:-server}" in
     python manage.py collectstatic --noinput --verbosity 0
     # No access log here: Caddy logs each request (with the tokens in links removed).
     exec daphne --bind 0.0.0.0 --port 8000 --proxy-headers config.asgi:application
+    ;;
+  free)
+    # Render free (docs/DEPLOY_FREE.md): no Redis to wait for, no static files to collect (the
+    # frontend is on Vercel). Migrate, then ONE Daphne process on Render's $PORT.
+    if ! python manage.py migrate --noinput; then
+      echo "migrate failed. If the message mentions btree_gist, run once in the Neon SQL editor:" \
+           "CREATE EXTENSION IF NOT EXISTS btree_gist;  (docs/DEPLOY_FREE.md)" >&2
+      exit 1
+    fi
+    exec daphne --bind 0.0.0.0 --port "${PORT:-10000}" --proxy-headers config.asgi:application
     ;;
   scheduler)
     wait_for_services

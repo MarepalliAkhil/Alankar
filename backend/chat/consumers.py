@@ -9,7 +9,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from chat import service
-from chat.auth import user_from_cookie
+from chat.auth import socket_user
 
 CLOSE_FORBIDDEN = 4403
 
@@ -58,7 +58,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     # ------------------------------------------------------------------ lifecycle
     async def connect(self):
-        user = await user_from_cookie(self.scope)
+        user = await socket_user(self.scope)
         thread_id = self.scope["url_route"]["kwargs"]["thread_id"]
         opened = await self._open(user, thread_id) if user else None
         if opened is None:
