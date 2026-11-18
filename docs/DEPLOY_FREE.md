@@ -52,7 +52,8 @@ contain it. Use the same key on Render and on your PC (first run).**
 
 Both need the header `X-Tick-Secret: <TICK_SECRET>` (compared in constant time), allow 20 calls an
 hour per address, stop starting new jobs after 25 seconds and answer
-`{"status": "nothing to do"}` when nothing was due. Without `TICK_SECRET` set they answer 404.
+`{"status": "nothing to do"}` when nothing was due. A missing or wrong header, or no `TICK_SECRET` on
+Render, gets 403. They read no cookies, so the browser CSRF check does not apply to them.
 
 **Correctness never depends on the tick.** Expired payment holds and booking requests are expired
 on every read that shows them (`expire_due()` runs before the lists, the schedule and the booking
@@ -208,8 +209,8 @@ Sign up, then Create cronjob three times (time zone **Asia/Kolkata** in the sett
 | nightly | `https://alankar-api.onrender.com/api/internal/nightly/` | POST | daily 02:30 | `X-Tick-Secret: <TICK_SECRET>` |
 
 Call the jobs on the Render address directly (not through Vercel). Set the request timeout to 30
-seconds (the first call after a sleep can be slow). A 403 means the header is wrong; 404 means
-`TICK_SECRET` is not set on Render.
+seconds (the first call after a sleep can be slow). A 403 means the header is wrong or `TICK_SECRET`
+is not set on Render.
 
 ## 4. Updating
 

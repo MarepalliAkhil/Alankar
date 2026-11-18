@@ -13,12 +13,16 @@ import hmac
 import time
 
 from django.conf import settings
-from django.http import Http404
 from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+
+from core import policy
+from core.permissions import view_action
 
 TICK_JOBS = [
     "expire_unpaid_holds",
@@ -82,24 +86,39 @@ def run_jobs(names: list[str], budget: float = BUDGET_SECONDS) -> dict:
     }
 
 
+class InternalPermission(BasePermission):
+    """Job endpoints only. They read no cookies (no authentication classes), so a browser session
+    can never be used here and the CSRF check (core.permissions) does not apply; cron-job.org
+    sends no CSRF token. The X-Tick-Secret header is the only key. A missing or wrong secret, or
+    no TICK_SECRET on the server, is always 403."""
+
+    def has_permission(self, request, view) -> bool:
+        if view_action(view, request.method) not in policy.known_actions():
+            return False
+        if not secret_ok(request):
+            raise PermissionDenied("Wrong or missing X-Tick-Secret.")
+        return True
+
+
 class _Internal(APIView):
     authentication_classes: list = []
+    permission_classes = [InternalPermission]
     throttle_classes = [InternalThrottle]
 
-    def check(self, request: Request) -> None:
-        if not getattr(settings, "SALON_TICK_SECRET", ""):
-            raise Http404  # switched off (no TICK_SECRET): looks like any unknown address
-        if not secret_ok(request):
-            from rest_framework.exceptions import PermissionDenied
+    def check_permissions(self, request: Request) -> None:
+        # Count every call against the rate limit BEFORE the secret is checked, so guessing the
+        # secret is limited too (DRF would otherwise check permissions first).
+        APIView.check_throttles(self, request)
+        super().check_permissions(request)
 
-            raise PermissionDenied("Wrong or missing X-Tick-Secret.")
+    def check_throttles(self, request: Request) -> None:
+        pass  # already done in check_permissions
 
 
 class TickView(_Internal):
     policy_action = "internal.tick"
 
     def post(self, request: Request) -> Response:
-        self.check(request)
         return Response(run_jobs(TICK_JOBS))
 
 
@@ -107,7 +126,6 @@ class NightlyView(_Internal):
     policy_action = "internal.nightly"
 
     def post(self, request: Request) -> Response:
-        self.check(request)
         from django.core.management import call_command
 
         body = run_jobs(NIGHTLY_JOBS, budget=120)

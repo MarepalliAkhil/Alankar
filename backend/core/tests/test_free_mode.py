@@ -47,12 +47,35 @@ def test_ping_makes_zero_database_queries(client):
 @pytest.mark.parametrize("path", ["/api/internal/tick/", "/api/internal/nightly/"])
 def test_jobs_endpoints_reject_missing_or_wrong_secrets(client, path):
     with override_settings(SALON_TICK_SECRET=""):
-        assert client.post(path, HTTP_X_TICK_SECRET="anything").status_code == 404  # switched off
+        assert client.post(path, HTTP_X_TICK_SECRET="anything").status_code == 403  # switched off
     with override_settings(SALON_TICK_SECRET=SECRET):
         assert client.post(path).status_code == 403
         assert client.post(path, HTTP_X_TICK_SECRET="wrong").status_code == 403
         assert client.post(path, HTTP_X_TICK_SECRET=SECRET[:-1]).status_code == 403
         assert client.get(path, HTTP_X_TICK_SECRET=SECRET).status_code == 405
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("path", ["/api/internal/tick/", "/api/internal/nightly/"])
+def test_jobs_work_like_cron_job_org_calls_them(path):
+    """A plain POST with only the secret header: no cookie, no CSRF token, CSRF checks on."""
+    from django.test import Client
+
+    cron = Client(enforce_csrf_checks=True)
+    with override_settings(SALON_TICK_SECRET=SECRET):
+        ok = cron.post(path, HTTP_X_TICK_SECRET=SECRET)
+        wrong = cron.post(path, HTTP_X_TICK_SECRET="wrong")
+    assert ok.status_code == 200, ok.content
+    assert ok.json()["status"] in ("nothing to do", "done")
+    assert wrong.status_code == 403
+    assert wrong.json()["detail"] == "Wrong or missing X-Tick-Secret."
+
+
+@pytest.mark.django_db
+def test_a_signed_in_session_alone_cannot_run_the_jobs(customer, desk):
+    with override_settings(SALON_TICK_SECRET=SECRET):
+        for client, _user in (customer, desk):
+            assert client.post("/api/internal/tick/").status_code == 403
 
 
 @pytest.mark.django_db
