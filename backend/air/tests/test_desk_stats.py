@@ -286,7 +286,8 @@ def test_the_admin_may_resolve_an_item_someone_else_claimed(day, make_user, admi
 def test_staff_undo_releases_a_hold_and_refuses_a_paid_booking(
     day, air_on, shopper, catalogue, reception_user
 ):
-    hold = make_hold(shopper, catalogue, hour=18, session="s9")
+    # 11:00 is open every day (18:00 was not on Sundays) and not used by the `day` fixture.
+    hold = make_hold(shopper, catalogue, hour=11, session="s9")
     client = signed_in(reception_user)
     rows = client.get("/api/air/desk/activity/?range=today").json()["results"]
     hold_row = next(
