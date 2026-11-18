@@ -20,7 +20,7 @@
   "rewrites": [
     {
       "source": "/api/:path(.*)",
-      "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/:path"
+      "destination": "https://alankar-api.onrender.com/api/:path"
     },
     {
       "source": "/:area(customer-dashboard|dashboard|appointments|schedule|customers|staff|my-day|my-appointments|my-schedule|my-hours|requests|earnings|chat|profile|notifications|pos|orders|inventory|settings|content|marketing|recommendations|reports|audit-log|security|ratings|payroll|work-hours|staff-summary|services|memberships|packages|package-requests|gift-cards|waitlist|chatbot-insights|air-activity|cash-close)",

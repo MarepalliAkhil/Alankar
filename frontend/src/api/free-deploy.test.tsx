@@ -185,12 +185,15 @@ const GOOD_ENV = {
   SITE_URL: 'https://alankar.vercel.app',
   VITE_WS_ORIGIN: 'wss://alankar-api.onrender.com',
 };
-const real = {
+// The same file with the backend address as the placeholder and as a real address.
+const withHost = (host: string) => ({
   ...vercel,
   rewrites: vercel.rewrites.map((r, i) =>
-    i === 0 ? { ...r, destination: r.destination.replace(PLACEHOLDER, 'alankar-api') } : r,
+    i === 0 ? { ...r, destination: r.destination.replace(/\/\/[^/]+\//, `//${host}/`) } : r,
   ),
-};
+});
+const placeholder = withHost(`${PLACEHOLDER}.onrender.com`);
+const real = withHost('alankar-api.onrender.com');
 
 describe('vercel.json', () => {
   it('builds the Vite app into dist with the checked build command', () => {
@@ -242,7 +245,7 @@ describe('vercel.json', () => {
   });
 
   it('the build check fails while the Render address is a placeholder', () => {
-    expect(checkVercel(vercel, GOOD_ENV).join(' ')).toContain(PLACEHOLDER);
+    expect(checkVercel(placeholder, GOOD_ENV).join(' ')).toContain(PLACEHOLDER);
     expect(checkVercel(real, GOOD_ENV)).toEqual([]);
   });
 
