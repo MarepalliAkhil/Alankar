@@ -8,6 +8,7 @@ import { cn } from '../../lib/cn';
 import { canCall, notificationsPathFor, roleLabel } from '../../policy/policy';
 import { useSession } from '../../session/session-context';
 import { AirPopup } from '../air/Air';
+import { ChatPopups } from '../chat/ChatPopups';
 import { ChatWidget } from '../chatbot/ChatWidget';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { TourProvider } from '../tour/TourProvider';
@@ -114,6 +115,7 @@ export function AppShell() {
 
         <CommandBar />
         {isCustomer && <ChatWidget />}
+        {(user.role === 'customer' || user.role === 'stylist') && <ChatPopups role={user.role} />}
         {user.role === 'receptionist' && <AirPopup />}
         <Drawer open={drawer} onClose={() => setDrawer(false)} title="Menu" side="left">
           <Sidebar

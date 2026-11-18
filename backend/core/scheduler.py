@@ -31,6 +31,7 @@ OTHER_JOBS = [
     "rating_reminders",
     "purge_old_rows",
     "chat_photo_retention",
+    "chat_unread_emails",
 ]
 
 

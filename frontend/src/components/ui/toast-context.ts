@@ -2,11 +2,18 @@ import { createContext, useContext } from 'react';
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastInput {
   title: string;
   description?: string;
   tone?: ToastTone;
   durationMs?: number;
+  /** Optional button inside the toast (it closes the toast after running). */
+  action?: ToastAction;
 }
 
 export interface ToastApi {

@@ -39,6 +39,12 @@ vi.mock('../api/notifications', () => ({
   markNotificationsRead: vi.fn(() => Promise.resolve({ unread: 0 })),
 }));
 
+// Zen Chat pop-ups keep a live connection on every signed-in page; unit tests never open one (the
+// pop-up's own tests replace this mock).
+vi.mock('../api/inbox', () => ({
+  openInbox: vi.fn(() => () => undefined),
+}));
+
 // The guided tour reads its progress from the server; unit tests treat it as already finished so
 // no invite appears (the tour's own tests override this mock).
 vi.mock('../api/tours', () => ({

@@ -200,6 +200,9 @@ def send(thread: Thread, user: User, raw_text: object) -> Message:
     message.set_text(text)
     message.save()
     Thread.objects.filter(pk=thread.pk).update(last_message_at=message.created_at)
+    from chat import inbox
+
+    inbox.announce(message)  # pop-up for the receiver, after the save commits
     return message
 
 

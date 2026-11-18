@@ -2,14 +2,14 @@
   "roles": 4,
   "pages": 73,
   "apiEndpoints": 294,
-  "automatedTests": 2392,
+  "automatedTests": 2410,
   "testBreakdown": {
-    "backend": 1399,
-    "frontendUnit": 830,
+    "backend": 1410,
+    "frontendUnit": 837,
     "endToEnd": 163
   },
   "airTests": 279,
-  "migrations": 120,
+  "migrations": 121,
   "accessibilityScreens": 48,
   "method": {
     "roles": "roles in shared/policy.json",

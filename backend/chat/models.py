@@ -47,6 +47,8 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
+    # When the receiver was emailed about this unread message (chat/inbox.py); at most once.
+    emailed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["created_at", "id"]

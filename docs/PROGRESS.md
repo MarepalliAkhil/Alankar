@@ -2956,3 +2956,22 @@ Details and host rules: `docs/SEO.md`.
   `scripts/vercel-build.mjs` (fails on the placeholder, checks SITE_URL and VITE_WS_ORIGIN).
 - `manage.py first_run_free`. Docs: `docs/DEPLOY_FREE.md`.
 - Tests: `core/tests/test_free_mode.py`, `src/api/free-deploy.test.tsx`.
+
+## Zen Chat notifications: pop-ups and emails (2026-11-19): DONE in code
+
+- Pop-up: every signed-in customer and stylist keeps one personal socket, `/api/ws/inbox/`
+  (`chat.consumers.InboxConsumer`, receive-only; cookie or ws-ticket like the chat socket; listed
+  in `shared/policy.json` "websocket"). When a message or photo is saved, `chat/inbox.announce`
+  sends a note to the RECEIVER's own group only: conversation id, the sender's name as the
+  receiver sees it (stylist display name / customer first name) and an 80-character preview
+  ("Photo" for photos). The account is re-checked before each note. Frontend `src/api/inbox.ts`
+  (reconnect with backoff; a fresh ticket per connect on the free deployment) and
+  `components/chat/ChatPopups.tsx` (toast "New message from Priya" with "Open chat"; nothing while
+  that conversation is open). Toasts got an optional action button.
+- Email: job `chat_unread_emails` (core/jobs.py; scheduler every 10 minutes; free tick every 15):
+  messages unread for 10 minutes (and newer than 2 days) give ONE email per receiver and
+  conversation, never with the message text, each message at most once (`Message.emailed_at`,
+  migration `chat 0003`). Reserved test domains (example.com/.org/.net, .test, .invalid,
+  .localhost) are never emailed, so the demo accounts cost no email quota.
+- Tests: `chat/tests/test_inbox.py`, `src/api/inbox.test.ts`, `components/chat/ChatPopups.test.tsx`.
+

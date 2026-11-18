@@ -164,3 +164,56 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def chat_typing(self, event):
         if event["sender"] != str(self.user.id):
             await self.send_json({"type": "typing", "on": event["on"]})
+
+
+class InboxConsumer(AsyncJsonWebsocketConsumer):
+    """One personal socket per signed-in customer or stylist: /api/ws/inbox/.
+
+    It only RECEIVES short notes about new messages addressed to this person (chat/inbox.py), so
+    the app can show a pop-up on any page. It joins the person's own group only; nothing sent by
+    the browser is acted on. The account is checked again before every note is passed on, so a
+    deactivated account stops getting them at once."""
+
+    user = None
+    group = None
+
+    @database_sync_to_async
+    def _allowed(self, user_id) -> bool:
+        from accounts.models import User
+
+        return service.can_use_chat(User.objects.filter(pk=user_id).first())
+
+    async def connect(self):
+        from chat import inbox
+
+        user = await socket_user(self.scope)
+        if user is None or not await self._allowed(user.pk):
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
+        self.user = user
+        self.group = inbox.group_for(user.pk)
+        await self.channel_layer.group_add(self.group, self.channel_name)
+        await self.accept()
+        await self.send_json({"type": "ready"})
+
+    async def disconnect(self, code):
+        if self.group:
+            await self.channel_layer.group_discard(self.group, self.channel_name)
+
+    async def receive_json(self, content, **kwargs):
+        return  # receive-only
+
+    async def inbox_chat(self, event):
+        if not await self._allowed(self.user.pk):
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
+        await self.send_json(
+            {
+                "type": "chat",
+                "thread": event["thread"],
+                "message": event["message"],
+                "sender": event["sender"],
+                "preview": event["preview"],
+                "kind": event["kind"],
+            }
+        )

@@ -1156,6 +1156,15 @@
         "status": "Delivered or read receipts (message ids)",
         "typing": "The other person is typing"
       }
+    },
+    {
+      "path": "/api/ws/inbox/",
+      "connect": "chat.ws.connect",
+      "send": "chat.ws.send",
+      "description": "Personal Zen Chat pop-ups: receive-only notes about new messages for me, on any page",
+      "events": {
+        "chat": "A new message for me: conversation id, sender name and a short preview"
+      }
     }
   ],
   "service_actors": {

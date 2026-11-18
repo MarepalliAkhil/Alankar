@@ -2,14 +2,16 @@ import { CircleCheck, CircleX, Info, TriangleAlert, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/cn';
+import { Button } from './Button';
 import { IconButton } from './IconButton';
-import { ToastContext, type ToastInput, type ToastTone } from './toast-context';
+import { ToastContext, type ToastAction, type ToastInput, type ToastTone } from './toast-context';
 
 interface ToastItem {
   id: number;
   title: string;
   description?: string;
   tone: ToastTone;
+  action?: ToastAction;
 }
 
 const toneStyles: Record<ToastTone, { accent: string; icon: ReactNode }> = {
@@ -40,9 +42,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const show = useCallback(
-    ({ title, description, tone = 'info', durationMs = 4500 }: ToastInput) => {
+    ({ title, description, tone = 'info', durationMs = 4500, action }: ToastInput) => {
       const id = nextId.current++;
-      setItems((current) => [...current, { id, title, description, tone }].slice(-4));
+      setItems((current) => [...current, { id, title, description, tone, action }].slice(-4));
       timers.current.set(
         id,
         window.setTimeout(() => dismiss(id), durationMs),
@@ -84,7 +86,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-text">{item.title}</p>
                 {item.description && (
-                  <p className="mt-0.5 text-sm text-text-muted">{item.description}</p>
+                  <p className="mt-0.5 break-words text-sm text-text-muted">{item.description}</p>
+                )}
+                {item.action && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-2"
+                    onClick={() => {
+                      item.action?.onClick();
+                      dismiss(item.id);
+                    }}
+                  >
+                    {item.action.label}
+                  </Button>
                 )}
               </div>
               <IconButton

@@ -31,6 +31,7 @@ TICK_JOBS = [
     "booking_request_reminders",
     "waitlist",
     "campaigns",  # marketing/campaigns.send_all: waits outside the quiet hours itself
+    "chat_unread_emails",  # Zen Chat: unread for 10 minutes -> one email per conversation
 ]
 NIGHTLY_JOBS = [
     "end_lapsed_memberships",

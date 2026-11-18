@@ -113,6 +113,13 @@ def chat_photo_retention(now) -> int:
     return purge_expired(now)
 
 
+def chat_unread_emails(now) -> int:
+    """Zen Chat messages still unread after 10 minutes: one short email per conversation."""
+    from chat.inbox import email_unread
+
+    return email_unread(now)
+
+
 JOBS: list[tuple[str, Callable]] = [
     ("expire_unpaid_holds", expire_unpaid_holds),
     ("booking_request_reminders", booking_request_reminders),
@@ -125,6 +132,7 @@ JOBS: list[tuple[str, Callable]] = [
     ("rating_reminders", rating_reminders),
     ("purge_old_rows", purge_old_rows),
     ("chat_photo_retention", chat_photo_retention),
+    ("chat_unread_emails", chat_unread_emails),
 ]
 
 

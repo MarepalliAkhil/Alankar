@@ -265,6 +265,9 @@ def send_image(thread: Thread, user: User, upload, tag: object, caption: object,
             tag=tag,
             bytes=image.size,
         )
+    from chat import inbox
+
+    inbox.announce(message)  # pop-up for the receiver, after the save commits
     return message
 
 

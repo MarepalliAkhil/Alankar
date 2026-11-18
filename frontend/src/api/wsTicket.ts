@@ -13,7 +13,12 @@ export function wsOrigin(): string {
   return (import.meta.env.VITE_WS_ORIGIN ?? '').trim().replace(/\/+$/, '');
 }
 
-export async function ticketSocketUrl(threadId: string, origin: string): Promise<string> {
+/** A socket address on the Render host for any /api/ws/... path, with a fresh ticket. */
+export async function ticketSocketPath(path: string, origin: string): Promise<string> {
   const { data } = await api.get<{ ticket: string }>('/ws-ticket/');
-  return `${origin}/api/ws/chat/${threadId}/?ticket=${encodeURIComponent(data.ticket)}`;
+  return `${origin}${path}?ticket=${encodeURIComponent(data.ticket)}`;
+}
+
+export function ticketSocketUrl(threadId: string, origin: string): Promise<string> {
+  return ticketSocketPath(`/api/ws/chat/${threadId}/`, origin);
 }

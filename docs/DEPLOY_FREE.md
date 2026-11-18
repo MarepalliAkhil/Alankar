@@ -47,7 +47,7 @@ contain it. Use the same key on Render and on your PC (first run).**
 
 | Endpoint | What runs | When |
 |---|---|---|
-| `POST /api/internal/tick/` | expire unpaid holds, AIR hold expiry, AIR cover sweep, booking-request reminders, waitlist offers, campaigns (quiet hours respected by the campaign job) | every 15 minutes |
+| `POST /api/internal/tick/` | expire unpaid holds, AIR hold expiry, AIR cover sweep, booking-request reminders, waitlist offers, campaigns (quiet hours respected by the campaign job), Zen Chat emails for messages unread for 10 minutes | every 15 minutes |
 | `POST /api/internal/nightly/` | end lapsed memberships, rebook and rating reminders, purge old rows, chat photo retention, build recommendations | 02:30 Asia/Kolkata |
 
 Both need the header `X-Tick-Secret: <TICK_SECRET>` (compared in constant time), allow 20 calls an

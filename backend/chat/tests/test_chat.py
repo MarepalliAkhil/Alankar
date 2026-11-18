@@ -323,7 +323,7 @@ def test_a_cancelled_visit_does_not_open_a_thread(catalogue, customer, desk, ash
 def test_websocket_routes_are_listed_in_the_policy():
     data = policy.load_policy()
     listed = {w["path"] for w in data["websocket"]}
-    assert listed == {"/api/ws/chat/:id/"}
+    assert listed == {"/api/ws/chat/:id/", "/api/ws/inbox/"}
     assert len(websocket_urlpatterns) == len(listed)
     for entry in data["websocket"]:
         for role in policy.ROLES:
