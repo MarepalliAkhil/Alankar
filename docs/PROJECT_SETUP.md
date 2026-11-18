@@ -25,7 +25,7 @@ Check the summary (roles, Alankar site, no LLMs, PostgreSQL from day one), then 
 
 ## 5. Tools to install first
 Git for Windows, Node.js LTS, Python 3.12+, Docker Desktop (PostgreSQL).
-the coding assistant: `an AI coding assistant of your choice` or the Code tab in the desktop app.
+An AI coding assistant of your choice (optional).
 
 ## 6. Cowork vs Code tab
 Use the Code tab for building (runs servers, tests, git). Use Cowork for documents, notes and Zenotians page content. Same folder, same Pro usage.

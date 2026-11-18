@@ -43,7 +43,6 @@ docs/ui-screenshots/*
 # Scratch / sync files that must never be committed
 _sync/
 _to_delete/
-the assistant outputs/
 *.tgz
 *.tar.gz
 
