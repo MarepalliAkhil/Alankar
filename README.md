@@ -1,5 +1,7 @@
 # Alankar: salon, spa and beauty parlor platform
 
+**▶ Watch the 5-minute demo video:** https://youtu.be/ycWTaSsUggU
+
 **Live demo:** https://alankar-akhil.vercel.app · **Portfolio page:** https://alankar-akhil.vercel.app/for-zenotians
 · **Author:** Akhil Marepalli ([LinkedIn](https://www.linkedin.com/in/akhil-marepalli-56694532b))
 
