@@ -32,7 +32,7 @@ def method_for(user: User) -> str | None:
     """ "email" for customers while email codes are in force, "totp" for admins with two-step."""
     if twofactor.applies_to(user):
         return "totp"
-    if user.role == User.Role.CUSTOMER and otp.otp_enabled():
+    if user.role == User.Role.CUSTOMER and otp.required_for(user):
         return "email"
     return None
 

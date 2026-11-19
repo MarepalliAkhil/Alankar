@@ -450,3 +450,45 @@ def test_booking_is_not_blocked_when_email_codes_are_off(booking_setup, settings
     user.email_verified_at = None
     user.save(update_fields=["email_verified_at"])
     assert send_request(client, cat, start=day_at(3, 11).isoformat()).status_code == 201
+
+
+# --------------------------------------------------------------------------- demo accounts
+
+
+@pytest.mark.django_db
+def test_demo_domain_accounts_skip_the_code_and_everyone_else_still_gets_it(make_user, settings):
+    """Free deployment: SALON_OTP_SKIP_DOMAINS=demo.example.com, so the fictional demo customers
+    (who can never receive an email) sign in with their password; real addresses get the code."""
+    settings.SALON_OTP_SKIP_DOMAINS = ["demo.example.com"]
+    demo = make_user(email="meera@demo.example.com")
+    real = make_user(email="ananya@example.com")
+
+    client = Client()
+    step = login_step(client, demo)
+    assert step.status_code == 200 and "otp_required" not in step.json()
+    assert client.get("/api/auth/me/").status_code == 200
+    assert not MailOutbox.objects.filter(kind="otp", to_email=demo.email).exists()
+
+    other = Client()
+    assert login_step(other, real).json()["otp_required"] is True
+    assert MailOutbox.objects.filter(kind="otp", to_email=real.email).exists()
+    # Look-alike domains are not exempt.
+    lookalike = make_user(email="x@demo.example.com.evil.in")
+    assert login_step(Client(), lookalike).json()["otp_required"] is True
+
+
+@pytest.mark.django_db
+def test_registering_on_the_demo_domain_needs_no_code(settings):
+    settings.SALON_OTP_SKIP_DOMAINS = ["demo.example.com"]
+    response = post(Client(), "/api/auth/register/", {**REGISTER, "email": "new@demo.example.com"})
+    assert response.status_code == 201 and response.json()["otp_required"] is False
+    assert not MailOutbox.objects.filter(kind="otp").exists()
+    # A real address still gets the code step, with the same answer for new and existing ones.
+    again = post(Client(), "/api/auth/register/", REGISTER)
+    assert again.json()["otp_required"] is True
+
+
+def test_the_skip_list_is_empty_unless_set(settings):
+    from django.conf import settings as live
+
+    assert live.SALON_OTP_SKIP_DOMAINS == []

@@ -130,13 +130,13 @@ class RegisterView(AuthThrottleMixin, APIView):
                     opted_in=True,
                     where="registration",
                 )
-            if otp.otp_enabled():
+            if otp.required_for(user):
                 try:
                     otp.issue(user, OtpChallenge.Purpose.REGISTER, request)
                 except otp.OtpThrottled:
                     pass
         # Identical for new and existing emails; the code step is shown either way.
-        body = {"detail": REGISTER_MESSAGE, "otp_required": otp.otp_enabled()}
+        body = {"detail": REGISTER_MESSAGE, "otp_required": otp.required_for_email(email)}
         return Response(body, status=status.HTTP_201_CREATED)
 
 
@@ -195,7 +195,7 @@ class LoginView(AuthThrottleMixin, APIView):
                 }
             )
         lockout.record_success(email, ip)
-        if user.role == User.Role.CUSTOMER and otp.otp_enabled():
+        if user.role == User.Role.CUSTOMER and otp.required_for(user):
             # A remembered device skips the emailed code, but only for an account whose email was
             # proven, and only after the password above was right. Nothing else is skipped.
             device = trusted.check(user, request) if otp.purpose_for(user) == "login" else None
@@ -330,7 +330,7 @@ class OtpResendView(AuthThrottleMixin, APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         user = otp_user(data["email"])
-        if user is not None and otp.otp_enabled() and data["purpose"] == otp.purpose_for(user):
+        if user is not None and otp.required_for(user) and data["purpose"] == otp.purpose_for(user):
             otp.resend(user, data["purpose"], request)
         # Same answer whether or not a code was sent.
         return Response({"detail": f"If a code is due, we sent a new one. {otp.sent_message()}"})

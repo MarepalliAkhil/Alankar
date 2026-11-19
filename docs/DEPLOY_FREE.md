@@ -50,9 +50,12 @@ contain it. Use the same key on Render and on your PC (first run).**
 | `POST /api/internal/tick/` | expire unpaid holds, AIR hold expiry, AIR cover sweep, booking-request reminders, waitlist offers, campaigns (quiet hours respected by the campaign job), Zen Chat emails for messages unread for 10 minutes | every 15 minutes |
 | `POST /api/internal/nightly/` | end lapsed memberships, rebook and rating reminders, purge old rows, chat photo retention, build recommendations | 02:30 Asia/Kolkata |
 
-Both need the header `X-Tick-Secret: <TICK_SECRET>` (compared in constant time), allow 20 calls an
-hour per address, stop starting new jobs after 25 seconds and answer
-`{"status": "nothing to do"}` when nothing was due. A missing or wrong header, or no `TICK_SECRET` on
+Both need the header `X-Tick-Secret: <TICK_SECRET>` (compared in constant time) and allow 20 calls
+an hour per address. The tick stops starting new jobs after 25 seconds and answers
+`{"status": "nothing to do"}` when nothing was due. The nightly work can take longer than
+cron-job.org's 30-second limit on the free server, so the nightly call answers at once with
+`202 {"status": "started"}` and does the work in the background (one run at a time; the outcome is
+one `nightly finished` line in the Render logs). A missing or wrong header, or no `TICK_SECRET` on
 Render, gets 403. They read no cookies, so the browser CSRF check does not apply to them.
 
 **Correctness never depends on the tick.** Expired payment holds and booking requests are expired
@@ -102,6 +105,7 @@ Generate every secret on your PC (`cmd.exe`, in the backend's `.venv`):
 | `EMAIL_HOST_PASSWORD` | `` | your Brevo SMTP key |
 | `DEFAULT_FROM_EMAIL` | `` | a sender verified in Brevo |
 | `AI_TEXT_PROVIDER` | `disabled` | AIR's optional AI stays off (docs/AIR.md) |
+| `SALON_CUSTOMER_OTP` | `true` (or leave it out) | customers confirm sign-in with an emailed 6-digit code (and can tick "Remember this device"); the fictional `@demo.example.com` accounts never get a code (`SALON_OTP_SKIP_DOMAINS`, set by `settings_free.py`) |
 | `SALON_LOG_LEVEL` | `INFO` | |
 | `SALON_PHOTO_USER_MB` / `SALON_PHOTO_TOTAL_MB` | `20` / `300` | optional |
 

@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,7 @@ from people.tests.test_stylist import asha, booked, catalogue, customer, desk, r
 BACKEND = Path(__file__).resolve().parents[2]
 ROOT = BACKEND.parent
 SECRET = "tick-secret-for-tests-only-7f3a"
+REAL_START_IN_BACKGROUND = internal.start_in_background
 
 
 # --------------------------------------------------------------------------- ping
@@ -41,6 +43,12 @@ def test_ping_makes_zero_database_queries(client):
 
 
 # --------------------------------------------------------------------------- tick and nightly
+
+
+@pytest.fixture(autouse=True)
+def nightly_inline(monkeypatch):
+    """The nightly endpoint works on a background thread; in tests it runs in place."""
+    monkeypatch.setattr(internal, "start_in_background", lambda work: work())
 
 
 @pytest.mark.django_db
@@ -65,8 +73,12 @@ def test_jobs_work_like_cron_job_org_calls_them(path):
     with override_settings(SALON_TICK_SECRET=SECRET):
         ok = cron.post(path, HTTP_X_TICK_SECRET=SECRET)
         wrong = cron.post(path, HTTP_X_TICK_SECRET="wrong")
-    assert ok.status_code == 200, ok.content
-    assert ok.json()["status"] in ("nothing to do", "done")
+    if path.endswith("tick/"):
+        assert ok.status_code == 200, ok.content
+        assert ok.json()["status"] in ("nothing to do", "done")
+    else:  # answers at once; the work runs in the background
+        assert ok.status_code == 202, ok.content
+        assert ok.json()["status"] == "started"
     assert wrong.status_code == 403
     assert wrong.json()["detail"] == "Wrong or missing X-Tick-Secret."
 
@@ -107,11 +119,51 @@ def test_tick_stops_before_the_time_budget():
 
 
 @pytest.mark.django_db
-def test_nightly_builds_recommendations(client):
-    with override_settings(SALON_TICK_SECRET=SECRET):
-        body = client.post("/api/internal/nightly/", HTTP_X_TICK_SECRET=SECRET).json()
+def test_nightly_builds_recommendations():
+    body = internal.run_nightly()
     assert body["results"]["build_recommendations"] == 1
     assert set(internal.NIGHTLY_JOBS) <= set(body["results"])
+
+
+@pytest.mark.django_db
+def test_nightly_answers_at_once_and_runs_the_work_once(client, monkeypatch):
+    ran = []
+    monkeypatch.setattr(internal, "run_nightly", lambda: ran.append(1))
+    started = []
+    monkeypatch.setattr(internal, "start_in_background", lambda work: started.append(work))
+    with override_settings(SALON_TICK_SECRET=SECRET):
+        first = client.post("/api/internal/nightly/", HTTP_X_TICK_SECRET=SECRET)
+        again = client.post("/api/internal/nightly/", HTTP_X_TICK_SECRET=SECRET)
+    assert (first.status_code, first.json()) == (202, {"status": "started"})
+    assert again.json() == {"status": "already running"}  # the first one has not finished
+    assert ran == []  # nothing ran inside the request
+    started[0]()  # the background thread
+    assert ran == [1]
+    with override_settings(SALON_TICK_SECRET=SECRET):
+        later = client.post("/api/internal/nightly/", HTTP_X_TICK_SECRET=SECRET)
+    assert later.json() == {"status": "started"}  # free again once the run finished
+    started[1]()
+
+
+def test_a_failing_background_run_is_logged_not_raised(caplog):
+    import threading
+
+    done = threading.Event()
+
+    def boom():
+        try:
+            raise RuntimeError("x")
+        finally:
+            done.set()
+
+    with caplog.at_level("ERROR", logger="salon.jobs"):
+        REAL_START_IN_BACKGROUND(boom)  # the real thread, not the inline test version
+        assert done.wait(5)
+        for _ in range(50):
+            if "nightly failed" in caplog.text:
+                break
+            time.sleep(0.05)
+    assert "nightly failed" in caplog.text
 
 
 @pytest.mark.django_db
@@ -314,7 +366,7 @@ def test_free_settings_values_and_deploy_check():
         "print(s.DEBUG, sorted(s.ALLOWED_HOSTS), s.CSRF_TRUSTED_ORIGINS, db['CONN_MAX_AGE'], "
         "db['OPTIONS']['sslmode'], s.CACHES['default']['BACKEND'], "
         "s.CHANNEL_LAYERS['default']['BACKEND'], s.SESSION_COOKIE_SECURE, "
-        "s.REST_FRAMEWORK['NUM_PROXIES'], s.SALON_PHOTO_COMPACT); "
+        "s.REST_FRAMEWORK['NUM_PROXIES'], s.SALON_PHOTO_COMPACT, s.SALON_OTP_SKIP_DOMAINS); "
         "from django.core.management import call_command; call_command('deploy_check')",
         FREE,
     )
@@ -323,7 +375,7 @@ def test_free_settings_values_and_deploy_check():
     hosts = f"['alankar-api.onrender.com', '{DOMAIN}', 'localhost']"
     assert f"False {hosts} ['https://{DOMAIN}'] 0 " in out
     assert "require django.core.cache.backends.locmem.LocMemCache" in out
-    assert "InMemoryChannelLayer True 2 True" in out
+    assert "InMemoryChannelLayer True 2 True ['demo.example.com']" in out
     # Only the two documented one-instance warnings.
     assert "deploy_check passed (2 warning(s))" in out
 

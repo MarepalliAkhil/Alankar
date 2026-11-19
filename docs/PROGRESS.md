@@ -2975,3 +2975,16 @@ Details and host rules: `docs/SEO.md`.
   .localhost) are never emailed, so the demo accounts cost no email quota.
 - Tests: `chat/tests/test_inbox.py`, `src/api/inbox.test.ts`, `components/chat/ChatPopups.test.tsx`.
 
+## Free deployment fixes: nightly in the background, email codes back on (2026-11-19): DONE in code
+
+- `POST /api/internal/nightly/` answered after up to 2 minutes of work, past cron-job.org's 30-second
+  limit (run "Failed (timeout)"). It now answers at once with `202 {"status": "started"}` and runs the
+  nightly jobs and the recommendations rebuild on a background thread (one at a time; a second call
+  gets "already running"; the outcome is one `nightly finished` log line). `core/internal.py`.
+- Email codes: with `SALON_CUSTOMER_OTP=false` no customer got a sign-in code (and so no "Remember this
+  device"). New setting `SALON_OTP_SKIP_DOMAINS` (empty by default; `demo.example.com` in
+  `settings_free.py`): codes are back on for every real address, while the fictional demo customers
+  still sign in with their password. `accounts/otp.py` (`required_for`), `accounts/views.py`,
+  `accounts/stepup.py`. On Render: set `SALON_CUSTOMER_OTP=true` (or delete it).
+- Tests: `core/tests/test_free_mode.py`, `accounts/tests/test_otp.py`.
+

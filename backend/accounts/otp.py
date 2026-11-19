@@ -35,6 +35,21 @@ def otp_enabled() -> bool:
     )
 
 
+def skips_codes(email: str) -> bool:
+    """True for addresses on SALON_OTP_SKIP_DOMAINS (the fictional demo accounts)."""
+    domain = (email or "").rsplit("@", 1)[-1].lower()
+    return any(domain == d or domain.endswith(f".{d}") for d in settings.SALON_OTP_SKIP_DOMAINS)
+
+
+def required_for_email(email: str) -> bool:
+    """Whether a customer with this address must enter an emailed code."""
+    return otp_enabled() and not skips_codes(email)
+
+
+def required_for(user: User) -> bool:
+    return required_for_email(user.email)
+
+
 def purpose_for(user: User) -> str:
     """Register code until the email is proven, login code afterwards (decided by the server)."""
     return (
@@ -46,7 +61,7 @@ def purpose_for(user: User) -> str:
 
 def email_verified_or_not_required(user: User) -> bool:
     """False for an unverified customer while email codes are in force."""
-    return user.email_verified_at is not None or not otp_enabled()
+    return user.email_verified_at is not None or not required_for(user)
 
 
 def _digest(challenge_id, code: str) -> str:

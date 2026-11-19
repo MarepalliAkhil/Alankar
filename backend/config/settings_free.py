@@ -56,6 +56,9 @@ _defaults = {
     # Browser -> Vercel -> Render's router -> the app: the client address is two hops back.
     "SALON_NUM_PROXIES": "2",
     "SALON_API_DOCS": "false",
+    # The fictional demo customers (meera@demo.example.com, ...) cannot receive a code; everyone
+    # else gets the emailed code once real email is set up.
+    "SALON_OTP_SKIP_DOMAINS": "demo.example.com",
     "SALON_DB_NAME": DATABASE["NAME"],
     "SALON_DB_USER": DATABASE["USER"],
     "SALON_DB_PASSWORD": DATABASE["PASSWORD"],

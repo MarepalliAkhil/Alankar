@@ -208,6 +208,9 @@ SALON_AUTH = {
 # Customers confirm their email with a 6-digit code at registration and on every sign-in.
 # It only applies when the code can actually be delivered (real email, or the dev mailbox).
 SALON_CUSTOMER_OTP = env_bool("SALON_CUSTOMER_OTP", True)
+# Email domains that never get a code (fictional demo accounts that cannot receive email).
+# Empty everywhere except the free deployment (config/settings_free.py: demo.example.com).
+SALON_OTP_SKIP_DOMAINS = [d.lower() for d in env_list("SALON_OTP_SKIP_DOMAINS", "")]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),

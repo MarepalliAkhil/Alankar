@@ -10,9 +10,13 @@ it on time for pages nobody opens, and sends campaigns and reminders.
 from __future__ import annotations
 
 import hmac
+import json
+import logging
+import threading
 import time
 
 from django.conf import settings
+from django.db import connections
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
@@ -123,20 +127,62 @@ class TickView(_Internal):
         return Response(run_jobs(TICK_JOBS))
 
 
+NIGHTLY_BUDGET = 600  # seconds; it runs in the background, so cron-job.org's 30 s limit is fine
+logger = logging.getLogger("salon.jobs")
+_nightly_lock = threading.Lock()
+
+
+def run_nightly() -> dict:
+    """The nightly jobs and the recommendations rebuild. Logs one JSON line with the outcome."""
+    from django.core.management import call_command
+
+    outcome = run_jobs(NIGHTLY_JOBS, budget=NIGHTLY_BUDGET)
+    try:
+        call_command("build_recommendations", verbosity=0)
+        outcome["results"]["build_recommendations"] = 1
+    except Exception as exc:
+        outcome["results"]["build_recommendations"] = f"failed ({type(exc).__name__})"
+        outcome["status"] = "failed"
+    logger.info("nightly finished %s", json.dumps(outcome))
+    return outcome
+
+
+def start_in_background(work) -> None:
+    """Runs `work` on its own thread (one Daphne process, kept awake by the ping job)."""
+
+    def runner():
+        try:
+            work()
+        except Exception:  # never crash the server; the error is logged
+            logger.exception("nightly failed")
+        finally:
+            connections.close_all()
+
+    threading.Thread(target=runner, name="nightly", daemon=True).start()
+
+
 class NightlyView(_Internal):
+    """Answers at once with 202 and does the work in the background: on the free server the
+    nightly work can take longer than cron-job.org's 30-second limit. One run at a time."""
+
     policy_action = "internal.nightly"
 
     def post(self, request: Request) -> Response:
-        from django.core.management import call_command
+        if not _nightly_lock.acquire(blocking=False):
+            return Response({"status": "already running"}, status=202)
 
-        body = run_jobs(NIGHTLY_JOBS, budget=120)
+        def work():
+            try:
+                run_nightly()
+            finally:
+                _nightly_lock.release()
+
         try:
-            call_command("build_recommendations", verbosity=0)
-            body["results"]["build_recommendations"] = 1
-        except Exception as exc:
-            body["results"]["build_recommendations"] = f"failed ({type(exc).__name__})"
-            body["status"] = "failed"
-        return Response(body)
+            start_in_background(work)
+        except Exception:
+            _nightly_lock.release()
+            raise
+        return Response({"status": "started"}, status=202)
 
 
 class PingView(APIView):
