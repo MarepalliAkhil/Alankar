@@ -1,12 +1,40 @@
-# Alankar (working name ZenFlow)
+# Alankar: salon, spa and beauty parlor platform
 
-A website and management system for a unisex salon, spa and beauty parlor: public site, online
-booking with payment, front-desk POS and billing, stylist day view, ratings that feed stylist pay,
-stock, payroll, reports, gift cards and memberships, and a chat assistant.
+**Live demo:** https://alankar-akhil.vercel.app · **Portfolio page:** https://alankar-akhil.vercel.app/for-zenotians
+· **Author:** Akhil Marepalli ([LinkedIn](https://www.linkedin.com/in/akhil-marepalli-56694532b))
+
+A full-stack website and management system for a unisex salon, spa and beauty parlor, built as an
+independent portfolio project (not affiliated with Zenoti). Customers book online and pay; the
+front desk and the stylist both accept each request; stylists see their day and chat with their
+customers; the admin runs payroll, stock, marketing and reports.
+
+**Try it:** the "Try the demo" section of the portfolio page lists the demo accounts (customer,
+stylist, receptionist, admin). All data in the demo is fictional.
+
+| | |
+|---|---|
+| Roles | 4 (customer, receptionist, stylist, admin), one shared permission file, deny by default |
+| Size | 73 pages, 294 API endpoints, 121 database migrations |
+| Tests | 2,415 automated tests: 1,415 backend (pytest), 837 frontend (Vitest), 163 end-to-end (Playwright); 48 screens scanned for accessibility (axe-core) |
+| Stack | React 18, TypeScript, Vite, Tailwind · Django 5, DRF, Channels (WebSockets) · PostgreSQL 16 |
+| Hosting | Vercel (site) + Render (API) + Neon (PostgreSQL) + scheduled jobs; also a Docker Compose / Azure setup (`docs/DEPLOY.md`) |
+
+**Highlights**
+- Booking requests accepted by both the front desk and the stylist, payment links that expire,
+  a slot hold engine with overlap protection (PostgreSQL exclusion constraints), waitlist offers.
+- Zen Chat: live customer-stylist chat over WebSockets, encrypted at rest with a key per
+  conversation, photo sharing, pop-up and email notifications.
+- AIR: a rule-based virtual receptionist that can cover the desk, with every action audited and
+  undoable.
+- Money and stock as ledgers; POS with GST, coupons, gift cards, memberships and packages; payroll
+  where stylist pay follows customer ratings.
+- Security: Argon2 passwords, httpOnly JWT cookies with CSRF, email one-time codes, optional admin
+  two-step sign-in, AES-256-GCM field encryption, audit log, rate limits.
 
 - **AI is optional and off by default.** The chat assistant's own engine is a deterministic rule program (`docs/CHATBOT_ALGORITHM.md`). AIR, the optional virtual receptionist, can also use a third-party language-model provider, but only when the admin switches it on with a key and the customer agrees; with it off, everything works with rules (`docs/AIR.md`).
 - Brand names live only in `frontend/src/config/brand.ts` and `backend/core/brand.py`.
-- Rules for contributors: the project rules file. Full plan: `docs/MASTER_NOTES.md`. Build status and decisions: `docs/PROGRESS.md`.
+- Full plan: `docs/MASTER_NOTES.md`. Build status and decisions: `docs/PROGRESS.md`. Free hosting:
+  `docs/DEPLOY_FREE.md`.
 - Security: `docs/SECURITY.md`. Backups, jobs and checks: `docs/OPERATIONS.md`.
 
 ## How it fits together
@@ -22,7 +50,7 @@ flowchart LR
       JOBS["run_jobs<br/>(timed work, idempotent)"]
     end
     DB[("PostgreSQL 16<br/>ledgers + constraints")]
-    MAIL["Email (Gmail SMTP,<br/>or saved + simulated)"]
+    MAIL["Email (SMTP, e.g. Brevo,<br/>or saved + simulated)"]
     SPA -- "JSON over /api<br/>cookie JWT + CSRF header" --> POL
     POL --> APPS
     APPS --> DB
